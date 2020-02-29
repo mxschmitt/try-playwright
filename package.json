@@ -16,7 +16,8 @@
     "vm2": "^3.8.4"
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "start": "node lib/index.js"
   },
   "devDependencies": {
     "@types/debug": "^4.1.5",
