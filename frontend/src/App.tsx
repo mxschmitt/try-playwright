@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Row, Col, Grid, Button, Loader, Panel, Dropdown } from 'rsuite'
+import MonacoEditor from 'react-monaco-editor';
 
 interface LogEntry {
   mode: "log" | "error"
@@ -65,7 +66,7 @@ const App = () => {
   const [code, setCode] = useState<string>(Examples[0].code)
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
-  const handleChangeCode = ({ target: { value } }: any) => setCode(value)
+  const handleChangeCode = (newValue: string) => setCode(newValue)
   const handleExection = () => {
     setLoading(true)
     fetch("/api/v1/run", {
@@ -103,7 +104,17 @@ const App = () => {
               {Examples.map(({ title }, index) => <Dropdown.Item key={index} onSelect={() => setCode(Examples[index].code)}>{title}</Dropdown.Item>)}
             </Dropdown>
           </>} bordered>
-            <textarea rows={20} value={code} onChange={handleChangeCode} className="rs-input" style={{ maxHeight: "inherit" }} />
+            <MonacoEditor
+              onChange={handleChangeCode}
+              language="typescript"
+              value={code}
+              height={500}
+              options={{
+                minimap: {
+                  enabled: false
+                },
+              }}
+            />
             <Button onClick={handleExection} style={{ position: "absolute", top: 20, right: 20 }}>
               Run
           </Button>
@@ -124,7 +135,7 @@ const App = () => {
                     minHeight: 500
                   }} />
                 </> : <>
-                    <img src={publicURL} style={{ width: "100%", borderRadius: 4 }} />
+                    <img src={publicURL} alt={filename} style={{ width: "100%", borderRadius: 4 }} />
                   </>}
               </p>)}
             </>}
