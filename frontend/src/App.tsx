@@ -26,12 +26,12 @@ const Examples: Example[] = [
   {
     title: "Page screenshot",
     code: `for (const browserType of ['chromium', 'firefox', 'webkit']) {
-const browser = await playwright[browserType].launch();
-const context = await browser.newContext();
-const page = await context.newPage();
-await page.goto('http://whatsmyuseragent.org/');
-await page.screenshot({ path: \`example-\${browserType}.png\` });
-await browser.close();
+  const browser = await playwright[browserType].launch();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('http://whatsmyuseragent.org/');
+  await page.screenshot({ path: \`example-\${browserType}.png\` });
+  await browser.close();
 }`
   }, {
     title: "Mobile and geolocation",
@@ -39,10 +39,10 @@ await browser.close();
 const iPhone11 = devices['iPhone 11 Pro'];
 const browser = await webkit.launch();
 const context = await browser.newContext({
-viewport: iPhone11.viewport,
-userAgent: iPhone11.userAgent,
-geolocation: { longitude: 12.492507, latitude: 41.889938 },
-permissions: { 'https://www.google.com': ['geolocation'] }
+  viewport: iPhone11.viewport,
+  userAgent: iPhone11.userAgent,
+  geolocation: { longitude: 12.492507, latitude: 41.889938 },
+  permissions: { 'https://www.google.com': ['geolocation'] }
 });
 const page = await context.newPage();
 await page.goto('https://maps.google.com');
@@ -82,6 +82,13 @@ const App = () => {
         setLoading(false)
       })
   }
+  const getDropdownTitle = () => {
+    const item = Examples.find(item => item.code === code)
+    if (item) {
+      return item.title
+    }
+    return "Custom"
+  }
   return (
     <Grid>
       <Row className="show-grid">
@@ -92,7 +99,7 @@ const App = () => {
           {loading && <Loader center content="loading" backdrop />}
           <Panel header={<>
             Examples{' '}
-            <Dropdown title="Default">
+            <Dropdown title={getDropdownTitle()}>
               {Examples.map(({ title }, index) => <Dropdown.Item key={index} onSelect={() => setCode(Examples[index].code)}>{title}</Dropdown.Item>)}
             </Dropdown>
           </>} bordered>
