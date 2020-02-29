@@ -55,6 +55,14 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
     })
   }
 
+  playwright.chromium.launch = new Proxy(playwright.chromium.launch, {
+    apply: (target, thisArg, [options = {}]) => {
+      target.apply(thisArg, [{
+        ...options,
+        args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
+      }])
+    }
+  });
   const sandbox = {
     playwright,
     console: {
@@ -83,7 +91,7 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
     sandbox,
   }).run(code);
 
-  const publicFiles = files ? files.map((filename: string): FileWrapper|undefined => {
+  const publicFiles = files ? files.map((filename: string): FileWrapper | undefined => {
     const fileExtension = path.extname(filename)
     if (fileExtension !== ".png") {
       return
