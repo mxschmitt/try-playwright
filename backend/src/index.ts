@@ -1,10 +1,12 @@
-import express from 'express'
-import playwright from 'playwright-core'
-import { runUntrustedCode } from './utils'
+import express from 'express';
+import { runUntrustedCode } from './utils';
 
 (async () => {
   const app = express()
   app.use(express.json())
+  app.use(express.static('./frontend'));
+
+  app.use("/public/", express.static('./public'))
 
   app.post("/api/v1/run", async (req: express.Request, resp: express.Response) => {
     const requestPayload = req.body

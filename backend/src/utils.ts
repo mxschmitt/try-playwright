@@ -2,6 +2,8 @@ import { VM } from 'vm2'
 import playwright from 'playwright-core'
 import fs from 'fs'
 import chokidar from 'chokidar';
+import path from 'path'
+import { v4 as uuidv4 } from 'uuid'
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -18,20 +20,12 @@ interface LogEntry {
 }
 
 export const runUntrustedCode = async (code: string): Promise<ResponseObject> => {
+  if (!code) {
+    throw new Error("no code specified")
+  }
   if (code.match(/file:/g)) {
     throw new Error('Its not allowed to access local files');
   }
-
-  code = `
-        const browser = await playwright.firefox.launch();
-        const context = await browser.newContext();
-        const page = await context.newPage();
-        await page.goto('http://whatsmyuseragent.org/');
-        await page.screenshot({ path: "example.png" });
-        const userAgent = await page.$eval(".user-agent > .intro-text", x => x.innerText)
-        console.log(userAgent)
-        await browser.close();
-  `
 
   code = `
     (async () => {
@@ -83,14 +77,27 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
     sandbox,
   }).run(code);
 
-  const filesContent = files && files.map((filename: string) => {
-    const buffer = fs.readFileSync(filename)
-    fs.unlinkSync(filename);
-    return buffer.toString("base64")
-  })
+  const publicFiles = files ? files.map((filename: string) => {
+    const fileExtension = path.extname(filename)
+    if (fileExtension !== ".png") {
+      return
+    }
+    const newFileName = uuidv4() + fileExtension
+    const publicFolder = "public"
+    const newFileLocation = path.join(publicFolder, newFileName)
+    if (!fs.existsSync(publicFolder)) {
+      fs.mkdirSync(publicFolder);
+    }
+    fs.renameSync(filename, newFileLocation)
+    setTimeout(() => {
+      console.log(`Removing old file '${newFileLocation}'`)
+      fs.unlinkSync(newFileLocation)
+    }, 1000 * 60)
+    return newFileLocation
+  }).filter(Boolean) as string[] : []
 
   return {
-    files: filesContent,
+    files: publicFiles,
     logs: logEntries
   }
 }
