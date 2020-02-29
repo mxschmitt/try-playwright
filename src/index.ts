@@ -3,12 +3,6 @@ import playwright from 'playwright-core'
 import { runUntrustedCode } from './utils'
 
 (async () => {
-  console.log("Checking if all browsers are installed")
-  playwright.chromium.downloadBrowserIfNeeded();
-  playwright.firefox.downloadBrowserIfNeeded();
-  playwright.webkit.downloadBrowserIfNeeded();
-  console.log("Installed all browsers successfully")
-
   const app = express()
   app.use(express.json())
 

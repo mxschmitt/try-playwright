@@ -23,7 +23,7 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
   }
 
   code = `
-        const browser = await playwright.chromium.launch();
+        const browser = await playwright.firefox.launch();
         const context = await browser.newContext();
         const page = await context.newPage();
         await page.goto('http://whatsmyuseragent.org/');
@@ -83,7 +83,7 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
     sandbox,
   }).run(code);
 
-  const filesContent = files.map((filename: string) => {
+  const filesContent = files && files.map((filename: string) => {
     const buffer = fs.readFileSync(filename)
     fs.unlinkSync(filename);
     return buffer.toString("base64")
