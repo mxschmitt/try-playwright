@@ -6,8 +6,13 @@ interface LogEntry {
   args: string[]
 }
 
+interface FileWrapper {
+  publicURL: string
+  filename: string
+}
+
 interface APIResponse {
-  "files": string[]
+  "files": FileWrapper[]
   "logs": LogEntry[]
 }
 
@@ -70,12 +75,12 @@ const App = () => {
   }
   return (
     <Grid>
-      {loading && <Loader center content="loading" backdrop />}
       <Row className="show-grid">
         <Col xs={24}>
           <h1>Playwright Playground</h1>
         </Col>
         <Col xs={24} md={12}>
+          {loading && <Loader center content="loading" backdrop />}
           <Panel header={<>
             Examples{' '}
             <Dropdown title="Default">
@@ -91,10 +96,13 @@ const App = () => {
         <Col xs={24} md={12}>
           <Panel header="Output:" bordered>
             {resp && <>
-              <h3>Logs</h3>
+              {resp.logs.length > 0 && <h3>Logs</h3>}
               <code>{resp.logs.map((entry, i) => entry.args.join())}</code>{resp.logs.map((entry, i) => entry.args.join())}
               <h3>Files</h3>
-              {resp.files.map((file, i) => <img src={file} key={i} style={{ width: "100%" }} />)}
+              {resp.files.map(({ publicURL, filename }, i) => <p key={i} style={{ marginBottom: 10}}>
+                {filename}
+                <img src={publicURL}  style={{ width: "100%", borderRadius: 4 }} />
+              </p>)}
             </>}
           </Panel>
         </Col>

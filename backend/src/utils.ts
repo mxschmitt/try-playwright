@@ -7,9 +7,15 @@ import { v4 as uuidv4 } from 'uuid'
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+interface FileWrapper {
+  publicURL: string
+  filename: string
+}
+
+
 interface ResponseObject {
   logs: LogEntry[]
-  files: string[]
+  files: FileWrapper[]
 }
 
 type LogMode = "log" | "error"
@@ -77,7 +83,7 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
     sandbox,
   }).run(code);
 
-  const publicFiles = files ? files.map((filename: string) => {
+  const publicFiles = files ? files.map((filename: string): FileWrapper|undefined => {
     const fileExtension = path.extname(filename)
     if (fileExtension !== ".png") {
       return
@@ -93,8 +99,11 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
       console.log(`Removing old file '${newFileLocation}'`)
       fs.unlinkSync(newFileLocation)
     }, 1000 * 60)
-    return newFileLocation
-  }).filter(Boolean) as string[] : []
+    return {
+      publicURL: newFileLocation,
+      filename: filename
+    }
+  }).filter(Boolean) as FileWrapper[] : []
 
   return {
     files: publicFiles,
