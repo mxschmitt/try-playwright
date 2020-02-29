@@ -1,0 +1,27 @@
+{
+  "name": "try-playwright",
+  "version": "1.0.0",
+  "description": "Try Playwright tests in your browser without installing the entire suite.",
+  "main": "index.js",
+  "repository": "https://github.com/mxschmitt/try-playwright",
+  "author": "Max Schmitt <max@schmitt.mx>",
+  "license": "MIT",
+  "dependencies": {
+    "chokidar": "^3.3.1",
+    "express": "^4.17.1",
+    "playwright": "^0.11.1",
+    "playwright-chromium": "^0.11.1",
+    "playwright-core": "^0.11.1",
+    "typescript": "^3.8.3",
+    "vm2": "^3.8.4"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.5",
+    "@types/express": "^4.17.2",
+    "@types/node": "^13.7.7",
+    "nodemon": "^2.0.2"
+  }
+}
