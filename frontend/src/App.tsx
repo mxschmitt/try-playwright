@@ -31,7 +31,6 @@ const Examples: Example[] = [
     title: "Mobile and geolocation",
     code: `const { webkit, devices } = playwright;
 const iPhone11 = devices['iPhone 11 Pro'];
-console.log(iPhone11)
 const browser = await webkit.launch();
 const context = await browser.newContext({
 viewport: iPhone11.viewport,
@@ -41,8 +40,8 @@ permissions: { 'https://www.google.com': ['geolocation'] }
 });
 const page = await context.newPage();
 await page.goto('https://maps.google.com');
-await page.click('text="Your location"');
-await page.waitForRequest(/.*preview\/pwa/);
+await page.click(".ml-my-location-fab button");
+await page.waitForRequest(/.*preview\\/pwa/);
 await page.screenshot({ path: 'colosseum-iphone.png' });
 await browser.close();`
   }
@@ -76,7 +75,7 @@ const App = () => {
         <Col xs={24}>
           <h1>Playwright Playground</h1>
         </Col>
-        <Col xs={12}>
+        <Col xs={24} md={12}>
           <Panel header={<>
             Examples{' '}
             <Dropdown title="Default">
@@ -89,7 +88,7 @@ const App = () => {
           </Button>
           </Panel>
         </Col>
-        <Col xs={12}>
+        <Col xs={24} md={12}>
           <Panel header="Output:" bordered>
             {resp && <>
               <h3>Logs</h3>

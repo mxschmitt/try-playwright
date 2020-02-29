@@ -65,7 +65,7 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
         files.push(filePath)
       })
       return async () => {
-        await sleep(100)
+        await sleep(150)
         watcher.close()
         return files
       }
