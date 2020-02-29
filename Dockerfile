@@ -13,4 +13,4 @@ ADD tsconfig.json /
 
 RUN yarn build
 
-ENTRYPOINT [ "node", "lib/index.js" ]
+CMD node lib/index.js
