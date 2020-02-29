@@ -57,7 +57,7 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
 
   playwright.chromium.launch = new Proxy(playwright.chromium.launch, {
     apply: (target, thisArg, [options = {}]) => {
-      target.apply(thisArg, [{
+      return target.apply(thisArg, [{
         ...options,
         args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
       }])
