@@ -18,8 +18,10 @@ import { runUntrustedCode } from './utils'
     resp.status(200).send(JSON.stringify(response))
   })
 
-  app.listen(8080, () => {
+  const port = process.env.PORT || 8080;
+
+  app.listen(port, () => {
     // tslint:disable-next-line:no-console
-    console.log(`Server started at http://localhost:8080`);
+    console.log(`Server started at http://localhost:${port}`);
   });
 })();
