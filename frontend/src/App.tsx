@@ -9,6 +9,7 @@ interface LogEntry {
 interface FileWrapper {
   publicURL: string
   filename: string
+  mimetype: string
 }
 
 interface APIResponse {
@@ -25,12 +26,12 @@ const Examples: Example[] = [
   {
     title: "Page screenshot",
     code: `for (const browserType of ['chromium', 'firefox', 'webkit']) {
-    const browser = await playwright[browserType].launch();
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await page.goto('http://whatsmyuseragent.org/');
-    await page.screenshot({ path: \`example-\${browserType}.png\` });
-    await browser.close();
+const browser = await playwright[browserType].launch();
+const context = await browser.newContext();
+const page = await context.newPage();
+await page.goto('http://whatsmyuseragent.org/');
+await page.screenshot({ path: \`example-\${browserType}.png\` });
+await browser.close();
 }`
   }, {
     title: "Mobile and geolocation",
@@ -49,7 +50,15 @@ await page.click(".ml-my-location-fab button");
 await page.waitForRequest(/.*preview\\/pwa/);
 await page.screenshot({ path: 'colosseum-iphone.png' });
 await browser.close();`
-  }
+  }, {
+    title: "Generate a PDF",
+    code: `const browser = await playwright.chromium.launch();
+const context = await browser.newContext();
+const page = await context.newPage();
+await page.goto('https://www.google.com/search?q=Google');
+await page.pdf({ path: \`document.pdf\` });
+await browser.close();`
+  },
 ]
 
 const App = () => {
@@ -99,9 +108,17 @@ const App = () => {
               {resp.logs.length > 0 && <h3>Logs</h3>}
               <code>{resp.logs.map((entry, i) => entry.args.join())}</code>{resp.logs.map((entry, i) => entry.args.join())}
               <h3>Files</h3>
-              {resp.files.map(({ publicURL, filename }, i) => <p key={i} style={{ marginBottom: 10}}>
+              {resp.files.map(({ publicURL, filename, mimetype }, i) => <p key={i} style={{ marginBottom: 10 }}>
                 {filename}
-                <img src={publicURL}  style={{ width: "100%", borderRadius: 4 }} />
+                {mimetype === "application/pdf" ? <>
+                  <object type="application/pdf" data={publicURL} style={{
+                    display: "block",
+                    width: "100%",
+                    minHeight: 500
+                  }} />
+                </> : <>
+                    <img src={publicURL} style={{ width: "100%", borderRadius: 4 }} />
+                  </>}
               </p>)}
             </>}
           </Panel>

@@ -4,12 +4,14 @@ import fs from 'fs'
 import chokidar from 'chokidar';
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import mimeTypes from 'mime-types'
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface FileWrapper {
   publicURL: string
   filename: string
+  mimetype: string | false
 }
 
 
@@ -73,7 +75,7 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
     setTimeout,
     fileWatcherWrapper: () => {
       const files: string[] = []
-      const watcher = chokidar.watch("./*{png,jpeg,jpg}", {
+      const watcher = chokidar.watch("./*{png,pdf}", {
         ignored: /node_modules/
       }).on("add", (filePath) => {
         files.push(filePath)
@@ -91,9 +93,14 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
     sandbox,
   }).run(code);
 
+  const allowedExtensions: string[] = [
+    ".png",
+    ".pdf"
+  ]
+
   const publicFiles = files ? files.map((filename: string): FileWrapper | undefined => {
     const fileExtension = path.extname(filename)
-    if (fileExtension !== ".png") {
+    if (!allowedExtensions.includes(fileExtension)) {
       return
     }
     const newFileName = uuidv4() + fileExtension
@@ -109,7 +116,8 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
     }, 1000 * 60)
     return {
       publicURL: newFileLocation,
-      filename: filename
+      filename: filename,
+      mimetype: mimeTypes.lookup(newFileLocation)
     }
   }).filter(Boolean) as FileWrapper[] : []
 
