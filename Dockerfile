@@ -8,6 +8,7 @@ RUN npm install
 
 ADD frontend/ /frontend
 ADD types/ /types
+ENV GENERATE_SOURCEMAP=false
 RUN npm run build
 
 FROM arjun27/playwright-bionic:0.2.0
@@ -26,4 +27,4 @@ RUN npm run build
 
 COPY --from=client-builder /frontend/build /backend/frontend
 
-ENTRYPOINT ["node", "/backend/lib/index.js"]
+CMD ["node", "/backend/lib/index.js"]
