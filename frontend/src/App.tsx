@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Footer } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
+import monacoEditor from 'monaco-editor'
 
 import { Examples } from './constants'
 import { getDropdownTitle, decodeCode } from './utils'
@@ -37,6 +38,11 @@ const App = () => {
         setLoading(false)
       })
   }
+  const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor)=> {
+      editor.getModel()?.updateOptions({
+        tabSize: 2
+      })
+    }
   return (
     <Grid>
       <Row>
@@ -64,6 +70,7 @@ const App = () => {
                   enabled: false
                 },
               }}
+              editorDidMount={handleEditorDidMount}
             />
 
           </Panel>

@@ -23,6 +23,11 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     throw new Error('Its not allowed to access local files');
   }
 
+  // remove the async at the beginning
+  code = code.replace(/^\(async \(\) => {/, "")
+  // remove the brackets at the end
+  code = code.replace(/}\)\(\);$/, "")
+
   code = `
     (async () => {
       try {
