@@ -3,7 +3,7 @@
     "formation": {
         "web": {
             "quantity": 1,
-            "size": "hobby"
+            "size": "free"
         }
     },
     "stack": "container"
