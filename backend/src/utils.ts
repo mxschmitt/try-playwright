@@ -8,26 +8,7 @@ import mimeTypes from 'mime-types'
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-interface FileWrapper {
-  publicURL: string
-  filename: string
-  mimetype: string | false
-}
-
-
-interface ResponseObject {
-  logs: LogEntry[]
-  files: FileWrapper[]
-}
-
-type LogMode = "log" | "error"
-
-interface LogEntry {
-  mode: LogMode,
-  args: any
-}
-
-export const runUntrustedCode = async (code: string): Promise<ResponseObject> => {
+export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   if (!code) {
     throw new Error("no code specified")
   }
@@ -117,7 +98,7 @@ export const runUntrustedCode = async (code: string): Promise<ResponseObject> =>
     return {
       publicURL: newFileLocation,
       filename: filename,
-      mimetype: mimeTypes.lookup(newFileLocation)
+      mimetype: mimeTypes.lookup(newFileLocation) || ''
     }
   }).filter(Boolean) as FileWrapper[] : []
 

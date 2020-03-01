@@ -7,6 +7,9 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "lib"
   },
+  "files": [
+    "../types/api.ts"
+  ],
   "include": [
     "src"
   ]

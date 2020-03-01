@@ -19,6 +19,9 @@
     "noEmit": true,
     "jsx": "react"
   },
+  "files": [
+    "../types/api.ts"
+  ],
   "include": [
     "src"
   ]

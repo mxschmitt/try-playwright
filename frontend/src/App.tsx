@@ -2,21 +2,7 @@ import React, { useState } from 'react';
 import { Row, Col, Grid, Button, Loader, Panel, Dropdown } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 
-interface LogEntry {
-  mode: "log" | "error"
-  args: string[]
-}
 
-interface FileWrapper {
-  publicURL: string
-  filename: string
-  mimetype: string
-}
-
-interface APIResponse {
-  "files": FileWrapper[]
-  "logs": LogEntry[]
-}
 
 interface Example {
   title: string
