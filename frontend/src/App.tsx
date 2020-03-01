@@ -97,7 +97,7 @@ const App = () => {
           <h1>Playwright Playground</h1>
         </Col>
         <Col xs={24} md={12}>
-          {loading && <Loader center content="loading" backdrop />}
+          {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
           <Panel header={<>
             Examples{' '}
             <Dropdown title={getDropdownTitle()}>
