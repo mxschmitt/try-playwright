@@ -4,7 +4,7 @@ import MonacoEditor from 'react-monaco-editor';
 import monacoEditor from 'monaco-editor'
 
 import { Examples } from './constants'
-import { getDropdownTitle, decodeCode } from './utils'
+import { getDropdownTitle, decodeCode, runCode } from './utils'
 import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
 
@@ -15,6 +15,7 @@ const App = () => {
   const [browser, setBrowser] = useState<BrowserType>("chromium")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("code")) {
@@ -24,31 +25,21 @@ const App = () => {
       setCode(Examples[0].code)
     }
   }, [])
+
   const handleChangeCode = (newValue: string) => setCode(newValue)
-  const handleExection = () => {
+  const handleExection = async () => {
     setLoading(true)
     setResponse(null)
-    fetch("/api/v1/run", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        code,
-        browser
+    try {
+      const resp = await runCode(code, browser)
+      setResponse(resp)
+    } catch (err) {
+      Notification.error({
+        title: "Error!",
+        description: err.toString()
       })
-    }).then(resp => resp.ok ? resp.json() : Promise.reject(resp.text()))
-      .then((resp) => {
-        setResponse(resp)
-        setLoading(false)
-      })
-      .catch(() => {
-        Notification.error({
-          title: "Error!",
-          description: "Could not run script, please try again in a few minutes..."
-        })
-        setLoading(false)
-      })
+    }
+    setLoading(false)
   }
   const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor) => {
     editor.getModel()?.updateOptions({
