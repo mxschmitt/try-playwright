@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Row, Col, Grid, Button, Loader, Panel, Dropdown } from 'rsuite'
+import { Row, Col, Grid, Button, Loader, Panel, Dropdown, Footer } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 
 import { Examples } from './constants'
@@ -29,7 +29,7 @@ const App = () => {
   }
   return (
     <Grid>
-      <Row className="show-grid">
+      <Row>
         <Col xs={24}>
           <h1>Playwright Playground</h1>
         </Col>
@@ -45,7 +45,7 @@ const App = () => {
               onChange={handleChangeCode}
               language="typescript"
               value={code}
-              height={400}
+              height={500}
               options={{
                 minimap: {
                   enabled: false
@@ -69,6 +69,11 @@ const App = () => {
               {resp.files.map((file, idx) => <ResponseFile file={file} key={idx} />)}
             </>}
           </Panel>
+        </Col>
+        <Col sm={24}>
+          <Footer style={{ textAlign: "center", marginTop: 4 }}>
+            Open Source on <a href="https://github.com/mxschmitt/try-playwright">GitHub</a>.
+          </Footer>
         </Col>
       </Row>
     </Grid >
