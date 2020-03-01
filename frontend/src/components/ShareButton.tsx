@@ -1,5 +1,6 @@
 import React, { CSSProperties } from 'react'
 import { IconButton, Icon, Notification } from 'rsuite'
+import clipboard from 'clipboard-polyfill'
 
 import { encodeCode } from '../utils';
 
@@ -13,7 +14,7 @@ const ShareButton: React.FunctionComponent<ShareButtonProps> = ({ code, style })
         const encodedCode = encodeCode(code)
         const newURL = `${window.location.origin}${window.location.pathname}?code=${encodedCode}`
         window.history.pushState(null, "Playwright Playground", newURL)
-        navigator.clipboard.writeText(newURL)
+        clipboard.writeText(newURL)
             .then(() => {
                 Notification.success({
                     title: "Successfully copied link to the clipboard",
