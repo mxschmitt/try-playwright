@@ -15,10 +15,14 @@ const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
 
   app.post("/api/v1/run", async (req: express.Request, resp: express.Response) => {
     const requestPayload = req.body
-    const response = await runUntrustedCode(requestPayload?.code)
-    resp.status(200).send(
-      JSON.stringify(response)
-    )
+    try {
+      const response = await runUntrustedCode(requestPayload?.code)
+      resp.status(200).send(
+        JSON.stringify(response)
+      )
+    } catch (error) {
+      resp.status(500).send(error)
+    }
   })
 
   const port = process.env.PORT || 8080;

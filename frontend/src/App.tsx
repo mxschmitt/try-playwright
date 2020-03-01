@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Footer } from 'rsuite'
+import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Footer, Notification } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 import monacoEditor from 'monaco-editor'
 
@@ -24,6 +24,7 @@ const App = () => {
   const handleChangeCode = (newValue: string) => setCode(newValue)
   const handleExection = () => {
     setLoading(true)
+    setResponse(null)
     fetch("/api/v1/run", {
       method: "POST",
       headers: {
@@ -33,16 +34,23 @@ const App = () => {
         code
       })
     }).then(resp => resp.ok ? resp.json() : Promise.reject(resp.text()))
-      .then(resp => {
+      .then((resp) => {
         setResponse(resp)
         setLoading(false)
       })
-  }
-  const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor)=> {
-      editor.getModel()?.updateOptions({
-        tabSize: 2
+      .catch(() => {
+        Notification.error({
+          title: "Error!",
+          description: "Could not run script, please try again in a few minutes..."
+        })
+        setLoading(false)
       })
-    }
+  }
+  const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor) => {
+    editor.getModel()?.updateOptions({
+      tabSize: 2
+    })
+  }
   return (
     <Grid>
       <Row>
@@ -56,7 +64,7 @@ const App = () => {
             <Dropdown title={getDropdownTitle(code)} trigger={['click', 'hover']}>
               {Examples.map(({ title }, index) => <Dropdown.Item key={index} onSelect={() => setCode(Examples[index].code)}>{title}</Dropdown.Item>)}
             </Dropdown>
-            <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play"/>}>
+            <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
               Run
           </IconButton>
           </>} bordered>
