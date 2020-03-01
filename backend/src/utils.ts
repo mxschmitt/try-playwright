@@ -6,6 +6,13 @@ import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import mimeTypes from 'mime-types'
 
+const allowedFileExtensions: string[] = [
+  ".png",
+  ".pdf"
+]
+
+const FILE_DELETION_TIME = 60 * 1000
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
@@ -30,6 +37,8 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   console.log("Running code", code)
 
   const logEntries: LogEntry[] = []
+  // emulates console.log and console.error and redirects it to the stdout and
+  // stores it in the logEntries array
   const mitmConsoleLog = (mode: LogMode) => (...args: any[]) => {
     console[mode](...args)
     logEntries.push({
@@ -38,6 +47,8 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     })
   }
 
+  // Chromium does not have '--cap-add=SYS_ADMIN' on Heroku, that's why we need
+  // to set '--no-sandbox' as default
   playwright.chromium.launch = new Proxy(playwright.chromium.launch, {
     apply: (target, thisArg, [options = {}]) => {
       return target.apply(thisArg, [{
@@ -56,7 +67,8 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     setTimeout,
     fileWatcherWrapper: () => {
       const files: string[] = []
-      const watcher = chokidar.watch("./*{png,pdf}", {
+      const allowedGlobExtensions = allowedFileExtensions.map(extension => extension.replace(/^\./, '')).join(",")
+      const watcher = chokidar.watch(`./*{${allowedGlobExtensions}}`, {
         ignored: /node_modules/
       }).on("add", (filePath) => {
         files.push(filePath)
@@ -74,14 +86,9 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     sandbox,
   }).run(code);
 
-  const allowedExtensions: string[] = [
-    ".png",
-    ".pdf"
-  ]
-
   const publicFiles = files ? files.map((filename: string): FileWrapper | undefined => {
     const fileExtension = path.extname(filename)
-    if (!allowedExtensions.includes(fileExtension)) {
+    if (!allowedFileExtensions.includes(fileExtension)) {
       return
     }
     const newFileName = uuidv4() + fileExtension
@@ -91,10 +98,11 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
       fs.mkdirSync(publicFolder);
     }
     fs.renameSync(filename, newFileLocation)
+    // delete the file after FILE_DELETION_TIME
     setTimeout(() => {
       console.log(`Removing old file '${newFileLocation}'`)
       fs.unlinkSync(newFileLocation)
-    }, 1000 * 60)
+    }, FILE_DELETION_TIME)
     return {
       publicURL: newFileLocation,
       filename: filename,
