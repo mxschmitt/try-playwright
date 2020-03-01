@@ -90,10 +90,10 @@ const App = () => {
           </>} bordered>
             {resp && <>
               {resp.logs.length > 0 && <h4>Logs</h4>}
-              <code>{resp.logs.map((entry, i) => <>
+              <code>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
                 {entry.args.join()}
                 <br />
-              </>)}</code>
+              </React.Fragment>)}</code>
               <h4>Files</h4>
               {resp.files.map((file, idx) => <ResponseFile file={file} key={idx} />)}
             </>}

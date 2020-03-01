@@ -1,5 +1,6 @@
 import { VM } from 'vm2'
 import playwright from 'playwright-core'
+import { VideoCapture } from 'playwright-video'
 import fs from 'fs'
 import chokidar from 'chokidar';
 import path from 'path'
@@ -8,7 +9,8 @@ import mimeTypes from 'mime-types'
 
 const allowedFileExtensions: string[] = [
   ".png",
-  ".pdf"
+  ".pdf",
+  ".mp4"
 ]
 
 const FILE_DELETION_TIME = 60 * 1000
@@ -64,6 +66,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   });
   const sandbox = {
     playwright,
+    VideoCapture,
     console: {
       log: mitmConsoleLog("log"),
       error: mitmConsoleLog("error"),
