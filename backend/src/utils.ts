@@ -44,21 +44,12 @@ export const runUntrustedCode = async (code: string, browserName: BrowserType): 
     throw new Error('Its not allowed to access local files');
   }
 
-  // remove the async at the beginning
-  code = code.replace(/^\(async \(\) => {/, "")
-  // remove the brackets at the end
-  code = code.replace(/}\)\(\);$/, "")
-
   code = `
-    (async () => {
-      try {
-        const getCreatedFiles = fileWatcherWrapper()
-        ${code}
-        return await getCreatedFiles()
-      } catch(err) {
-        console.error("Runtime error", err)
-      }
-    })();
+    try {
+      ${code}
+    } catch(err) {
+      console.error("Runtime error", err)
+    }
   `
   console.log("Running code", code)
 
@@ -93,7 +84,6 @@ export const runUntrustedCode = async (code: string, browserName: BrowserType): 
                   return page
                 }
               })
-
               return context
             }
           })
@@ -107,35 +97,40 @@ export const runUntrustedCode = async (code: string, browserName: BrowserType): 
       warn: mitmConsoleLog("error")
     },
     setTimeout,
-    fileWatcherWrapper: () => {
-      const files: string[] = []
-      const allowedGlobExtensions = allowedFileExtensions.map(extension => extension.replace(/^\./, '')).join(",")
-      const watcher = chokidar.watch(`./*{${allowedGlobExtensions}}`, {
-        ignored: /node_modules/
-      }).on("add", (filePath) => {
-        files.push(filePath)
-      })
-      return async () => {
-        await sleep(150)
-        watcher.close()
-        return files
-      }
-    }
   };
 
-  const files: string[] = await new VM({
+  const startFileWatcher = (): (() => Promise<string[]>) => {
+    const files: string[] = []
+    const allowedGlobExtensions = allowedFileExtensions.map(extension => extension.replace(/^\./, '')).join(",")
+    const watcher = chokidar.watch(`./*{${allowedGlobExtensions}}`, {
+      ignored: /node_modules/
+    }).on("add", (filePath) => {
+      files.push(filePath)
+    })
+    return async () => {
+      await sleep(150)
+      await watcher.close()
+      return files
+    }
+  }
+
+  const stopFileWatcher = startFileWatcher()
+
+  await new VM({
     timeout: 30 * 1000,
     sandbox,
   }).run(code);
 
+
   if (capture) {
     console.log("Closing capture")
     // @ts-ignore
-    await capture.close()
+    await capture.stop()
     console.log("Closed capture")
   }
+  const files = await stopFileWatcher()
 
-  const publicFiles = files ? files.map((filename: string): FileWrapper | undefined => {
+  const publicFiles = files.map((filename: string): FileWrapper | undefined => {
     const fileExtension = path.extname(filename)
     if (!allowedFileExtensions.includes(fileExtension)) {
       return
@@ -157,7 +152,7 @@ export const runUntrustedCode = async (code: string, browserName: BrowserType): 
       filename: filename,
       mimetype: mimeTypes.lookup(newFileLocation) || ''
     }
-  }).filter(Boolean) as FileWrapper[] : []
+  }).filter(Boolean) as FileWrapper[]
 
   return {
     files: publicFiles,
