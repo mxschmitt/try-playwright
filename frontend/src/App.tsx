@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Grid, Button, Loader, Panel, Dropdown, Footer } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 
 import { Examples } from './constants'
-import { getDropdownTitle } from './utils'
+import { getDropdownTitle, decodeCode } from './utils'
 import ResponseFile from './components/ResponseFile'
+import ShareButton from './components/ShareButton'
 
 const App = () => {
-  const [code, setCode] = useState<string>(Examples[0].code)
+  const [code, setCode] = useState<string>("")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
+  useEffect(()=> {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("code")) {
+      const newCode = decodeCode(urlParams.get("code"))
+      setCode(newCode)
+    } else {
+      setCode(Examples[0].code)
+    }
+  }, [])
   const handleChangeCode = (newValue: string) => setCode(newValue)
   const handleExection = () => {
     setLoading(true)
@@ -40,6 +50,10 @@ const App = () => {
             <Dropdown title={getDropdownTitle(code)}>
               {Examples.map(({ title }, index) => <Dropdown.Item key={index} onSelect={() => setCode(Examples[index].code)}>{title}</Dropdown.Item>)}
             </Dropdown>
+            <Button onClick={handleExection} style={{ float: "right" }}>
+              Run
+          </Button>
+            <ShareButton code={code} style={{ float: "right", marginRight: 4 }} />
           </>} bordered>
             <MonacoEditor
               onChange={handleChangeCode}
@@ -52,9 +66,7 @@ const App = () => {
                 },
               }}
             />
-            <Button onClick={handleExection} style={{ position: "absolute", top: 20, right: 20 }}>
-              Run
-          </Button>
+
           </Panel>
         </Col>
         <Col xs={24} md={12}>
