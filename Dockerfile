@@ -24,6 +24,6 @@ ADD backend/ /backend
 ADD types/ /types
 RUN npm run build
 
-COPY --from=client-builder /build /frontend
+COPY --from=client-builder /frontend/build /frontend
 
 ENTRYPOINT ["node", "lib/index.js"]
