@@ -6,6 +6,7 @@ import chokidar from 'chokidar';
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import mimeTypes from 'mime-types'
+import { CRBrowser } from 'playwright-core/lib/chromium/crBrowser';
 
 const allowedFileExtensions: string[] = [
   ".png",
@@ -71,10 +72,35 @@ export const runUntrustedCode = async (code: string, browserName: BrowserType): 
       args: args.map(arg => arg.toString ? arg.toString() : arg)
     })
   }
+  var capture: VideoCapture | null = null
 
   const sandbox = {
-    browser: BROWSER_STORE[browserName],
-    VideoCapture,
+    browser: new Proxy(BROWSER_STORE[browserName], {
+      get: (target, prop, receiver) => {
+        if (prop === "newContext" && browserName === "chromium") {
+          const newContext = Reflect.get(target, prop, receiver)
+          return new Proxy(newContext, {
+            apply: async (target, thisArg, argumentList) => {
+              const context = await target.apply(thisArg, argumentList)
+              context.newPage = new Proxy(context.newPage, {
+                apply: async (target, thisArg, argumentList) => {
+                  const page = await target.apply(thisArg, argumentList)
+                  capture = await VideoCapture.start({
+                    browser: BROWSER_STORE[browserName] as CRBrowser,
+                    page,
+                    savePath: 'video.mp4',
+                  });
+                  return page
+                }
+              })
+
+              return context
+            }
+          })
+        }
+        return Reflect.get(target, prop, receiver);
+      }
+    }),
     console: {
       log: mitmConsoleLog("log"),
       error: mitmConsoleLog("error"),
@@ -101,6 +127,13 @@ export const runUntrustedCode = async (code: string, browserName: BrowserType): 
     timeout: 30 * 1000,
     sandbox,
   }).run(code);
+
+  if (capture) {
+    console.log("Closing capture")
+    // @ts-ignore
+    await capture.close()
+    console.log("Closed capture")
+  }
 
   const publicFiles = files ? files.map((filename: string): FileWrapper | undefined => {
     const fileExtension = path.extname(filename)
