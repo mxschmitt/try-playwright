@@ -20,4 +20,4 @@ RUN npm run build
 
 COPY --from=client-builder /build /frontend
 
-CMD node lib/index.js
+ENTRYPOINT ["node", "lib/index.js"]
