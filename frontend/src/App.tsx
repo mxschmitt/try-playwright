@@ -11,7 +11,7 @@ const App = () => {
   const [code, setCode] = useState<string>("")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
-  useEffect(()=> {
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("code")) {
       const newCode = decodeCode(urlParams.get("code"))
@@ -84,7 +84,10 @@ const App = () => {
         </Col>
         <Col sm={24}>
           <Footer style={{ textAlign: "center", marginTop: 4 }}>
-            Open Source on <a href="https://github.com/mxschmitt/try-playwright">GitHub</a>.
+            Open Source on {' '}
+            <a href="https://github.com/mxschmitt/try-playwright" target="_blank" rel="noopener noreferrer">
+              GitHub
+            </a>.
           </Footer>
         </Col>
       </Row>
