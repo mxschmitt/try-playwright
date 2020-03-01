@@ -1,6 +1,6 @@
-interface Example {
+export interface Example {
   title: string
-  browser: string
+  browser: BrowserType
   code: string
 }
 
@@ -16,9 +16,8 @@ export const Examples: Example[] = [
 })();`
   }, {
     title: "Mobile and geolocation",
-    browser: "chromium",
+    browser: "webkit",
     code: `(async () => {
-  const { webkit, devices } = playwright;
   const iPhone11 = devices['iPhone 11 Pro'];
   const context = await browser.newContext({
     viewport: iPhone11.viewport,

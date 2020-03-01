@@ -3,7 +3,7 @@ import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Footer, Noti
 import MonacoEditor from 'react-monaco-editor';
 import monacoEditor from 'monaco-editor'
 
-import { Examples } from './constants'
+import { Examples, Example } from './constants'
 import { getDropdownTitle, decodeCode, runCode } from './utils'
 import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
@@ -46,6 +46,16 @@ const App = () => {
       tabSize: 2
     })
   }
+  const Example = ({ example }: {
+    example: Example
+  }) => {
+    const handleSelect = () => {
+      setCode(example.code)
+      setBrowser(example.browser)
+    }
+    return <Dropdown.Item onSelect={handleSelect}>{example.title}</Dropdown.Item>
+  }
+
   return (
     <Grid>
       <Row>
@@ -57,7 +67,7 @@ const App = () => {
           <Panel header={<>
             Examples{' '}
             <Dropdown title={getDropdownTitle(code)}>
-              {Examples.map(({ title }, idx) => <Dropdown.Item key={idx} onSelect={() => setCode(Examples[idx].code)}>{title}</Dropdown.Item>)}
+              {Examples.map((example, idx) => <Example key={idx} example={example} />)}
             </Dropdown>
             <Dropdown title={`Browser: ${browser}`}>
               {BROWSERS.map((browserName: BrowserType, idx) => <Dropdown.Item key={idx} onSelect={() => setBrowser(browserName)}>{browserName}</Dropdown.Item>)}
@@ -89,7 +99,7 @@ const App = () => {
             {resp && <>
               {resp.logs.length > 0 && <h4>Logs</h4>}
               <code>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
-                {entry.args.join()}
+                {entry.args.join(" ")}
                 <br />
               </React.Fragment>)}</code>
               <h4>Files</h4>

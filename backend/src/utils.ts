@@ -91,6 +91,7 @@ export const runUntrustedCode = async (code: string, browserName: BrowserType): 
         return Reflect.get(target, prop, receiver);
       }
     }),
+    devices: playwright.devices,
     console: {
       log: mitmConsoleLog("log"),
       error: mitmConsoleLog("error"),
