@@ -1,3 +1,5 @@
+type BrowserType = "chromium" | "firefox" | "webkit"
+
 type LogMode = "log" | "error"
 
 interface LogEntry {

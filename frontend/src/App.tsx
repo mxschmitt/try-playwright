@@ -8,8 +8,11 @@ import { getDropdownTitle, decodeCode } from './utils'
 import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
 
+const BROWSERS: BrowserType[] = ["chromium", "firefox", "webkit"]
+
 const App = () => {
   const [code, setCode] = useState<string>("")
+  const [browser, setBrowser] = useState<BrowserType>("chromium")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
   useEffect(() => {
@@ -31,7 +34,8 @@ const App = () => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        code
+        code,
+        browser
       })
     }).then(resp => resp.ok ? resp.json() : Promise.reject(resp.text()))
       .then((resp) => {
@@ -61,8 +65,11 @@ const App = () => {
           {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
           <Panel header={<>
             Examples{' '}
-            <Dropdown title={getDropdownTitle(code)} trigger={['click', 'hover']}>
-              {Examples.map(({ title }, index) => <Dropdown.Item key={index} onSelect={() => setCode(Examples[index].code)}>{title}</Dropdown.Item>)}
+            <Dropdown title={getDropdownTitle(code)}>
+              {Examples.map(({ title }, idx) => <Dropdown.Item key={idx} onSelect={() => setCode(Examples[idx].code)}>{title}</Dropdown.Item>)}
+            </Dropdown>
+            <Dropdown title={`Browser: ${browser}`}>
+              {BROWSERS.map((browserName: BrowserType, idx) => <Dropdown.Item key={idx} onSelect={() => setBrowser(browserName)}>{browserName}</Dropdown.Item>)}
             </Dropdown>
             <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
               Run

@@ -1,12 +1,15 @@
 import express from 'express';
 import expressStaticGzip from "express-static-gzip";
-import { runUntrustedCode } from './utils';
+import { runUntrustedCode, startBrowsers } from './utils';
 
 const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
   enableBrotli: true,
 };
 
 (async () => {
+  console.log("Starting browsers")
+  await startBrowsers()
+  console.log("Started browsers")
   const app = express()
   app.use(express.json())
   app.use(expressStaticGzip('./frontend', compressionOptions));
@@ -16,7 +19,7 @@ const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
   app.post("/api/v1/run", async (req: express.Request, resp: express.Response) => {
     const requestPayload = req.body
     try {
-      const response = await runUntrustedCode(requestPayload?.code)
+      const response = await runUntrustedCode(requestPayload?.code, requestPayload?.browser)
       resp.status(200).send(
         JSON.stringify(response)
       )
@@ -31,7 +34,7 @@ const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
     console.log(`Server started at http://localhost:${port}`);
   });
 
-  process.on('SIGINT', () => {
+  process.on('SIGINT', async () => {
     console.info('SIGINT signal received.');
     console.log('Closing http server.');
     server.close(() => {

@@ -1,5 +1,5 @@
 import { VM } from 'vm2'
-import playwright from 'playwright-core'
+import playwright, { Browser } from 'playwright-core'
 import { VideoCapture } from 'playwright-video'
 import fs from 'fs'
 import chokidar from 'chokidar';
@@ -15,11 +15,29 @@ const allowedFileExtensions: string[] = [
 
 const FILE_DELETION_TIME = 60 * 1000
 
+const ALLOWED_BROWSERS: BrowserType[] = ["chromium", "firefox", "webkit"]
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
+const BROWSER_STORE: Record<string, Browser> = {}
+
+export const startBrowsers = async () => {
+  await Promise.all(ALLOWED_BROWSERS.map(async (browserName) => {
+    BROWSER_STORE[browserName] = await playwright[browserName].launch({
+      ...(browserName === "chromium" ? { args: ["--no-sandbox"] } : {})
+    });
+    // prevent that the user can download the whole browser
+    // @ts-ignore
+    BROWSER_STORE[browserName].close = () => null
+  }))
+}
+
+export const runUntrustedCode = async (code: string, browserName: BrowserType): Promise<APIResponse> => {
   if (!code) {
     throw new Error("no code specified")
+  }
+  if (!ALLOWED_BROWSERS.includes(browserName)) {
+    throw new Error("No valid browser specified!")
   }
   if (code.match(/file:/g)) {
     throw new Error('Its not allowed to access local files');
@@ -54,18 +72,8 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     })
   }
 
-  // Chromium does not have '--cap-add=SYS_ADMIN' on Heroku, that's why we need
-  // to set '--no-sandbox' as default
-  playwright.chromium.launch = new Proxy(playwright.chromium.launch, {
-    apply: (target, thisArg, [options = {}]) => {
-      return target.apply(thisArg, [{
-        ...options,
-        args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
-      }])
-    }
-  });
   const sandbox = {
-    playwright,
+    browser: BROWSER_STORE[browserName],
     VideoCapture,
     console: {
       log: mitmConsoleLog("log"),
