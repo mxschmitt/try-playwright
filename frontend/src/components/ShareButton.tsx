@@ -1,5 +1,5 @@
 import React, { CSSProperties } from 'react'
-import { Button, Notification } from 'rsuite'
+import { IconButton, Icon, Notification } from 'rsuite'
 
 import { encodeCode } from '../utils';
 
@@ -25,9 +25,9 @@ const ShareButton: React.FunctionComponent<ShareButtonProps> = ({ code, style })
                 });
             })
     }
-    return (<Button style={style} onClick={handleOnClick}>
+    return (<IconButton style={style} onClick={handleOnClick} icon={<Icon icon="share" />}>
         Share
-    </Button>)
+    </IconButton>)
 }
 
 export default ShareButton

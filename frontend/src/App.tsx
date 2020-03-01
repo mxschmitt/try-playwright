@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Grid, Button, Loader, Panel, Dropdown, Footer } from 'rsuite'
+import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Footer } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 
 import { Examples } from './constants'
@@ -47,13 +47,12 @@ const App = () => {
           {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
           <Panel header={<>
             Examples{' '}
-            <Dropdown title={getDropdownTitle(code)}>
+            <Dropdown title={getDropdownTitle(code)} trigger={['click', 'hover']}>
               {Examples.map(({ title }, index) => <Dropdown.Item key={index} onSelect={() => setCode(Examples[index].code)}>{title}</Dropdown.Item>)}
             </Dropdown>
-            <Button onClick={handleExection} style={{ float: "right" }}>
+            <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play"/>}>
               Run
-          </Button>
-            <ShareButton code={code} style={{ float: "right", marginRight: 4 }} />
+          </IconButton>
           </>} bordered>
             <MonacoEditor
               onChange={handleChangeCode}
@@ -70,7 +69,10 @@ const App = () => {
           </Panel>
         </Col>
         <Col xs={24} md={12}>
-          <Panel header="Output" bordered>
+          <Panel header={<>
+            Output
+          <ShareButton code={code} style={{ float: "right" }} />
+          </>} bordered>
             {resp && <>
               {resp.logs.length > 0 && <h4>Logs</h4>}
               <code>{resp.logs.map((entry, i) => <>
