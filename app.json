@@ -1,0 +1,10 @@
+{
+    "name": "Playwright Playground",
+    "formation": {
+        "web": {
+            "quantity": 1,
+            "size": "free"
+        }
+    },
+    "stack": "container"
+}

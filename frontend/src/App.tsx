@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
-import { Row, Col, Grid, Button, Loader, Panel, Dropdown, Footer } from 'rsuite'
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Footer } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 
 import { Examples } from './constants'
-import { getDropdownTitle } from './utils'
+import { getDropdownTitle, decodeCode } from './utils'
 import ResponseFile from './components/ResponseFile'
+import ShareButton from './components/ShareButton'
 
 const App = () => {
-  const [code, setCode] = useState<string>(Examples[0].code)
+  const [code, setCode] = useState<string>("")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("code")) {
+      const newCode = decodeCode(urlParams.get("code"))
+      setCode(newCode)
+    } else {
+      setCode(Examples[0].code)
+    }
+  }, [])
   const handleChangeCode = (newValue: string) => setCode(newValue)
   const handleExection = () => {
     setLoading(true)
@@ -37,9 +47,12 @@ const App = () => {
           {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
           <Panel header={<>
             Examples{' '}
-            <Dropdown title={getDropdownTitle(code)}>
+            <Dropdown title={getDropdownTitle(code)} trigger={['click', 'hover']}>
               {Examples.map(({ title }, index) => <Dropdown.Item key={index} onSelect={() => setCode(Examples[index].code)}>{title}</Dropdown.Item>)}
             </Dropdown>
+            <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play"/>}>
+              Run
+          </IconButton>
           </>} bordered>
             <MonacoEditor
               onChange={handleChangeCode}
@@ -52,13 +65,14 @@ const App = () => {
                 },
               }}
             />
-            <Button onClick={handleExection} style={{ position: "absolute", top: 20, right: 20 }}>
-              Run
-          </Button>
+
           </Panel>
         </Col>
         <Col xs={24} md={12}>
-          <Panel header="Output" bordered>
+          <Panel header={<>
+            Output
+          <ShareButton code={code} style={{ float: "right" }} />
+          </>} bordered>
             {resp && <>
               {resp.logs.length > 0 && <h4>Logs</h4>}
               <code>{resp.logs.map((entry, i) => <>
@@ -72,7 +86,10 @@ const App = () => {
         </Col>
         <Col sm={24}>
           <Footer style={{ textAlign: "center", marginTop: 4 }}>
-            Open Source on <a href="https://github.com/mxschmitt/try-playwright">GitHub</a>.
+            Open Source on {' '}
+            <a href="https://github.com/mxschmitt/try-playwright" target="_blank" rel="noopener noreferrer">
+              GitHub
+            </a>.
           </Footer>
         </Col>
       </Row>
