@@ -8,7 +8,7 @@
     "outDir": "lib"
   },
   "files": [
-    "../types/api.ts"
+    "../types/api.d.ts"
   ],
   "include": [
     "src"

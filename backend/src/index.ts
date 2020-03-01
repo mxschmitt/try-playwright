@@ -33,6 +33,7 @@ const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
     console.log('Closing http server.');
     server.close(() => {
       console.log('Http server closed.');
+      process.exit(0)
     });
   });
 })();
