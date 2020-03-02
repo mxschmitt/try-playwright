@@ -8,11 +8,8 @@ import { getDropdownTitle, decodeCode, runCode } from './utils'
 import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
 
-const BROWSERS: BrowserType[] = ["chromium", "firefox", "webkit"]
-
 const App = () => {
   const [code, setCode] = useState<string>("")
-  const [browser, setBrowser] = useState<BrowserType>("chromium")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
 
@@ -31,7 +28,7 @@ const App = () => {
     setLoading(true)
     setResponse(null)
     try {
-      const resp = await runCode(code, browser)
+      const resp = await runCode(code)
       setResponse(resp)
     } catch (err) {
       Notification.error({
@@ -51,7 +48,6 @@ const App = () => {
   }) => {
     const handleSelect = () => {
       setCode(example.code)
-      setBrowser(example.browser)
     }
     return <Dropdown.Item onSelect={handleSelect}>{example.title}</Dropdown.Item>
   }
@@ -68,9 +64,6 @@ const App = () => {
             Examples{' '}
             <Dropdown title={getDropdownTitle(code)}>
               {Examples.map((example, idx) => <Example key={idx} example={example} />)}
-            </Dropdown>
-            <Dropdown title={`Browser: ${browser}`}>
-              {BROWSERS.map((browserName: BrowserType, idx) => <Dropdown.Item key={idx} onSelect={() => setBrowser(browserName)}>{browserName}</Dropdown.Item>)}
             </Dropdown>
             <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
               Run

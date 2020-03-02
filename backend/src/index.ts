@@ -1,15 +1,12 @@
 import express from 'express';
 import expressStaticGzip from "express-static-gzip";
-import { runUntrustedCode, startBrowsers } from './utils';
+import { runUntrustedCode } from './utils';
 
 const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
   enableBrotli: true,
 };
 
 (async () => {
-  console.log("Starting browsers")
-  await startBrowsers()
-  console.log("Started browsers")
   const app = express()
   app.use(express.json())
   app.use(expressStaticGzip('./frontend', compressionOptions));
@@ -19,12 +16,12 @@ const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
   app.post("/api/v1/run", async (req: express.Request, resp: express.Response) => {
     const requestPayload = req.body
     try {
-      const response = await runUntrustedCode(requestPayload?.code, requestPayload?.browser)
+      const response = await runUntrustedCode(requestPayload?.code)
       resp.status(200).send(
         JSON.stringify(response)
       )
     } catch (error) {
-      resp.status(500).send(error)
+      resp.status(500).send(error.toString())
     }
   })
 

@@ -21,7 +21,7 @@ export const decodeCode = (code: string | null): string => {
   return lzString.decompressFromEncodedURIComponent(code)
 }
 
-export const runCode = async (code: string, browser: BrowserType): Promise<APIResponse> => {
+export const runCode = async (code: string): Promise<APIResponse> => {
   const resp = await fetch("/api/v1/run", {
     method: "POST",
     headers: {
@@ -29,7 +29,6 @@ export const runCode = async (code: string, browser: BrowserType): Promise<APIRe
     },
     body: JSON.stringify({
       code,
-      browser
     })
   })
   if (!resp.ok) {
