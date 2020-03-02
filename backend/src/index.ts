@@ -21,7 +21,7 @@ const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
         JSON.stringify(response)
       )
     } catch (error) {
-      resp.status(500).send(error)
+      resp.status(500).send(error.toString())
     }
   })
 
@@ -31,7 +31,7 @@ const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
     console.log(`Server started at http://localhost:${port}`);
   });
 
-  process.on('SIGINT', () => {
+  process.on('SIGINT', async () => {
     console.info('SIGINT signal received.');
     console.log('Closing http server.');
     server.close(() => {

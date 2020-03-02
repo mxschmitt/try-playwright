@@ -20,3 +20,19 @@ export const decodeCode = (code: string | null): string => {
   }
   return lzString.decompressFromEncodedURIComponent(code)
 }
+
+export const runCode = async (code: string): Promise<APIResponse> => {
+  const resp = await fetch("/api/v1/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      code,
+    })
+  })
+  if (!resp.ok) {
+    throw new Error("Execution was not successfull, please try again in a few minutes...")
+  }
+  return await resp.json()
+}

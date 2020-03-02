@@ -1,4 +1,4 @@
-interface Example {
+export interface Example {
   title: string
   code: string
 }
@@ -45,5 +45,29 @@ export const Examples: Example[] = [
   await page.pdf({ path: \`document.pdf\` });
   await browser.close();
 })();`
-  },
+  }, {
+    title: "Record a video using 'playwright-video'",
+    code: `(async () => {
+  const { devices } = playwright
+  const iPhone = devices['iPhone 6'];
+  const browser = await playwright.chromium.launch();
+  const context = await browser.newContext({
+    viewport: iPhone.viewport,
+    userAgent: iPhone.userAgent,
+  });
+  const page = await context.newPage();
+  const caputure = await VideoCapture.start({
+    browser,
+    page,
+    savePath: 'video.mp4',
+  });
+  await page.goto('http://example.org');
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: 'networkidle0' }),
+    page.click('a'),
+  ]);
+  await caputure.stop()
+  await browser.close();
+})();`
+  }
 ]

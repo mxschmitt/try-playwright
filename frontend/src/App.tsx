@@ -3,8 +3,8 @@ import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Footer, Noti
 import MonacoEditor from 'react-monaco-editor';
 import monacoEditor from 'monaco-editor'
 
-import { Examples } from './constants'
-import { getDropdownTitle, decodeCode } from './utils'
+import { Examples, Example } from './constants'
+import { getDropdownTitle, decodeCode, runCode } from './utils'
 import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
 
@@ -12,6 +12,7 @@ const App = () => {
   const [code, setCode] = useState<string>("")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("code")) {
@@ -21,36 +22,36 @@ const App = () => {
       setCode(Examples[0].code)
     }
   }, [])
+
   const handleChangeCode = (newValue: string) => setCode(newValue)
-  const handleExection = () => {
+  const handleExection = async () => {
     setLoading(true)
     setResponse(null)
-    fetch("/api/v1/run", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        code
+    try {
+      const resp = await runCode(code)
+      setResponse(resp)
+    } catch (err) {
+      Notification.error({
+        title: "Error!",
+        description: err.toString()
       })
-    }).then(resp => resp.ok ? resp.json() : Promise.reject(resp.text()))
-      .then((resp) => {
-        setResponse(resp)
-        setLoading(false)
-      })
-      .catch(() => {
-        Notification.error({
-          title: "Error!",
-          description: "Could not run script, please try again in a few minutes..."
-        })
-        setLoading(false)
-      })
+    }
+    setLoading(false)
   }
   const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor) => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
   }
+  const Example = ({ example }: {
+    example: Example
+  }) => {
+    const handleSelect = () => {
+      setCode(example.code)
+    }
+    return <Dropdown.Item onSelect={handleSelect}>{example.title}</Dropdown.Item>
+  }
+
   return (
     <Grid>
       <Row>
@@ -61,8 +62,8 @@ const App = () => {
           {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
           <Panel header={<>
             Examples{' '}
-            <Dropdown title={getDropdownTitle(code)} trigger={['click', 'hover']}>
-              {Examples.map(({ title }, index) => <Dropdown.Item key={index} onSelect={() => setCode(Examples[index].code)}>{title}</Dropdown.Item>)}
+            <Dropdown title={getDropdownTitle(code)}>
+              {Examples.map((example, idx) => <Example key={idx} example={example} />)}
             </Dropdown>
             <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
               Run
@@ -90,10 +91,10 @@ const App = () => {
           </>} bordered>
             {resp && <>
               {resp.logs.length > 0 && <h4>Logs</h4>}
-              <code>{resp.logs.map((entry, i) => <>
-                {entry.args.join()}
+              <code>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
+                {entry.args.join(" ")}
                 <br />
-              </>)}</code>
+              </React.Fragment>)}</code>
               {resp.files.length > 0 && <h4>Files</h4>}
               {resp.files.map((file, idx) => <ResponseFile file={file} key={idx} />)}
             </>}
