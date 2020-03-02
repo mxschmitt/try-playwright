@@ -1,8 +1,6 @@
 {
   "name": "try-playwright",
   "version": "1.0.0",
-  "description": "> Interactive Playground for [Playwright](https://github.com/microsoft/playwright) to run examples directly from your browser",
-  "main": "index.js",
   "scripts": {
     "lint": "eslint --ext ts,tsx,js,jsx ."
   },
@@ -10,9 +8,6 @@
     "type": "git",
     "url": "git+https://github.com/mxschmitt/try-playwright.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "bugs": {
     "url": "https://github.com/mxschmitt/try-playwright/issues"
   },
@@ -26,9 +21,8 @@
     "eslint-plugin-import": "^2.20.1",
     "eslint-plugin-jsx-a11y": "^6.2.3",
     "eslint-plugin-react": "^7.18.3",
-    "eslint-plugin-react-hooks": "^2.5.0"
-  },
-  "dependencies": {
+    "eslint-plugin-react-hooks": "^2.5.0",
     "typescript": "^3.8.3"
-  }
+  },
+  "dependencies": {}
 }
