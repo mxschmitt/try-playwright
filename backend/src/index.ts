@@ -1,7 +1,7 @@
 import express from 'express';
 import expressStaticGzip from "express-static-gzip";
 import { runUntrustedCode } from './utils';
-import Sentry from '@sentry/node'
+import * as Sentry from '@sentry/node'
 
 const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
   enableBrotli: true,
