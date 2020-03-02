@@ -1,12 +1,11 @@
 import { VM } from 'vm2'
-import playwright, { Browser } from 'playwright-core'
+import playwright from 'playwright-core'
 import { VideoCapture } from 'playwright-video'
 import fs from 'fs'
 import chokidar from 'chokidar';
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import mimeTypes from 'mime-types'
-import { CRBrowser } from 'playwright-core/lib/chromium/crBrowser';
 
 const allowedFileExtensions: string[] = [
   ".png",
