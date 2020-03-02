@@ -1,17 +1,17 @@
 type LogMode = "log" | "error"
 
 interface LogEntry {
-  mode: LogMode
-  args: string[]
+  mode: LogMode;
+  args: string[];
 }
 
 interface FileWrapper {
-  publicURL: string
-  filename: string
-  mimetype: string
+  publicURL: string;
+  filename: string;
+  mimetype: string;
 }
 
 interface APIResponse {
-  files: FileWrapper[]
-  logs: LogEntry[]
+  files: FileWrapper[];
+  logs: LogEntry[];
 }

@@ -1,0 +1,5 @@
+frontend/node_modules
+frontend/build
+frontend/config-overrides.js
+backend/node_modules
+backend/lib
