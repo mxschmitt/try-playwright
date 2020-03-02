@@ -13,6 +13,12 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: 12.x
+    - name: Install root dependencies
+      run: npm install
+    - name: Lint project
+      run: npm run lint
+      env:
+        CI: true
     - name: Install frontend dependencies
       working-directory: frontend
       run: npm install

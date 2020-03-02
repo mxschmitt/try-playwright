@@ -6,6 +6,7 @@ import chokidar from 'chokidar';
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import mimeTypes from 'mime-types'
+import { CRBrowser } from 'playwright-core/lib/chromium/crBrowser';
 
 const allowedFileExtensions: string[] = [
   ".png",
@@ -15,7 +16,7 @@ const allowedFileExtensions: string[] = [
 
 const FILE_DELETION_TIME = 60 * 1000
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   if (!code) {
@@ -37,7 +38,8 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   const logEntries: LogEntry[] = []
   // emulates console.log and console.error and redirects it to the stdout and
   // stores it in the logEntries array
-  const mitmConsoleLog = (mode: LogMode) => (...args: any[]) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mitmConsoleLog = (mode: LogMode) => (...args: any[]): void=> {
     console[mode](...args)
     logEntries.push({
       mode: mode,
@@ -48,7 +50,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   // Chromium does not have '--cap-add=SYS_ADMIN' on Heroku, that's why we need
   // to set '--no-sandbox' as default
   playwright.chromium.launch = new Proxy(playwright.chromium.launch, {
-    apply: (target, thisArg, [options = {}]) => {
+    apply: (target, thisArg, [options = {}]): Promise<CRBrowser>=> {
       return target.apply(thisArg, [{
         ...options,
         args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
@@ -75,7 +77,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     }).on("add", (filePath) => {
       files.push(filePath)
     })
-    return async () => {
+    return async (): Promise<string[]>=> {
       await sleep(150)
       await watcher.close()
       return files
@@ -91,10 +93,10 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
 
   const files = await stopFileWatcher()
 
-  const publicFiles = files.map((filename: string): FileWrapper | undefined => {
+  const publicFiles = files.map((filename: string): FileWrapper | null => {
     const fileExtension = path.extname(filename)
     if (!allowedFileExtensions.includes(fileExtension)) {
-      return
+      return null
     }
     const newFileName = uuidv4() + fileExtension
     const publicFolder = "public"

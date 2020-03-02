@@ -7,7 +7,7 @@ const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
   enableBrotli: true,
 };
 
-(async () => {
+(async (): Promise<void> => {
   const app = express()
 
   app.use(express.json())

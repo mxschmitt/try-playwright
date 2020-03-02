@@ -9,7 +9,19 @@ import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
 import Header from './components/Header'
 
-const App = () => {
+interface ExampleWrapperProps {
+  example: Example;
+  onChange: (code: string) => void;
+}
+
+const ExampleWrapper: React.FunctionComponent<ExampleWrapperProps> = ({ example, onChange }) => {
+  const handleSelect = (): void => {
+    onChange(example.code)
+  }
+  return <Dropdown.Item onSelect={handleSelect}>{example.title}</Dropdown.Item>
+}
+
+const App: React.FunctionComponent = () => {
   const [code, setCode] = useState<string>("")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
@@ -24,8 +36,8 @@ const App = () => {
     }
   }, [])
 
-  const handleChangeCode = (newValue: string) => setCode(newValue)
-  const handleExection = async () => {
+  const handleChangeCode = (newValue: string): void => setCode(newValue)
+  const handleExection = async (): Promise<void>=> {
     setLoading(true)
     setResponse(null)
     try {
@@ -39,18 +51,10 @@ const App = () => {
     }
     setLoading(false)
   }
-  const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor) => {
+  const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor): void => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
-  }
-  const ExampleWrapper = ({ example }: {
-    example: Example
-  }) => {
-    const handleSelect = () => {
-      setCode(example.code)
-    }
-    return <Dropdown.Item onSelect={handleSelect}>{example.title}</Dropdown.Item>
   }
 
   return (
@@ -63,7 +67,7 @@ const App = () => {
           <Panel header={<>
             Examples{' '}
             <Dropdown title={getDropdownTitle(code)}>
-              {Examples.map((example, idx) => <ExampleWrapper key={idx} example={example} />)}
+              {Examples.map((example, idx) => <ExampleWrapper key={idx} example={example} onChange={setCode} />)}
             </Dropdown>
             <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
               Run
