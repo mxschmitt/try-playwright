@@ -13,6 +13,8 @@ RUN npm run build
 
 FROM arjun27/playwright-bionic:0.2.0
 
+ENV NODE_ENV=production
+
 WORKDIR /backend
 
 USER root
