@@ -13,8 +13,6 @@ RUN npm run build
 
 FROM arjun27/playwright-bionic:0.2.0
 
-ENV NODE_ENV=production
-
 WORKDIR /backend
 
 USER root
@@ -28,5 +26,7 @@ ADD types/ /types
 RUN npm run build
 
 COPY --from=client-builder /frontend/build /backend/frontend
+
+ENV NODE_ENV=production
 
 CMD ["node", "/backend/lib/index.js"]
