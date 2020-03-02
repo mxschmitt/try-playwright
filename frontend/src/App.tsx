@@ -94,7 +94,7 @@ const App = () => {
                 {entry.args.join()}
                 <br />
               </>)}</code>
-              <h4>Files</h4>
+              {resp.files.length > 0 && <h4>Files</h4>}
               {resp.files.map((file, idx) => <ResponseFile file={file} key={idx} />)}
             </>}
           </Panel>
