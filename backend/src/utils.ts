@@ -44,6 +44,18 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
       args: args.map(arg => arg.toString ? arg.toString() : arg)
     })
   }
+
+  // Chromium does not have '--cap-add=SYS_ADMIN' on Heroku, that's why we need
+  // to set '--no-sandbox' as default
+  playwright.chromium.launch = new Proxy(playwright.chromium.launch, {
+    apply: (target, thisArg, [options = {}]) => {
+      return target.apply(thisArg, [{
+        ...options,
+        args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
+      }])
+    }
+  });
+
   const sandbox = {
     playwright,
     VideoCapture,
