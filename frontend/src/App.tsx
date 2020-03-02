@@ -44,7 +44,7 @@ const App = () => {
       tabSize: 2
     })
   }
-  const Example = ({ example }: {
+  const ExampleWrapper = ({ example }: {
     example: Example
   }) => {
     const handleSelect = () => {
@@ -63,7 +63,7 @@ const App = () => {
           <Panel header={<>
             Examples{' '}
             <Dropdown title={getDropdownTitle(code)}>
-              {Examples.map((example, idx) => <Example key={idx} example={example} />)}
+              {Examples.map((example, idx) => <ExampleWrapper key={idx} example={example} />)}
             </Dropdown>
             <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
               Run

@@ -27,4 +27,6 @@ RUN npm run build
 
 COPY --from=client-builder /frontend/build /backend/frontend
 
+ENV NODE_ENV=production
+
 CMD ["node", "/backend/lib/index.js"]
