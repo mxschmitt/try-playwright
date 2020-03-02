@@ -45,6 +45,7 @@
   },
   "proxy": "http://localhost:8080",
   "devDependencies": {
+    "@sentry/types": "^5.12.4",
     "@types/lz-string": "^1.3.33",
     "react-app-rewired": "^2.1.5"
   }
