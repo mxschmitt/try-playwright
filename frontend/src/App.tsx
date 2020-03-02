@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Footer, Notification } from 'rsuite'
+import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 import monacoEditor from 'monaco-editor'
 
@@ -7,6 +7,7 @@ import { Examples, Example } from './constants'
 import { getDropdownTitle, decodeCode, runCode } from './utils'
 import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
+import Header from './components/Header'
 
 const App = () => {
   const [code, setCode] = useState<string>("")
@@ -53,11 +54,10 @@ const App = () => {
   }
 
   return (
+    <>
+    <Header />
     <Grid>
       <Row>
-        <Col xs={24}>
-          <h1>Playwright Playground</h1>
-        </Col>
         <Col xs={24} md={12}>
           {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
           <Panel header={<>
@@ -100,16 +100,9 @@ const App = () => {
             </>}
           </Panel>
         </Col>
-        <Col sm={24}>
-          <Footer style={{ textAlign: "center", marginTop: 4 }}>
-            Open Source on {' '}
-            <a href="https://github.com/mxschmitt/try-playwright" target="_blank" rel="noopener noreferrer">
-              GitHub
-            </a>.
-          </Footer>
-        </Col>
       </Row>
     </Grid >
+    </>
   );
 }
 
