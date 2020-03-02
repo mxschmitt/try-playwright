@@ -1,5 +1,5 @@
 import React from 'react';
-import { Nav, Icon, Loader, Panel, Dropdown, Footer, Notification, Navbar } from 'rsuite'
+import { Nav, Icon, Navbar } from 'rsuite'
 
 const Header = () => {
   return (

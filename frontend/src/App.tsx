@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Footer, Notification } from 'rsuite'
+import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 import monacoEditor from 'monaco-editor'
 
