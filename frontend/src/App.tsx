@@ -65,12 +65,12 @@ const App: React.FunctionComponent = () => {
   return (
     <>
     <Header />
-    <Grid fluid={true}>
+    <Grid fluid>
       <Row>
         <Col xs={24} md={12}>
           {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
           <Panel 
-            bodyFill={true}
+            bodyFill
             header={
               <>
                 Examples{' '}
@@ -85,11 +85,12 @@ const App: React.FunctionComponent = () => {
               onChange={handleChangeCode}
               language="typescript"
               value={code}
-              height={"calc(100vh - 132px)"}
+              height={500}
               options={{
                 minimap: {
                   enabled: false
                 },
+                scrollBeyondLastLine: false
               }}
               editorDidMount={handleEditorDidMount}
             />
@@ -97,7 +98,7 @@ const App: React.FunctionComponent = () => {
         </Col>
         <Col xs={24} md={12}>
           <Panel
-            bodyFill={true}
+            bodyFill
             header={
               <>
                 Output <ShareButton code={code} style={{ float: "right" }} />
