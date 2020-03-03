@@ -1,7 +1,7 @@
 import React from 'react'
 
 interface ResponseFileProps {
-    file: FileWrapper
+    file: FileWrapper;
 }
 
 const ResponseFile: React.FunctionComponent<ResponseFileProps> = ({ file }) => {

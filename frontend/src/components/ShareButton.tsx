@@ -5,12 +5,12 @@ import clipboard from 'clipboard-polyfill'
 import { encodeCode } from '../utils';
 
 interface ShareButtonProps {
-    code: string
-    style: CSSProperties
+    code: string;
+    style: CSSProperties;
 }
 
 const ShareButton: React.FunctionComponent<ShareButtonProps> = ({ code, style }) => {
-    const handleOnClick = () => {
+    const handleOnClick = (): void=> {
         const encodedCode = encodeCode(code)
         const newURL = `${window.location.origin}${window.location.pathname}?code=${encodedCode}`
         window.history.pushState(null, "Playwright Playground", newURL)

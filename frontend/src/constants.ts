@@ -1,6 +1,6 @@
 export interface Example {
-  title: string
-  code: string
+  title: string;
+  code: string;
 }
 
 export const Examples: Example[] = [

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Nav, Icon, Navbar } from 'rsuite'
 
-const Header = () => {
+const Header: React.FunctionComponent = () => {
   return (
     <Navbar appearance="inverse">
       <Navbar.Header>
@@ -19,5 +19,5 @@ const Header = () => {
     </Navbar>
     )
   }
-  
+
   export default Header;
