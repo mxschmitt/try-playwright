@@ -39,7 +39,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   // emulates console.log and console.error and redirects it to the stdout and
   // stores it in the logEntries array
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mitmConsoleLog = (mode: LogMode) => (...args: any[]): void=> {
+  const mitmConsoleLog = (mode: LogMode) => (...args: any[]): void => {
     console[mode](...args)
     logEntries.push({
       mode: mode,
@@ -50,7 +50,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   // Chromium does not have '--cap-add=SYS_ADMIN' on Heroku, that's why we need
   // to set '--no-sandbox' as default
   playwright.chromium.launch = new Proxy(playwright.chromium.launch, {
-    apply: (target, thisArg, [options = {}]): Promise<CRBrowser>=> {
+    apply: (target, thisArg, [options = {}]): Promise<CRBrowser> => {
       return target.apply(thisArg, [{
         ...options,
         args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
@@ -77,7 +77,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     }).on("add", (filePath) => {
       files.push(filePath)
     })
-    return async (): Promise<string[]>=> {
+    return async (): Promise<string[]> => {
       await sleep(150)
       await watcher.close()
       return files
