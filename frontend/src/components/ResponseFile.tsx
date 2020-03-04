@@ -18,7 +18,7 @@ const ResponseFile: React.FunctionComponent<ResponseFileProps> = ({ file }) => {
             </object>
         </> : mimetype.startsWith("video/") ? <>
             <video autoPlay muted style={{ width: "100%" }} controls loop>
-                <source src={publicURL} type="video/mp4"/>
+                <source src={publicURL} type="video/mp4" />
             </video>
         </> : <>
                     <img src={publicURL} alt={filename} style={{ width: "100%", borderRadius: 4 }} />

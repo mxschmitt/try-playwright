@@ -37,7 +37,7 @@ const App: React.FunctionComponent = () => {
   }, [])
 
   const handleChangeCode = (newValue: string): void => setCode(newValue)
-  const handleExection = async (): Promise<void>=> {
+  const handleExection = async (): Promise<void> => {
     setLoading(true)
     setResponse(null)
     try {
@@ -56,7 +56,7 @@ const App: React.FunctionComponent = () => {
       tabSize: 2
     })
   }
-  const RunButton = () => (
+  const RunButton: React.FunctionComponent = () => (
     <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
       Run
     </IconButton>
@@ -64,60 +64,60 @@ const App: React.FunctionComponent = () => {
 
   return (
     <>
-    <Header />
-    <Grid fluid>
-      <Row>
-        <Col xs={24} md={12}>
-          {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
-          <Panel 
-            bodyFill
-            header={
-              <>
-                Examples{' '}
-                <Dropdown title={getDropdownTitle(code)}>
-                  {Examples.map((example, idx) => <ExampleWrapper key={idx} example={example} onChange={setCode} />)}
-                </Dropdown>
-                <RunButton />
-              </>
-            }
-          >
-            <MonacoEditor
-              onChange={handleChangeCode}
-              language="typescript"
-              value={code}
-              height={500}
-              options={{
-                minimap: {
-                  enabled: false
-                },
-                scrollBeyondLastLine: false
-              }}
-              editorDidMount={handleEditorDidMount}
-            />
-          </Panel>
-        </Col>
-        <Col xs={24} md={12}>
-          <Panel
-            bodyFill
-            header={
-              <>
-                Output <ShareButton code={code} style={{ float: "right" }} />
-              </>
-            }
-          >
-            {resp && <>
-              {resp.logs.length > 0 && <h4>Logs</h4>}
-              <code>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
-                {entry.args.join(" ")}
-                <br />
-              </React.Fragment>)}</code>
-              {resp.files.length > 0 && <h4>Files</h4>}
-              {resp.files.map((file, idx) => <ResponseFile file={file} key={idx} />)}
-            </>}
-          </Panel>
-        </Col>
-      </Row>
-    </Grid >
+      <Header />
+      <Grid fluid>
+        <Row>
+          <Col xs={24} md={12}>
+            {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
+            <Panel
+              bodyFill
+              header={
+                <>
+                  Examples{' '}
+                  <Dropdown title={getDropdownTitle(code)}>
+                    {Examples.map((example, idx) => <ExampleWrapper key={idx} example={example} onChange={setCode} />)}
+                  </Dropdown>
+                  <RunButton />
+                </>
+              }
+            >
+              <MonacoEditor
+                onChange={handleChangeCode}
+                language="typescript"
+                value={code}
+                height={500}
+                options={{
+                  minimap: {
+                    enabled: false
+                  },
+                  scrollBeyondLastLine: false
+                }}
+                editorDidMount={handleEditorDidMount}
+              />
+            </Panel>
+          </Col>
+          <Col xs={24} md={12}>
+            <Panel
+              bodyFill
+              header={
+                <>
+                  Output <ShareButton code={code} style={{ float: "right" }} />
+                </>
+              }
+            >
+              {resp && <>
+                {resp.logs.length > 0 && <h4>Logs</h4>}
+                <code>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
+                  {entry.args.join(" ")}
+                  <br />
+                </React.Fragment>)}</code>
+                {resp.files.length > 0 && <h4>Files</h4>}
+                {resp.files.map((file, idx) => <ResponseFile file={file} key={idx} />)}
+              </>}
+            </Panel>
+          </Col>
+        </Row>
+      </Grid >
     </>
   );
 }

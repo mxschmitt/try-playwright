@@ -19,5 +19,5 @@ const Header: React.FunctionComponent = () => {
     </Navbar>
   )
 }
-  
+
 export default Header;
