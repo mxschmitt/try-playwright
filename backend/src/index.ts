@@ -27,7 +27,7 @@ const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
         JSON.stringify(response)
       )
     } catch (error) {
-      resp.status(500).send(error.toString())
+      resp.status(500).send({ error: error.toString() })
     }
   })
 
