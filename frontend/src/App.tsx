@@ -56,23 +56,31 @@ const App: React.FunctionComponent = () => {
       tabSize: 2
     })
   }
+  const RunButton = () => (
+    <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
+      Run
+    </IconButton>
+  );
 
   return (
     <>
     <Header />
-    <Grid>
+    <Grid fluid>
       <Row>
         <Col xs={24} md={12}>
           {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
-          <Panel header={<>
-            Examples{' '}
-            <Dropdown title={getDropdownTitle(code)}>
-              {Examples.map((example, idx) => <ExampleWrapper key={idx} example={example} onChange={setCode} />)}
-            </Dropdown>
-            <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
-              Run
-          </IconButton>
-          </>} bordered>
+          <Panel 
+            bodyFill
+            header={
+              <>
+                Examples{' '}
+                <Dropdown title={getDropdownTitle(code)}>
+                  {Examples.map((example, idx) => <ExampleWrapper key={idx} example={example} onChange={setCode} />)}
+                </Dropdown>
+                <RunButton />
+              </>
+            }
+          >
             <MonacoEditor
               onChange={handleChangeCode}
               language="typescript"
@@ -82,17 +90,21 @@ const App: React.FunctionComponent = () => {
                 minimap: {
                   enabled: false
                 },
+                scrollBeyondLastLine: false
               }}
               editorDidMount={handleEditorDidMount}
             />
-
           </Panel>
         </Col>
         <Col xs={24} md={12}>
-          <Panel header={<>
-            Output
-          <ShareButton code={code} style={{ float: "right" }} />
-          </>} bordered>
+          <Panel
+            bodyFill
+            header={
+              <>
+                Output <ShareButton code={code} style={{ float: "right" }} />
+              </>
+            }
+          >
             {resp && <>
               {resp.logs.length > 0 && <h4>Logs</h4>}
               <code>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>

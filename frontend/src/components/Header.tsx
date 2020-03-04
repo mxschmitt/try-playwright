@@ -6,7 +6,7 @@ const Header: React.FunctionComponent = () => {
     <Navbar appearance="inverse">
       <Navbar.Header>
         <Nav>
-          <Nav.Item><strong>Try Playwright</strong></Nav.Item>
+          <Nav.Item href="/"><strong>Try Playwright</strong></Nav.Item>
         </Nav>
       </Navbar.Header>
       <Navbar.Body>
@@ -17,7 +17,7 @@ const Header: React.FunctionComponent = () => {
         </Nav>
       </Navbar.Body>
     </Navbar>
-    )
-  }
-
-  export default Header;
+  )
+}
+  
+export default Header;
