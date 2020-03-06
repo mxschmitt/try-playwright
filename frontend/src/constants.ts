@@ -78,7 +78,7 @@ export const Examples: Example[] = [
     title: "Evaluate in browser context",
     description: "This code snippet navigates to example.com in Firefox, and executes a script in the page context.",
     code: `(async () => {
-  const browser = await firefox.launch();
+  const browser = await playwright.firefox.launch();
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto('https://www.example.com/');
@@ -89,7 +89,7 @@ export const Examples: Example[] = [
       deviceScaleFactor: window.devicePixelRatio
     }
   })
-  console.log(dimensions);
+  console.log(JSON.stringify(dimensions));
 
   await browser.close();
 })();`
@@ -97,7 +97,7 @@ export const Examples: Example[] = [
     title: `Intercept network requests`,
     description: "This code snippet sets up network interception for a WebKit page to log all network requests.",
     code: `(async () => {
-  const browser = await playwrightwebkit.launch();
+  const browser = await playwright.webkit.launch();
   const context = await browser.newContext();
   const page = await context.newPage();
 
