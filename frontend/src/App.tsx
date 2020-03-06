@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
-import monacoEditor from 'monaco-editor'
+import monacoEditor, { KeyCode } from 'monaco-editor'
 
 import { Examples, Example } from './constants'
 import { getDropdownTitle, decodeCode, runCode } from './utils'
@@ -37,7 +37,7 @@ const App: React.FunctionComponent = () => {
   }, [])
 
   const handleChangeCode = (newValue: string): void => setCode(newValue)
-  const handleExection = async (): Promise<void> => {
+  const handleExecution = async (): Promise<void> => {
     setLoading(true)
     setResponse(null)
     try {
@@ -55,9 +55,15 @@ const App: React.FunctionComponent = () => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
+    editor.onKeyDown(event => {
+      if (event.keyCode === KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        handleExecution();
+      }
+    });
   }
   const RunButton: React.FunctionComponent = () => (
-    <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
+    <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
       Run
     </IconButton>
   );
