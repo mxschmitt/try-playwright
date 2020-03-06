@@ -1,15 +1,5 @@
 import lzString from "lz-string";
 
-import { Examples } from './constants'
-
-export const getDropdownTitle = (code: string): string => {
-  const item = Examples.find(item => item.code === code)
-  if (item) {
-    return item.title
-  }
-  return "Custom"
-}
-
 export const encodeCode = (code: string): string => {
   return lzString.compressToEncodedURIComponent(code)
 }
@@ -43,7 +33,7 @@ export const runCode = async (code: string): Promise<APIResponse> => {
 
 export const trackEvent = (): void => {
   // @ts-ignore
-  if (window.gtag) {
+  if (window.gtag && process.env.NODE_ENV === "production") {
     // @ts-ignore
     window.gtag('event', "execute", {
       'event_category': "engagement",

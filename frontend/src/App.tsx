@@ -1,25 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification } from 'rsuite'
+import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification, Message } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 import monacoEditor, { KeyCode } from 'monaco-editor'
 
-import { Examples, Example } from './constants'
-import { getDropdownTitle, decodeCode, runCode, trackEvent } from './utils'
+import { Examples } from './constants'
+import { decodeCode, runCode, trackEvent } from './utils'
 import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
 import Header from './components/Header'
-
-interface ExampleWrapperProps {
-  example: Example;
-  onChange: (code: string) => void;
-}
-
-const ExampleWrapper: React.FunctionComponent<ExampleWrapperProps> = ({ example, onChange }) => {
-  const handleSelect = (): void => {
-    onChange(example.code)
-  }
-  return <Dropdown.Item onSelect={handleSelect}>{example.title}</Dropdown.Item>
-}
+import ExampleWrapper from './components/ExampleWrapper'
 
 const App: React.FunctionComponent = () => {
   const [code, setCode] = useState<string>("")
@@ -74,6 +63,13 @@ const App: React.FunctionComponent = () => {
     </IconButton>
   );
 
+  const handleSelectExample = (index: number): void => {
+    const example = Examples[index]
+    setCode(example.code)
+  }
+
+  const example = Examples.find(item => item.code === code)
+
   return (
     <>
       <Header />
@@ -86,13 +82,14 @@ const App: React.FunctionComponent = () => {
               header={
                 <>
                   Examples{' '}
-                  <Dropdown title={getDropdownTitle(code)}>
-                    {Examples.map((example, idx) => <ExampleWrapper key={idx} example={example} onChange={setCode} />)}
+                  <Dropdown title={example ? example.title : "Custom"} onSelect={handleSelectExample}>
+                    {Examples.map((example, idx) => <ExampleWrapper key={idx} example={example} index={idx} />)}
                   </Dropdown>
                   <RunButton />
                 </>
               }
             >
+              {example?.description && <Message description={example.description} style={{ margin: "0 20px 20px 20px" }} />}
               <MonacoEditor
                 onChange={handleChangeCode}
                 language="typescript"
