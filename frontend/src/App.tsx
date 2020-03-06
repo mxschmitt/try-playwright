@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
-import monacoEditor from 'monaco-editor'
+import monacoEditor, { KeyCode } from 'monaco-editor'
 
 import { Examples, Example } from './constants'
 import { getDropdownTitle, decodeCode, runCode } from './utils'
@@ -25,6 +25,7 @@ const App: React.FunctionComponent = () => {
   const [code, setCode] = useState<string>("")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
+  const handleExecutionContainer = useRef<() => Promise<void>>()
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -37,7 +38,7 @@ const App: React.FunctionComponent = () => {
   }, [])
 
   const handleChangeCode = (newValue: string): void => setCode(newValue)
-  const handleExection = async (): Promise<void> => {
+  const handleExecution = async (): Promise<void> => {
     setLoading(true)
     setResponse(null)
     try {
@@ -51,13 +52,22 @@ const App: React.FunctionComponent = () => {
     }
     setLoading(false)
   }
+  handleExecutionContainer.current = handleExecution
   const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor): void => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
+    editor.onKeyDown((event: monacoEditor.IKeyboardEvent) => {
+      if (event.keyCode === KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        if (handleExecutionContainer.current) {
+          handleExecutionContainer.current();
+        }
+      }
+    });
   }
   const RunButton: React.FunctionComponent = () => (
-    <IconButton onClick={handleExection} style={{ float: "right" }} icon={<Icon icon="play" />}>
+    <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
       Run
     </IconButton>
   );
