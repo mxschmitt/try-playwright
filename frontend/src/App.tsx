@@ -4,7 +4,7 @@ import MonacoEditor from 'react-monaco-editor';
 import monacoEditor, { KeyCode } from 'monaco-editor'
 
 import { Examples, Example } from './constants'
-import { getDropdownTitle, decodeCode, runCode } from './utils'
+import { getDropdownTitle, decodeCode, runCode, trackEvent } from './utils'
 import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
 import Header from './components/Header'
@@ -41,6 +41,8 @@ const App: React.FunctionComponent = () => {
   const handleExecution = async (): Promise<void> => {
     setLoading(true)
     setResponse(null)
+
+    trackEvent()
     try {
       const resp = await runCode(code)
       setResponse(resp)

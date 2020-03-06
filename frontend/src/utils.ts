@@ -40,3 +40,13 @@ export const runCode = async (code: string): Promise<APIResponse> => {
   }
   return await resp.json()
 }
+
+export const trackEvent = (): void => {
+  // @ts-ignore
+  if (window.gtag) {
+    // @ts-ignore
+    window.gtag('event', "execute", {
+      'event_category': "engagement",
+    });
+  }
+}
