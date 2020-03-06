@@ -51,6 +51,7 @@ const App: React.FunctionComponent = () => {
     editor.onKeyDown((event: monacoEditor.IKeyboardEvent) => {
       if (event.keyCode === KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
+        event.stopPropagation()
         if (handleExecutionContainer.current) {
           handleExecutionContainer.current();
         }
@@ -89,7 +90,7 @@ const App: React.FunctionComponent = () => {
                 </>
               }
             >
-              {example?.description && <Message description={example.description} style={{ margin: "0 20px 20px 20px" }} />}
+              {example?.description && <Message description={example.description} style={{ margin: "0 20px 20px 20px", animation: "none" }} />}
               <MonacoEditor
                 onChange={handleChangeCode}
                 language="typescript"
