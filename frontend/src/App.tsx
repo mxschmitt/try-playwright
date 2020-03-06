@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
 import monacoEditor, { KeyCode } from 'monaco-editor'
@@ -25,6 +25,7 @@ const App: React.FunctionComponent = () => {
   const [code, setCode] = useState<string>("")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
+  const handleExecutionContainer = useRef<() => Promise<void>>()
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -51,14 +52,17 @@ const App: React.FunctionComponent = () => {
     }
     setLoading(false)
   }
+  handleExecutionContainer.current = handleExecution
   const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor): void => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
-    editor.onKeyDown(event => {
+    editor.onKeyDown((event: monacoEditor.IKeyboardEvent) => {
       if (event.keyCode === KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
-        handleExecution();
+        if (handleExecutionContainer.current) {
+          handleExecutionContainer.current();
+        }
       }
     });
   }
