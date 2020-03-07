@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification, Message } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
-import monacoEditor, { KeyCode } from 'monaco-editor'
+import { KeyCode, IKeyboardEvent } from 'monaco-editor'
+import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { Examples } from './constants'
 import { decodeCode, runCode, trackEvent } from './utils'
@@ -48,7 +49,7 @@ const App: React.FunctionComponent = () => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
-    editor.onKeyDown((event: monacoEditor.IKeyboardEvent) => {
+    editor.onKeyDown((event: IKeyboardEvent) => {
       if (event.keyCode === KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         event.stopPropagation()

@@ -27805,9 +27805,10 @@ declare const playwright: {
     firefox: import('playwright-core/server/firefox').Firefox;
     webkit: import('playwright-core/server/webkit').WebKit;
     selectors: import('playwright-core/api').Selectors;
+    /**
+     * Fallback for string loops to the generic BrowserType interface
+     */
+    [browserType: string]: import('playwright-core/server/browserType').BrowserType
 }
 
-type Browser = import("playwright-core/browser").Browser
-type Context = import("playwright-core/browser").Context
-type Page = import("playwright-core/browser").Page
 declare const VideoCapture = any
