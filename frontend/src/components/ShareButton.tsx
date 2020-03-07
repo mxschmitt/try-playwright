@@ -13,7 +13,7 @@ const ShareButton: React.FunctionComponent<ShareButtonProps> = ({ code, style })
     const handleOnClick = (): void => {
         const encodedCode = encodeCode(code)
         const newURL = `${window.location.origin}${window.location.pathname}?code=${encodedCode}`
-        window.history.pushState(null, "Playwright Playground", newURL)
+        window.history.pushState(null, "Try Playwright", newURL)
         clipboard.writeText(newURL)
             .then(() => {
                 Notification.success({
