@@ -44,7 +44,7 @@ const App: React.FunctionComponent = () => {
     setLoading(false)
   }
   handleExecutionContainer.current = handleExecution
-  const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor): void => {
+  const handleEditorDidMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: typeof monacoEditor): Promise<void> => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
@@ -57,6 +57,14 @@ const App: React.FunctionComponent = () => {
         }
       }
     });
+    // const resp = await fetch("https://unpkg.com/electron@8.1.0/electron.d.ts")
+    // monaco.languages.typescript.typescriptDefaults.addExtraLib(await resp.text())
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(`
+declare const playwright: {
+  chromium: any
+  firefox: any
+  webkit: any
+}`)
   }
   const RunButton: React.FunctionComponent = () => (
     <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
