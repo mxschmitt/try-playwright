@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import * as Sentry from '@sentry/browser';
 
+import * as serviceWorker from './serviceWorker';
+
 import 'rsuite/dist/styles/rsuite-default.css'
 
 import App from './App';
@@ -14,3 +16,5 @@ if (process.env.NODE_ENV === "production") {
 }
 
 ReactDOM.render(<App />, document.getElementById('root'));
+
+serviceWorker.register();

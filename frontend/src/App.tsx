@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification, Message } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
-import monacoEditor, { KeyCode } from 'monaco-editor'
+import { KeyCode, IKeyboardEvent } from 'monaco-editor'
+import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { Examples } from './constants'
 import { decodeCode, runCode, trackEvent } from './utils'
@@ -44,11 +45,11 @@ const App: React.FunctionComponent = () => {
     setLoading(false)
   }
   handleExecutionContainer.current = handleExecution
-  const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor): void => {
+  const handleEditorDidMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: typeof monacoEditor): Promise<void> => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
-    editor.onKeyDown((event: monacoEditor.IKeyboardEvent) => {
+    editor.onKeyDown((event: IKeyboardEvent) => {
       if (event.keyCode === KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         event.stopPropagation()
@@ -57,6 +58,8 @@ const App: React.FunctionComponent = () => {
         }
       }
     });
+    const resp = await fetch("/types.d.ts")
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(await resp.text())
   }
   const RunButton: React.FunctionComponent = () => (
     <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>

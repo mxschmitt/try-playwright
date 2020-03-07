@@ -1,5 +1,6 @@
 frontend/node_modules
 frontend/build
+frontend/public/types.d.ts
 frontend/config-overrides.js
 backend/node_modules
 backend/lib
