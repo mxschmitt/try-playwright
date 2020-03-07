@@ -2,4 +2,5 @@ frontend/node_modules
 frontend/build
 backend/node_modules
 backend/lib
+node_modules
 .git
