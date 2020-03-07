@@ -11,13 +11,6 @@
 // To learn more about the benefits of this model and instructions on how to
 // opt-in, read https://bit.ly/CRA-PWA
 
-import { registerRoute } from 'workbox-routing';
-import { CacheFirst } from 'workbox-strategies';
-
-registerRoute(
-  window.location.origin + "/types.d.ts",
-  new CacheFirst(),
-);
 
 const isLocalhost = Boolean(
   window.location.hostname === 'localhost' ||
