@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification, Message } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
-import { KeyCode, IKeyboardEvent } from 'monaco-editor'
+import { KeyCode, IKeyboardEvent, editor } from 'monaco-editor'
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { Examples } from './constants'
@@ -27,6 +27,14 @@ const App: React.FunctionComponent = () => {
     } else {
       setCode(Examples[0].code)
     }
+    editor.defineTheme('custom-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      colors: {
+        'editor.background': '#0f131a',
+      },
+      rules: []
+    });
   }, [])
 
   const handleChangeCode = (newValue: string): void => setCode(newValue)
@@ -51,14 +59,6 @@ const App: React.FunctionComponent = () => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
-    monaco.editor.defineTheme('custom-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      colors: {
-        'editor.background': '#0f131a',
-      },
-      rules: []
-    });
     editor.onKeyDown((event: IKeyboardEvent) => {
       if (event.keyCode === KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
