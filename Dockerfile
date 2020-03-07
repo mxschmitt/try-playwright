@@ -8,7 +8,6 @@ RUN npm install
 
 ADD frontend/ /frontend
 ADD types/ /types
-ENV GENERATE_SOURCEMAP=false
 RUN npm run build
 
 FROM arjun27/playwright-bionic:0.2.0
