@@ -2,13 +2,19 @@
 
 ## Overview
 
-The project is split into `frontend` (React with Monaco editor embedded) and `backend` (webserver with Express that runs the input isolated) which are located in the directories with the same names. Both are written fully in TypeScript and share their types from the root `types` directory. 
+The project is split into `frontend` (React with Monaco editor embedded) and `backend` (webserver with Express that runs the input isolated) which are located in the directories with the same names. Both are written fully in TypeScript and share their types from the root `types` directory.
 
-For linting purposes ESLint is in the root directory configured. 
+For linting purposes ESLint is in the root directory configured.
 
 ## Development environment
 
 For running everything locally with auto-reload functionality the following setup is recommended:
+
 - frontend: `npm run start` - starts the React development server
 - backend: `npm run dev-tsc` - starts the TypeScript compiler in watch mode
 - backend: `npm run dev-dev` - starts the Express server with auto-reload using `nodemon`
+
+## Generate / Update autocompletion
+
+- Execute the `npx npm-dts generate` command in the `playwright` repository
+- Replace the last `declare module` with the custom appendix / modification in the bottom of the file

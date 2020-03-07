@@ -57,14 +57,8 @@ const App: React.FunctionComponent = () => {
         }
       }
     });
-    // const resp = await fetch("https://unpkg.com/electron@8.1.0/electron.d.ts")
-    // monaco.languages.typescript.typescriptDefaults.addExtraLib(await resp.text())
-    monaco.languages.typescript.typescriptDefaults.addExtraLib(`
-declare const playwright: {
-  chromium: any
-  firefox: any
-  webkit: any
-}`)
+    const resp = await fetch("/types.d.ts")
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(await resp.text())
   }
   const RunButton: React.FunctionComponent = () => (
     <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>

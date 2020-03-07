@@ -10,7 +10,7 @@ export const Examples: Example[] = [
     description: "This code snippet navigates to whatsmyuseragent.org in Chromium, Firefox and WebKit, and saves 3 screenshots.",
     code: `(async () => {
   for (const browserType of ['chromium', 'firefox', 'webkit']) {
-    const browser = await playwright[browserType].launch();
+    const browser: Browser = await playwright[browserType].launch();
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.goto('http://whatsmyuseragent.org/');
