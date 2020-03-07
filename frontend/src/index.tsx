@@ -3,8 +3,7 @@ import ReactDOM from 'react-dom';
 import * as Sentry from '@sentry/browser';
 
 import * as serviceWorker from './serviceWorker';
-
-import 'rsuite/dist/styles/rsuite-default.css'
+import './index.css'
 
 import App from './App';
 

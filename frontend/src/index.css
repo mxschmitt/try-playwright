@@ -1,0 +1,2 @@
+@import '~rsuite/dist/styles/rsuite-dark.css' screen and (prefers-color-scheme: dark);
+@import '~rsuite/dist/styles/rsuite-default.css' screen and (prefers-color-scheme: light);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification, Message } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
-import { KeyCode, IKeyboardEvent } from 'monaco-editor'
+import { KeyCode, IKeyboardEvent, editor } from 'monaco-editor'
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { Examples } from './constants'
@@ -10,8 +10,10 @@ import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
 import Header from './components/Header'
 import ExampleWrapper from './components/ExampleWrapper'
+import useDarkMode from './hooks/useDarkMode';
 
 const App: React.FunctionComponent = () => {
+  const [darkMode] = useDarkMode()
   const [code, setCode] = useState<string>("")
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>()
@@ -25,6 +27,14 @@ const App: React.FunctionComponent = () => {
     } else {
       setCode(Examples[0].code)
     }
+    editor.defineTheme('custom-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      colors: {
+        'editor.background': '#0f131a',
+      },
+      rules: []
+    });
   }, [])
 
   const handleChangeCode = (newValue: string): void => setCode(newValue)
@@ -97,13 +107,19 @@ const App: React.FunctionComponent = () => {
               <MonacoEditor
                 onChange={handleChangeCode}
                 language="typescript"
+                theme={darkMode ? "custom-dark" : "vs"}
                 value={code}
                 height={500}
                 options={{
                   minimap: {
                     enabled: false
                   },
-                  scrollBeyondLastLine: false
+                  scrollBeyondLastLine: false,
+                  hideCursorInOverviewRuler: true,
+                  overviewRulerLanes: 0,
+                  scrollbar: {
+                    vertical: "hidden"
+                  }
                 }}
                 editorDidMount={handleEditorDidMount}
               />
