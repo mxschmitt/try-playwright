@@ -12,6 +12,9 @@ import Header from './components/Header'
 import ExampleWrapper from './components/ExampleWrapper'
 import useDarkMode from './hooks/useDarkMode';
 
+// eslint-disable-next-line import/no-webpack-loader-syntax
+import staticTypes from '!!raw-loader!./types.txt';
+
 const App: React.FunctionComponent = () => {
   const [darkMode] = useDarkMode()
   const [code, setCode] = useState<string>("")
@@ -68,8 +71,7 @@ const App: React.FunctionComponent = () => {
         }
       }
     });
-    const resp = await fetch("/types.d.ts")
-    monaco.languages.typescript.typescriptDefaults.addExtraLib(await resp.text())
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(staticTypes)
   }
   const RunButton: React.FunctionComponent = () => (
     <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
