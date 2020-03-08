@@ -1,4 +1,4 @@
-import React, { CSSProperties } from 'react'
+import React, { CSSProperties, useEffect } from 'react'
 import { IconButton, Icon, Notification } from 'rsuite'
 import clipboard from 'clipboard-polyfill'
 
@@ -26,6 +26,16 @@ const ShareButton: React.FunctionComponent<ShareButtonProps> = ({ code, style })
                 });
             })
     }
+    useEffect(() => {
+        const handler = function (e: KeyboardEvent): void {
+            if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+                e.preventDefault();
+                handleOnClick()
+            }
+        }
+        window.addEventListener("keydown", handler);
+        return (): void => window.removeEventListener("keydown", handler)
+    })
     return (<IconButton style={style} onClick={handleOnClick} icon={<Icon icon="share" />}>
         Share
     </IconButton>)
