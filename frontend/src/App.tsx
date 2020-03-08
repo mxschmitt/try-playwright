@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Grid, IconButton, Icon, Loader, Panel, Dropdown, Notification, Message } from 'rsuite'
 import MonacoEditor from 'react-monaco-editor';
-import { KeyCode, IKeyboardEvent, editor } from 'monaco-editor'
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { Examples } from './constants'
@@ -11,6 +10,9 @@ import ShareButton from './components/ShareButton'
 import Header from './components/Header'
 import ExampleWrapper from './components/ExampleWrapper'
 import useDarkMode from './hooks/useDarkMode';
+
+// eslint-disable-next-line import/no-webpack-loader-syntax
+import staticTypes from '!!raw-loader!./types.txt';
 
 const App: React.FunctionComponent = () => {
   const [darkMode] = useDarkMode()
@@ -27,7 +29,7 @@ const App: React.FunctionComponent = () => {
     } else {
       setCode(Examples[0].code)
     }
-    editor.defineTheme('custom-dark', {
+    monacoEditor.editor.defineTheme('custom-dark', {
       base: 'vs-dark',
       inherit: true,
       colors: {
@@ -59,8 +61,8 @@ const App: React.FunctionComponent = () => {
     editor.getModel()?.updateOptions({
       tabSize: 2
     })
-    editor.onKeyDown((event: IKeyboardEvent) => {
-      if (event.keyCode === KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
+    editor.onKeyDown((event: monacoEditor.IKeyboardEvent) => {
+      if (event.keyCode === monacoEditor.KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         event.stopPropagation()
         if (handleExecutionContainer.current) {
@@ -68,8 +70,7 @@ const App: React.FunctionComponent = () => {
         }
       }
     });
-    const resp = await fetch("/types.d.ts")
-    monaco.languages.typescript.typescriptDefaults.addExtraLib(await resp.text())
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(staticTypes)
   }
   const RunButton: React.FunctionComponent = () => (
     <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
