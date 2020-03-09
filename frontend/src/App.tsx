@@ -23,8 +23,7 @@ const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
   overviewRulerLanes: 0,
   scrollbar: {
     vertical: "hidden"
-  },
-  automaticLayout: true
+  }
 }
 
 const App: React.FunctionComponent = () => {
