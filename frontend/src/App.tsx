@@ -82,7 +82,7 @@ const App: React.FunctionComponent = () => {
         }
       }
     });
-    monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(staticTypes)
   }
   const RunButton: React.FunctionComponent = () => (
     <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
@@ -118,7 +118,7 @@ const App: React.FunctionComponent = () => {
             {example?.description && <Message description={example.description} style={{ margin: "0 20px 20px 20px", animation: "none" }} />}
             <MonacoEditor
               onChange={handleChangeCode}
-              language="javascript"
+              language="typescript"
               theme={darkMode ? "custom-dark" : "vs"}
               value={code}
               options={MONACO_OPTIONS}
