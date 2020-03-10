@@ -1,5 +1,5 @@
 import { VM } from 'vm2'
-import playwright from 'playwright-core'
+import playwright, { Browser, FirefoxBrowser, WebKitBrowser } from 'playwright-core'
 import { VideoCapture } from 'playwright-video'
 import fs from 'fs'
 import chokidar from 'chokidar';
@@ -47,19 +47,54 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     })
   }
 
-  // Chromium does not have '--cap-add=SYS_ADMIN' on Heroku, that's why we need
-  // to set '--no-sandbox' as default
-  playwright.chromium.launch = new Proxy(playwright.chromium.launch, {
-    apply: (target, thisArg, [options = {}]): Promise<CRBrowser> => {
-      return target.apply(thisArg, [{
-        ...options,
-        args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
-      }])
-    }
-  });
+  const preBrowserLaunch = async (browser: Browser): Promise<void> => {
+    setTimeout(() => {
+      if (browser.isConnected()) {
+        browser.close()
+        console.log("Browser was closed because it was not closed in the VM")
+      }
+    }, 30 * 1000)
+  }
+
+  const customPlaywright = Object.assign(playwright, {
+    chromium: Object.assign(playwright.chromium,
+      {
+        launch: new Proxy(playwright.chromium.launch, {
+          apply: async (target, thisArg, [options = {}]): Promise<CRBrowser> => {
+            // Chromium does not have '--cap-add=SYS_ADMIN' on Heroku, that's why we need
+            // to set '--no-sandbox' as default
+            const browser = await target.apply(thisArg, [{
+              ...options,
+              args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
+            }])
+            await preBrowserLaunch(browser)
+            return browser
+          }
+        })
+      }),
+    firefox: Object.assign(playwright.firefox,
+      {
+        launch: new Proxy(playwright.firefox.launch, {
+          apply: async (target, thisArg, args): Promise<FirefoxBrowser> => {
+            const browser = await target.apply(thisArg, args)
+            await preBrowserLaunch(browser)
+            return browser
+          }
+        })
+      }),
+    webkit: Object.assign(playwright.webkit, {
+      launch: new Proxy(playwright.webkit.launch, {
+        apply: async (target, thisArg, args): Promise<WebKitBrowser> => {
+          const browser = await target.apply(thisArg, args)
+          await preBrowserLaunch(browser)
+          return browser
+        }
+      })
+    })
+  })
 
   const sandbox = {
-    playwright,
+    playwright: customPlaywright,
     VideoCapture,
     console: {
       log: mitmConsoleLog("log"),
