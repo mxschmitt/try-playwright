@@ -7,8 +7,8 @@ interface LogEntry {
 
 interface FileWrapper {
   publicURL: string;
-  filename: string;
-  mimetype: string;
+  filename?: string;
+  extension: string;
 }
 
 interface APIResponse {

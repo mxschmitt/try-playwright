@@ -5,10 +5,10 @@ interface ResponseFileProps {
 }
 
 const ResponseFile: React.FunctionComponent<ResponseFileProps> = ({ file }) => {
-    const { publicURL, filename, mimetype } = file
+    const { publicURL, filename, extension } = file
     return <p style={{ marginBottom: 10 }}>
         {filename}
-        {mimetype === "application/pdf" ? <>
+        {extension === ".pdf" ? <>
             <object type="application/pdf" data={publicURL} style={{
                 display: "block",
                 width: "100%",
@@ -16,7 +16,7 @@ const ResponseFile: React.FunctionComponent<ResponseFileProps> = ({ file }) => {
             }} >
                 {filename}
             </object>
-        </> : mimetype.startsWith("video/") ? <>
+        </> : extension === ".mp4" ? <>
             <video autoPlay muted style={{ width: "100%" }} controls loop>
                 <source src={publicURL} type="video/mp4" />
             </video>
