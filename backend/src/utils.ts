@@ -1,9 +1,8 @@
 import { VM } from 'vm2'
-import { VideoCapture } from 'playwright-video'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 
-import { getPlaywright, registerFileListener } from "./playwright"
+import { getPlaywright, getPlaywrightVideo, registerFileListener } from "./playwright"
 
 const FILE_DELETION_TIME = 60 * 1000
 
@@ -41,8 +40,17 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   const getFiles = registerFileListener(browserId)
 
   const sandbox = {
-    playwright: getPlaywright(browserId),
-    VideoCapture,
+    require: (packageName: string): any => {
+      switch (packageName) {
+        case "playwright-video":
+          return getPlaywrightVideo(browserId)
+        case "playwright":
+        case "playwright-core":
+          return getPlaywright(browserId)
+        default:
+          throw new Error(`Package ${packageName} not recognized`)
+      }
+    },
     console: {
       log: mitmConsoleLog("log"),
       error: mitmConsoleLog("error"),

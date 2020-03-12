@@ -9,6 +9,7 @@ import { Page, FirefoxBrowser } from 'playwright-core/lib/api';
 import { ScreenshotOptions, PDFOptions } from 'playwright-core/lib/types';
 import { BufferType } from 'playwright-core/lib/platform';
 import { LaunchOptions } from 'playwright-core/lib/server/browserType';
+import { saveVideo } from 'playwright-video'
 
 const BROWSER_ID = Symbol('BROWSER_ID');
 
@@ -118,4 +119,13 @@ export const getPlaywright = (id: string): Playwright => {
   }
 
   return pw
+}
+
+export const getPlaywrightVideo = (browserId: string): any => {
+  return {
+    saveVideo: (page: Page, path: string): any => {
+      const publicPath = emitNewFile(browserId, path)
+      return saveVideo(page, publicPath)
+    }
+  }
 }

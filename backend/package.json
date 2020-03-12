@@ -14,7 +14,7 @@
     "mime-types": "^2.1.26",
     "playwright": "^0.11.1-next.1583993157193",
     "playwright-core": "^0.11.1-next.1583993157193",
-    "playwright-video": "^0.2.0",
+    "playwright-video": "^0.5.0",
     "typescript": "^3.8.3",
     "uuid": "^7.0.1",
     "vm2": "^3.8.4"
