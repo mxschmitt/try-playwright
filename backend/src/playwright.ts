@@ -83,7 +83,7 @@ const preBrowserLaunch = async (browser: Browser, id: string): Promise<void> => 
 
 export const getPlaywright = (id: string): Playwright => {
   const pw = new Playwright({
-    downloadPath: path.join(__dirname, "..", "node_modules", "playwright-core"),
+    downloadPath: path.join(__dirname, "..", "node_modules", "playwright"),
     browsers: ['webkit', 'chromium', 'firefox'],
     respectEnvironmentVariables: false,
   });
