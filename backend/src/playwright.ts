@@ -1,12 +1,14 @@
 import path from 'path'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import playwright, { Browser, FirefoxBrowser, WebKitBrowser } from 'playwright-core'
+import { Browser, WebKitBrowser } from 'playwright-core'
+import { Playwright } from 'playwright-core/lib/server/playwright'
 import { CRBrowser } from 'playwright-core/lib/chromium/crBrowser';
 import { CRPage } from 'playwright-core/lib/chromium/crPage';
-import { Page } from 'playwright-core/lib/api';
+import { Page, FirefoxBrowser } from 'playwright-core/lib/api';
 import { ScreenshotOptions, PDFOptions } from 'playwright-core/lib/types';
 import { BufferType } from 'playwright-core/lib/platform';
+import { LaunchOptions } from 'playwright-core/lib/server/browserType';
 
 const BROWSER_ID = Symbol('BROWSER_ID');
 
@@ -82,39 +84,41 @@ const preBrowserLaunch = async (browser: Browser, id: string): Promise<void> => 
   browser[BROWSER_ID] = id
 }
 
-export const getPlaywright = (id: string): typeof playwright => Object.assign(playwright, {
-  chromium: Object.assign(playwright.chromium,
-    {
-      launch: new Proxy(playwright.chromium.launch, {
-        apply: async (target, thisArg, [options = {}]): Promise<CRBrowser> => {
-          // Chromium does not have '--cap-add=SYS_ADMIN' on Heroku, that's why we need
-          // to set '--no-sandbox' as default
-          const browser = await target.apply(thisArg, [{
-            ...options,
-            args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
-          }])
-          await preBrowserLaunch(browser, id)
-          return browser
-        }
-      })
-    }),
-  firefox: Object.assign(playwright.firefox,
-    {
-      launch: new Proxy(playwright.firefox.launch, {
-        apply: async (target, thisArg, args): Promise<FirefoxBrowser> => {
-          const browser = await target.apply(thisArg, args)
-          await preBrowserLaunch(browser, id)
-          return browser
-        }
-      })
-    }),
-  webkit: Object.assign(playwright.webkit, {
-    launch: new Proxy(playwright.webkit.launch, {
-      apply: async (target, thisArg, args): Promise<WebKitBrowser> => {
-        const browser = await target.apply(thisArg, args)
-        await preBrowserLaunch(browser, id)
-        return browser
-      }
-    })
-  })
-})
+export const getPlaywright = (id: string): Playwright => {
+  const pw = new Playwright({
+    downloadPath: path.join(__dirname, "..", "node_modules", "playwright-core"),
+    browsers: ['webkit', 'chromium', 'firefox'],
+    respectEnvironmentVariables: false,
+  });
+  // @ts-ignore
+  const originalChromiumLaunch = pw.chromium.launch
+  // @ts-ignore
+  pw.chromium.launch = async (options: LaunchOptions = {}): Promise<CRBrowser> => {
+    const browser = await originalChromiumLaunch.apply(pw.chromium, [{
+      ...options,
+      args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
+    }])
+    await preBrowserLaunch(browser, id)
+    return browser
+  }
+
+  // @ts-ignore
+  const originalWebKitLaunch = pw.webkit.launch
+  // @ts-ignore
+  pw.webkit.launch = async (options: LaunchOptions = {}): Promise<WebKitBrowser> => {
+    const browser = await originalWebKitLaunch.apply(pw.webkit, [options])
+    await preBrowserLaunch(browser, id)
+    return browser
+  }
+
+  // @ts-ignore
+  const originalFirefoxLaunch = pw.firefox.launch
+  // @ts-ignore
+  pw.firefox.launch = async (options: LaunchOptions = {}): Promise<FirefoxBrowser> => {
+    const browser = await originalFirefoxLaunch.apply(pw.firefox, [options])
+    await preBrowserLaunch(browser, id)
+    return browser
+  }
+
+  return pw
+}
