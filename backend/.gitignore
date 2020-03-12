@@ -105,5 +105,3 @@ dist
 
 lib/
 yarn.lock
-public/*
-!public/.gitkeep
