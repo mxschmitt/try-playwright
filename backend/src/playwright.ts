@@ -17,30 +17,34 @@ const fileEmitter = new EventEmitter()
 export const registerFileListener = (browserId: string): (() => FileWrapper[]) => {
   const files: FileWrapper[] = []
   const handler = (file: FileWrapper): void => {
-    console.log(`Received file ${file.publicURL} for browser ${browserId}`)
     files.push(file)
   }
   fileEmitter.on(browserId, handler)
   return (): FileWrapper[] => {
+    fileEmitter.removeListener(browserId, handler)
     return files
   }
 }
 
 const superScreenshot = Page.prototype.screenshot;
 
+const emitNewFile = (browserId: string, originalFileName: string): string => {
+  const ext = path.extname(originalFileName)
+  const publicPath = path.join("public", uuidv4() + ext)
+  const event: FileWrapper = {
+    filename: originalFileName,
+    publicURL: publicPath,
+    extension: ext
+  }
+  fileEmitter.emit(browserId, event)
+  return publicPath
+}
+
 Page.prototype.screenshot = async function (options?: ScreenshotOptions): Promise<BufferType> {
   if (options?.path) {
     // @ts-ignore
     const browserId = this.context()._browser[BROWSER_ID];
-    const ext = path.extname(options.path)
-    const publicPath = path.join("public", uuidv4() + ext)
-    const event: FileWrapper = {
-      filename: options.path,
-      publicURL: publicPath,
-      extension: ext
-    }
-    console.log(`Sending file ${options.path} for browser ${browserId}`)
-    fileEmitter.emit(browserId, event)
+    const publicPath = emitNewFile(browserId, options.path)
     const buffer = await superScreenshot.call(this, {
       ...options,
       path: publicPath
@@ -56,14 +60,7 @@ CRPage.prototype.pdf = async function (options?: PDFOptions): Promise<BufferType
   if (options?.path && superCRPDF) {
     // @ts-ignore
     const browserId = this.page().context()._browser[BROWSER_ID];
-    const ext = path.extname(options.path)
-    const publicPath = path.join("public", uuidv4() + ext)
-    const event: FileWrapper = {
-      filename: options.path,
-      publicURL: publicPath,
-      extension: ext
-    }
-    fileEmitter.emit(browserId, event)
+    const publicPath = emitNewFile(browserId, options.path)
     const buffer = await superCRPDF.call(this, {
       ...options,
       path: publicPath
