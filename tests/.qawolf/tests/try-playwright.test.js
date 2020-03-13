@@ -25,7 +25,7 @@ const executeExample = async (nth) => {
 }
 
 const getImageCount = () => page.$$eval(".rs-panel-body > p img", (images) => images.length)
-const getFileNames = () => page.$$eval(".rs-panel-body > p", (elements) => elements.map(el => el.innerText))
+const getFileNames = () => page.$$eval(".rs-panel-body span.file-name", (elements) => elements.map(el => el.innerText))
 const getConsoleLines = () => page.$eval(".rs-panel-body code", (code) => code.innerText.split(/\n/).filter(Boolean))
 
 describe('Examples', () => {
@@ -43,7 +43,7 @@ describe('Examples', () => {
     const imageNames = await getFileNames()
     expect(imageNames).toEqual(["colosseum-iphone.png"])
   })
-  it("3: should be able to generaete a PDF file", async () => {
+  it("3: should be able to generate a PDF file", async () => {
     await executeExample(3)
     const imageCount = await page.$$eval(".rs-panel-body > p object", (objects) => objects.length)
     expect(imageCount).toBe(1)
