@@ -1,18 +1,12 @@
 import express from 'express';
-import expressStaticGzip from "express-static-gzip";
 import { runUntrustedCode } from './utils';
 import * as Sentry from '@sentry/node'
-
-const compressionOptions: expressStaticGzip.ExpressStaticGzipOptions = {
-  enableBrotli: true,
-};
 
 (async (): Promise<void> => {
   const app = express()
 
   app.use(express.json())
-  app.use(expressStaticGzip('./frontend', compressionOptions));
-  app.use("/public/", expressStaticGzip('./public', compressionOptions))
+  app.use("/public/", express.static('./public'))
 
   if (process.env.NODE_ENV === "production" && process.env.BACKEND_SENTRY_DSN) {
     Sentry.init({ dsn: process.env.BACKEND_SENTRY_DSN });

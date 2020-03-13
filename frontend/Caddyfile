@@ -1,0 +1,10 @@
+try.playwright.tech
+
+# Set this path to your site's directory.
+root * /frontend
+
+# Enable the static file server.
+file_server
+
+# Another common task is to set up a reverse proxy:
+reverse_proxy backend:8080
