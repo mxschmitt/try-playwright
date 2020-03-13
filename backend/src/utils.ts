@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { getPlaywright, getPlaywrightVideo, registerFileListener } from "./playwright"
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const packageJson = require("package.json")
+const packageJson = require("../package.json")
 
 const FILE_DELETION_TIME = 60 * 1000
 const PLAYWRIGHT_VERSION = packageJson.dependencies["playwright-core"]
