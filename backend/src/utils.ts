@@ -40,7 +40,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   const getFiles = registerFileListener(browserId)
 
   const sandbox = {
-    require: (packageName: string): any => {
+    require: (packageName: string): unknown => {
       switch (packageName) {
         case "playwright-video":
           return getPlaywrightVideo(browserId)
