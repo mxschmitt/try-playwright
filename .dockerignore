@@ -3,4 +3,5 @@ frontend/build
 backend/node_modules
 backend/lib
 node_modules
+tests/node_modules
 .git
