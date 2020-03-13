@@ -24,7 +24,10 @@ const executeExample = async (nth) => {
   await page.waitForResponse(resp => resp.url().endsWith("/api/v1/run"))
 }
 
-const getImageCount = () => page.$$eval(".rs-panel-body > p img", (images) => images.length)
+const getImageCount = async () => {
+  await page.waitFor(".rs-panel-body > p img")
+  return await page.$$eval(".rs-panel-body > p img", (images) => images.length)
+}
 const getFileNames = () => page.$$eval(".rs-panel-body span.file-name", (elements) => elements.map(el => el.innerText))
 const getConsoleLines = async () => {
   await page.waitFor(".rs-panel-body code")
@@ -48,16 +51,17 @@ describe('Examples', () => {
   })
   it("3: should be able to generate a PDF file", async () => {
     await executeExample(3)
-    const imageCount = await page.$$eval(".rs-panel-body > p object", (objects) => objects.length)
-    expect(imageCount).toBe(1)
+    await page.waitFor(".rs-panel-body object")
+    const pdfCount = await page.$$eval(".rs-panel-body > p object", (objects) => objects.length)
+    expect(pdfCount).toBe(1)
     const imageNames = await getFileNames()
     expect(imageNames).toEqual(["document.pdf"])
   })
   it("4: should be able to record via 'playwright-video'", async () => {
     await executeExample(4)
-    await page.waitFor("video")
-    const imageCount = await page.$$eval(".rs-panel-body > p video", (videos) => videos.length)
-    expect(imageCount).toBe(1)
+    await page.waitFor(".rs-panel-body video")
+    const videoCount = await page.$$eval(".rs-panel-body > p video", (videos) => videos.length)
+    expect(videoCount).toBe(1)
     const imageNames = await getFileNames()
     expect(imageNames).toEqual(["/tmp/video.mp4"])
   })
