@@ -27798,9 +27798,13 @@ declare module 'playwright-core/webkit/wkWorkers' {
  * Custom modification
  */
 
-const { Playwright } = import('playwright-core/server/playwright')
-
-class CustomPlaywright extends Playwright {
+interface CustomPlaywright {
+    devices: typeof import("playwright-core/deviceDescriptors").DeviceDescriptors;
+    errors: { TimeoutError: typeof import('playwright-core/errors').TimeoutError};
+    chromium: import('playwright-core/server/chromium').Chromium;
+    firefox: import('playwright-core/server/firefox').Firefox;
+    webkit: import('playwright-core/server/webkit').WebKit;
+    selectors: import('playwright-core/api').Selectors;
     /**
      * Fallback for string loops to the generic BrowserType interface
      */
