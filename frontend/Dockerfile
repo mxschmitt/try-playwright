@@ -1,4 +1,4 @@
-FROM node:13.8.0-buster-slim as client-builder
+FROM node:13.10.1-buster-slim as client-builder
 
 WORKDIR /frontend
 
