@@ -158,6 +158,7 @@ const App: React.FunctionComponent = () => {
               </React.Fragment>)}</code>
               {resp.files.length > 0 && <h4>Files</h4>}
               {resp.files.map((file, idx) => <ResponseFile file={file} key={idx} />)}
+              <p>Duration of {resp.duration} ms with Playwright version {resp.version.replace(/[\^|=]/, "")}.</p>
             </>}
           </Panel>
         </Col>

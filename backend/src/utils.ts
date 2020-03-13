@@ -1,10 +1,12 @@
 import { VM } from 'vm2'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
+import packageJson from '../package.json'
 
 import { getPlaywright, getPlaywrightVideo, registerFileListener } from "./playwright"
 
 const FILE_DELETION_TIME = 60 * 1000
+const PLAYWRIGHT_VERSION = packageJson.dependencies["playwright-core"]
 
 export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   if (!code) {
@@ -59,6 +61,8 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     setTimeout,
   };
 
+  const executionStart = new Date().getTime()
+
   await new VM({
     timeout: 30 * 1000,
     sandbox,
@@ -74,6 +78,8 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   })
 
   return {
+    version: PLAYWRIGHT_VERSION,
+    duration: Math.abs(new Date().getTime() - executionStart),
     files,
     logs: logEntries
   }

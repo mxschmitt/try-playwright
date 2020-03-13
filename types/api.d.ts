@@ -12,6 +12,8 @@ interface FileWrapper {
 }
 
 interface APIResponse {
+  version: string;
+  duration: number;
   files: FileWrapper[];
   logs: LogEntry[];
 }
