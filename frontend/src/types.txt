@@ -27798,9 +27798,18 @@ declare module 'playwright-core/webkit/wkWorkers' {
  * Custom modification
  */
 
+const { Playwright } = import('playwright-core/server/playwright')
+
+class CustomPlaywright extends Playwright {
+    /**
+     * Fallback for string loops to the generic BrowserType interface
+     */
+    [browserType: string]: import('playwright-core/server/browserType').BrowserType
+}
+
 interface RequireTypes {
-    "playwright": import('playwright-core/server/playwright').Playwright;
-    "playwright-core": import('playwright-core/server/playwright').Playwright;
+    "playwright": CustomPlaywright;
+    "playwright-core": CustomPlaywright;
     "playwright-video": {
         saveVideo: (page: import('playwright-core/page').Page, path: string):void
     };
