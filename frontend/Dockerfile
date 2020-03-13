@@ -6,7 +6,10 @@ COPY frontend/package.json /frontend
 COPY frontend/package-lock.json /frontend
 RUN npm install
 
-COPY frontend/ /frontend/
+COPY frontend/config-overrides.js frontend/tsconfig.json /frontend/
+COPY frontend/public /frontend/public
+COPY frontend/src /frontend/src
+
 COPY types/ /types
 RUN npm run build
 
