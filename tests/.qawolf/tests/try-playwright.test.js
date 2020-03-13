@@ -26,7 +26,10 @@ const executeExample = async (nth) => {
 
 const getImageCount = () => page.$$eval(".rs-panel-body > p img", (images) => images.length)
 const getFileNames = () => page.$$eval(".rs-panel-body span.file-name", (elements) => elements.map(el => el.innerText))
-const getConsoleLines = () => page.$eval(".rs-panel-body code", (code) => code.innerText.split(/\n/).filter(Boolean))
+const getConsoleLines = async () => {
+  await page.waitFor(".rs-panel-body code")
+  return await page.$eval(".rs-panel-body code", (code) => code.innerText.split(/\n/).filter(Boolean))
+}
 
 describe('Examples', () => {
   it("1: should be able to make screenshots in all browsers", async () => {
