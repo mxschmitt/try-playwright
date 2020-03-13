@@ -1,9 +1,11 @@
 import { VM } from 'vm2'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
-import packageJson from '../package.json'
 
 import { getPlaywright, getPlaywrightVideo, registerFileListener } from "./playwright"
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const packageJson = require("package.json")
 
 const FILE_DELETION_TIME = 60 * 1000
 const PLAYWRIGHT_VERSION = packageJson.dependencies["playwright-core"]

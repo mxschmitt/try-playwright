@@ -5,8 +5,7 @@
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "lib",
-    "resolveJsonModule": true
+    "outDir": "lib"
   },
   "files": [
     "../types/api.d.ts"
