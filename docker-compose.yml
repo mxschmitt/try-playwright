@@ -1,0 +1,19 @@
+version: '3'
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    # will be injected via the .env file
+    environment:
+      - BACKEND_SENTRY_DSN
