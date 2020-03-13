@@ -1,4 +1,4 @@
-try.playwright.tech
+{$SITE_ADDRESS}
 
 root * /frontend
 

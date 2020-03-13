@@ -5,6 +5,20 @@ on:
       - master
   pull_request:
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SITE_ADDRESS: http://localhost
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+    - name: Build Docker images
+      run: docker-compose build
+    - name: Start Docker containers
+      run: docker-compose up -d
+    - name: Run e2e tests
+      run: npx qawolf test
   build:
     runs-on: ubuntu-latest
     steps:
