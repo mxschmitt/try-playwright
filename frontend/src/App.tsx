@@ -35,9 +35,12 @@ const App: React.FunctionComponent = () => {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    const localStorageCode = window.localStorage.getItem("code")
     if (urlParams.has("code")) {
       const newCode = decodeCode(urlParams.get("code"))
       setCode(newCode)
+    } else if (localStorageCode) {
+      setCode(localStorageCode)
     } else {
       setCode(Examples[0].code)
     }
@@ -50,6 +53,14 @@ const App: React.FunctionComponent = () => {
       rules: []
     });
   }, [])
+
+  useEffect((): (() => void) => {
+    const handler = (): void => {
+      window.localStorage.setItem("code", code)
+    }
+    window.addEventListener("unload", handler)
+    return (): void => window.removeEventListener("unload", handler)
+  })
 
   const handleChangeCode = (newValue: string): void => setCode(newValue)
   const handleExecution = async (): Promise<void> => {
