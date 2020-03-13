@@ -48,6 +48,7 @@ describe('Examples', () => {
   })
   it("3: should be able to generate a PDF file", async () => {
     await executeExample(3)
+    await page.waitFor(".rs-panel-body object")
     const imageCount = await page.$$eval(".rs-panel-body > p object", (objects) => objects.length)
     expect(imageCount).toBe(1)
     const imageNames = await getFileNames()
@@ -55,7 +56,7 @@ describe('Examples', () => {
   })
   it("4: should be able to record via 'playwright-video'", async () => {
     await executeExample(4)
-    await page.waitFor("video")
+    await page.waitFor(".rs-panel-body video")
     const imageCount = await page.$$eval(".rs-panel-body > p video", (videos) => videos.length)
     expect(imageCount).toBe(1)
     const imageNames = await getFileNames()
