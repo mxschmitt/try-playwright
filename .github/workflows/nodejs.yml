@@ -5,6 +5,31 @@ on:
       - master
   pull_request:
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SITE_ADDRESS: http://localhost
+    steps:
+    - name: Install dependencies
+      run: |
+          sudo apt update
+          # chromium dependencies
+          sudo apt-get install libgbm1
+          # webkit dependencies
+          sudo apt-get install libwoff1 libopus0 libwebp6 libwebpdemux2 libenchant1c2a libgudev-1.0-0 libsecret-1-0 libhyphen0 libgdk-pixbuf2.0-0 libegl1 libgles2 libevent-2.1-6 libnotify4 libvpx5 libxslt1.1
+    - uses: actions/checkout@v2
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+    - name: Install dependencies
+      run: npm install
+      working-directory: tests
+    - name: Build Docker images
+      run: docker-compose build
+    - name: Start Docker containers
+      run: docker-compose up -d
+    - name: Run e2e tests
+      run: npx qawolf test --headless
+      working-directory: tests
   build:
     runs-on: ubuntu-latest
     steps:
