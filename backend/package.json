@@ -8,14 +8,13 @@
   "license": "MIT",
   "dependencies": {
     "@sentry/node": "^5.13.0",
-    "chokidar": "^3.3.1",
     "express": "^4.17.1",
     "express-static-gzip": "^2.0.6",
     "ffmpeg-static": "^4.0.1",
     "mime-types": "^2.1.26",
-    "playwright": "^0.11.1",
-    "playwright-core": "^0.11.1",
-    "playwright-video": "^0.2.0",
+    "playwright": "^0.11.1-next.1583993157193",
+    "playwright-core": "^0.11.1-next.1583993157193",
+    "playwright-video": "^0.5.0",
     "typescript": "^3.8.3",
     "uuid": "^7.0.1",
     "vm2": "^3.8.4"

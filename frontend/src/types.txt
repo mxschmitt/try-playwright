@@ -27798,17 +27798,12 @@ declare module 'playwright-core/webkit/wkWorkers' {
  * Custom modification
  */
 
-declare const playwright: {
-    devices: typeof import("playwright-core/deviceDescriptors").DeviceDescriptors;
-    errors: { TimeoutError: typeof import('playwright-core/errors').TimeoutError};
-    chromium: import('playwright-core/server/chromium').Chromium;
-    firefox: import('playwright-core/server/firefox').Firefox;
-    webkit: import('playwright-core/server/webkit').WebKit;
-    selectors: import('playwright-core/api').Selectors;
-    /**
-     * Fallback for string loops to the generic BrowserType interface
-     */
-    [browserType: string]: import('playwright-core/server/browserType').BrowserType
+interface RequireTypes {
+    "playwright": import('playwright-core/server/playwright').Playwright;
+    "playwright-core": import('playwright-core/server/playwright').Playwright;
+    "playwright-video": {
+        saveVideo: (page: import('playwright-core/page').Page, path: string):void
+    };
 }
 
-declare const VideoCapture = any
+declare function require <K extends keyof RequireTypes>(packageName: K): RequireTypes[K];

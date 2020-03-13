@@ -28,4 +28,6 @@ COPY --from=client-builder /frontend/build /backend/frontend
 
 ENV NODE_ENV=production
 
+RUN mkdir -p /backend/public
+
 CMD ["node", "/backend/lib/index.js"]

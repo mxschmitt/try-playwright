@@ -83,6 +83,9 @@ const App: React.FunctionComponent = () => {
       }
     });
     monaco.languages.typescript.typescriptDefaults.addExtraLib(staticTypes)
+    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+      diagnosticCodesToIgnore: [80005]
+    })
   }
   const RunButton: React.FunctionComponent = () => (
     <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
