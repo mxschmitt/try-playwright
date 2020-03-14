@@ -40,7 +40,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     console[mode](...args)
     logEntries.push({
       mode: mode,
-      args: args.map(arg => arg.toString ? arg.toString() : arg)
+      args: args.map(arg => arg?.toString ? arg.toString() : arg)
     })
   }
 
