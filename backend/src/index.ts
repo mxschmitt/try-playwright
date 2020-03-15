@@ -52,16 +52,20 @@ import { ShareStore } from './store'
 
   const port = process.env.PORT || 8080;
 
-  const server = app.listen(port, () => {
-    console.log(`Server started at http://localhost:${port}`);
-  });
+  const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
 
-  process.on('SIGINT', async () => {
+  signals.forEach(signal => process.on(signal, () => {
     console.info('SIGINT signal received.');
     console.log('Closing http server.');
-    server.close(() => {
+    server.close(async () => {
       console.log('Http server closed.');
+      console.log("Closing database")
+      await store.close()
       process.exit(0)
     });
+  }));
+
+  const server = app.listen(port, () => {
+    console.log(`Server started at http://localhost:${port}`);
   });
 })();

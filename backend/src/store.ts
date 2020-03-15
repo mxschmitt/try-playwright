@@ -6,6 +6,9 @@ export class ShareStore {
     this.db = await sqlite.open(dbPath);
     this.db.run(`CREATE TABLE IF NOT EXISTS shares (id TEXT NOT NULL PRIMARY KEY, code TEXT UNIQUE)`)
   }
+  async close(): Promise<void> {
+    return this.db.close()
+  }
   async get(id: string): Promise<string | null> {
     const rows = await this.db.get('SELECT code FROM shares WHERE id = ?', id)
     if (!rows) {
