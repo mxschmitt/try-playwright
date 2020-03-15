@@ -20,8 +20,7 @@
     "react-monaco-editor": "0.34.0",
     "react-scripts": "3.4.0",
     "rsuite": "4.3.1",
-    "typescript": "3.8.3",
-    "workbox-webpack-plugin": "5.0.0"
+    "typescript": "3.8.3"
   },
   "scripts": {
     "start": "react-app-rewired start",
@@ -45,7 +44,6 @@
   "devDependencies": {
     "@sentry/types": "5.14.2",
     "@types/lz-string": "1.3.33",
-    "@types/workbox-sw": "4.3.0",
     "raw-loader": "4.0.0",
     "react-app-rewired": "2.1.5"
   }
