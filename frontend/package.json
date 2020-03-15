@@ -21,7 +21,7 @@
     "react-scripts": "3.4.0",
     "rsuite": "4.3.1",
     "typescript": "3.8.3",
-    "workbox-webpack-plugin": "^5.0.0"
+    "workbox-webpack-plugin": "5.0.0"
   },
   "scripts": {
     "start": "react-app-rewired start",
