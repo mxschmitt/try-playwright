@@ -152,7 +152,7 @@ const App: React.FunctionComponent = () => {
           >
             {resp && <>
               {resp.logs.length > 0 && <h4>Logs</h4>}
-              <code>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
+              <code style={{ wordBreak: "break-all" }}>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
                 {entry.args.join(" ")}
                 <br />
               </React.Fragment>)}</code>
