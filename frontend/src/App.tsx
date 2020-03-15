@@ -4,7 +4,7 @@ import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { Examples } from './constants'
-import { decodeCode, runCode, trackEvent } from './utils'
+import { decodeCode, runCode, trackEvent, fetchSharedCode } from './utils'
 import ResponseFile from './components/ResponseFile'
 import ShareButton from './components/ShareButton'
 import Header from './components/Header'
@@ -36,9 +36,21 @@ const App: React.FunctionComponent = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const localStorageCode = window.localStorage.getItem("code")
+    const fetchSharedCodeWrapper = async (key: string|null): Promise<void> => {
+      if (!key) {
+        return
+      }
+      const sharedCode = await fetchSharedCode(key)
+      if (sharedCode) {
+        setCode(sharedCode)
+      }
+    }
+    // TODO: remove (if: code) after a couple of months. Was kept for backwards compatibility
     if (urlParams.has("code")) {
       const newCode = decodeCode(urlParams.get("code"))
       setCode(newCode)
+    } else if (urlParams.has("s")) {
+      fetchSharedCodeWrapper(urlParams.get("s"))
     } else if (localStorageCode) {
       setCode(localStorageCode)
     } else {

@@ -15,5 +15,8 @@ RUN npm run build
 ENV NODE_ENV=production
 
 RUN mkdir -p /backend/public
+RUN mkdir -p /backend/data
+
+VOLUME [ "/backend/data" ]
 
 CMD ["node", "/backend/lib/index.js"]

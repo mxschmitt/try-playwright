@@ -16,6 +16,8 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    volumes:
+      - ${PWD}/data:/backend/data
     # will be injected via the .env file
     environment:
       - BACKEND_SENTRY_DSN
