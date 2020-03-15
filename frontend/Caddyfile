@@ -6,9 +6,5 @@ file_server
 
 log
 
-header /service-worker.js {
-	Cache-Control no-cache
-}
-
 reverse_proxy /api/*  backend:8080
 reverse_proxy /public/*  backend:8080
