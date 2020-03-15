@@ -15,6 +15,8 @@
     "playwright": "^0.11.1-next.1583993157193",
     "playwright-core": "^0.11.1-next.1583993157193",
     "playwright-video": "^0.5.0",
+    "sqlite": "^3.0.3",
+    "sqlite3": "^4.1.1",
     "typescript": "^3.8.3",
     "uuid": "^7.0.1",
     "vm2": "^3.8.4"
@@ -31,6 +33,7 @@
     "@types/express": "4.17.3",
     "@types/mime-types": "2.1.0",
     "@types/node": "13.9.1",
+    "@types/sqlite3": "^3.1.6",
     "@types/uuid": "7.0.0",
     "nodemon": "2.0.2"
   }

@@ -1,9 +1,13 @@
 import express from 'express';
-import { runUntrustedCode } from './utils';
 import * as Sentry from '@sentry/node'
+
+import { runUntrustedCode } from './utils';
+import { ShareStore } from './store'
 
 (async (): Promise<void> => {
   const app = express()
+  const store = new ShareStore()
+  await store.init("data/db.sqlite")
 
   app.use(express.json())
   app.use("/public/", express.static('./public'))
@@ -23,6 +27,26 @@ import * as Sentry from '@sentry/node'
     } catch (error) {
       console.log("Errored request", error)
       resp.status(500).send({ error: error.toString() })
+    }
+  })
+
+  app.get("/api/v1/share/get/:id", async (req: express.Request, resp: express.Response) => {
+    try {
+      const code = await store.get(req.params.id)
+      resp.send({ code })
+    } catch (err) {
+      console.error("Could not get share key", err)
+      resp.status(404).send({})
+    }
+  })
+
+  app.post("/api/v1/share/create", async (req: express.Request, resp: express.Response) => {
+    try {
+      const key = await store.set(req.body?.code)
+      resp.send({ key })
+    } catch (err) {
+      console.error("Could not create share key", err)
+      resp.status(500).send({})
     }
   })
 

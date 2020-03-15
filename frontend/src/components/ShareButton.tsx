@@ -2,17 +2,29 @@ import React, { CSSProperties, useEffect } from 'react'
 import { IconButton, Icon, Notification } from 'rsuite'
 import clipboard from 'clipboard-polyfill'
 
-import { encodeCode } from '../utils';
-
 interface ShareButtonProps {
     code: string;
     style: CSSProperties;
 }
 
 const ShareButton: React.FunctionComponent<ShareButtonProps> = ({ code, style }) => {
-    const handleOnClick = (): void => {
-        const encodedCode = encodeCode(code)
-        const newURL = `${window.location.origin}${window.location.pathname}?code=${encodedCode}`
+    const handleOnClick = async (): Promise<void> => {
+        const resp = await fetch("/api/v1/share/create", {
+            method:"POST",
+            body: JSON.stringify({
+                code
+            }),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+        if (!resp.ok) {
+            Notification.error({
+                title: "Creating of a Share link was not successfull",
+            });
+        }
+        const body = await resp.json()
+        const newURL = `${window.location.origin}${window.location.pathname}?s=${body?.key}`
         window.history.pushState(null, "Try Playwright", newURL)
         clipboard.writeText(newURL)
             .then(() => {

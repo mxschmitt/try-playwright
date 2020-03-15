@@ -1,14 +1,19 @@
 import lzString from "lz-string";
 
-export const encodeCode = (code: string): string => {
-  return lzString.compressToEncodedURIComponent(code)
-}
-
 export const decodeCode = (code: string | null): string => {
   if (!code) {
     return ""
   }
   return lzString.decompressFromEncodedURIComponent(code)
+}
+
+export const fetchSharedCode = async (code: string): Promise<string | null> => {
+  const resp = await fetch(`/api/v1/share/get/${code}`)
+  if (!resp.ok) {
+    return null
+  }
+  const body = await resp.json()
+  return body?.code
 }
 
 export const runCode = async (code: string): Promise<APIResponse> => {
