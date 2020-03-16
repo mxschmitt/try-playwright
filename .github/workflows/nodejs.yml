@@ -43,7 +43,7 @@ jobs:
     - name: Lint project
       run: npm run lint
       env:
-        CI: true
+        CI: "true"
     - name: Install frontend dependencies
       working-directory: frontend
       run: npm install
@@ -53,6 +53,9 @@ jobs:
     - name: Install backend dependencies
       working-directory: backend
       run: npm install
+    - name: Run backend tests
+      working-directory: backend
+      run: npm run test
     - name: Build backend
       working-directory: backend
       run: npm run build

@@ -29,7 +29,7 @@ export const registerFileListener = (browserId: string): (() => FileWrapper[]) =
 
 const superScreenshot = Page.prototype.screenshot;
 
-const emitNewFile = (browserId: string, originalFileName: string): string => {
+export const emitNewFile = (browserId: string, originalFileName: string): string => {
   const ext = path.extname(originalFileName)
   const publicPath = path.join("public", uuidv4() + ext)
   const event: FileWrapper = {
