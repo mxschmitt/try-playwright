@@ -44,7 +44,7 @@ export const Examples: Example[] = [
 })();`
   }, {
     title: "Generate a PDF",
-    description:"This example will search for 'Google' on Google and stores the rendered site as a PDF.",
+    description: "This example will search for 'Google' on Google and stores the rendered site as a PDF.",
     code: `const playwright = require("playwright");
 
 (async () => {
