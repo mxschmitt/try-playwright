@@ -7,11 +7,11 @@ export interface Example {
 export const Examples: Example[] = [
   {
     title: "Page screenshot",
-    description: "This code snippet navigates to whatsmyuseragent.org in Chromium, Firefox and WebKit, and saves 3 screenshots.",
+    description: "This code snippet navigates to whatsmyuseragent.org in Chromium and WebKit, and saves 3 screenshots.",
     code: `const playwright = require("playwright");
 
 (async () => {
-  for (const browserType of ['chromium', 'firefox', 'webkit']) {
+  for (const browserType of ['chromium', 'webkit']) {
     const browser = await playwright[browserType].launch();
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -44,7 +44,7 @@ export const Examples: Example[] = [
 })();`
   }, {
     title: "Generate a PDF",
-    description:"This example will search for 'Google' on Google and stores the rendered site as a PDF.",
+    description: "This example will search for 'Google' on Google and stores the rendered site as a PDF.",
     code: `const playwright = require("playwright");
 
 (async () => {
@@ -83,11 +83,11 @@ const { saveVideo } = require('playwright-video');
 })();`
   }, {
     title: "Evaluate in browser context",
-    description: "This code snippet navigates to example.com in Firefox, and executes a script in the page context.",
+    description: "This code snippet navigates to example.com in WebKit, and executes a script in the page context.",
     code: `const playwright = require("playwright");
 
 (async () => {
-  const browser = await playwright.firefox.launch();
+  const browser = await playwright.webkit.launch();
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto('https://www.example.com/');
