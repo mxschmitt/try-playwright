@@ -38,9 +38,9 @@ describe('Examples', () => {
   it("1: should be able to make screenshots in all browsers", async () => {
     await executeExample(1)
     const imageCount = await getImageCount()
-    expect(imageCount).toBe(3)
+    expect(imageCount).toBe(2)
     const imageNames = await getFileNames()
-    expect(imageNames).toEqual(["example-chromium.png", "example-firefox.png", "example-webkit.png"])
+    expect(imageNames).toEqual(["example-chromium.png", "example-webkit.png"])
   })
   it("2: should be able to set the geolocation", async () => {
     await executeExample(2)
