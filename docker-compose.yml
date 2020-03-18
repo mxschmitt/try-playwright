@@ -16,6 +16,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    restart: always
     volumes:
       - ${PWD}/data:/backend/data
     # will be injected via the .env file

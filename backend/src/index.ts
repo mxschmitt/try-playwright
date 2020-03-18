@@ -17,6 +17,10 @@ import { ShareStore } from './store'
     app.use(Sentry.Handlers.requestHandler());
   }
 
+  app.get("/api/v1/health", async (req: express.Request, resp: express.Response) => {
+    resp.status(200).send("OK")
+  })
+
   app.post("/api/v1/run", async (req: express.Request, resp: express.Response) => {
     const requestPayload = req.body
     try {
@@ -68,4 +72,4 @@ import { ShareStore } from './store'
   const server = app.listen(port, () => {
     console.log(`Server started at http://localhost:${port}`);
   });
-})();
+})().catch(console.error)
