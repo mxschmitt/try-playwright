@@ -15,25 +15,6 @@ const limiter = new Bottleneck({
   maxConcurrent: 5
 });
 
-// https://github.com/patriksimek/vm2/issues/268#issuecomment-593536163
-const vm2SecurityPatch = (vm: VM): void => {
-  // @ts-ignore
-  const internal = vm._internal;
-  const old = internal.Decontextify.object;
-  const handler = { __proto__: null };
-  // @ts-ignore
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  internal.Decontextify.object = (object, traps, deepTraps, flags, mock) => {
-    const value = old(object, traps, deepTraps, flags, mock);
-    // @ts-ignore
-    const better = new Proxy(value, handler);
-    internal.Decontextify.proxies.set(object, better);
-    internal.Contextify.proxies.set(better, object);
-    return better;
-  };
-};
-
-
 export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   if (!code) {
     throw new Error("no code specified")
@@ -93,8 +74,6 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     timeout: 30 * 1000,
     sandbox,
   })
-
-  vm2SecurityPatch(vm)
 
   await limiter.schedule(() => vm.run(code));
 

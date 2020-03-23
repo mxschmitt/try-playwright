@@ -2,13 +2,21 @@ import path from 'path'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
 import { Browser, WebKitBrowser } from 'playwright-core'
+// @ts-ignore
 import { Playwright } from 'playwright-core/lib/server/playwright'
+// @ts-ignore
 import { CRBrowser } from 'playwright-core/lib/chromium/crBrowser';
+// @ts-ignore
 import { CRPage } from 'playwright-core/lib/chromium/crPage';
+// @ts-ignore
 import { Page, FirefoxBrowser } from 'playwright-core/lib/api';
+// @ts-ignore
 import { ScreenshotOptions, PDFOptions } from 'playwright-core/lib/types';
+// @ts-ignore
 import { BufferType } from 'playwright-core/lib/platform';
+// @ts-ignore
 import { LaunchOptions } from 'playwright-core/lib/server/browserType';
+// @ts-nocheck
 import { saveVideo, PageVideoCapture } from 'playwright-video'
 
 const BROWSER_ID = Symbol('BROWSER_ID');
@@ -82,12 +90,17 @@ const preBrowserLaunch = async (browser: Browser, id: string): Promise<void> => 
   browser[BROWSER_ID] = id
 }
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const downloadedBrowsers = require(path.join(__dirname, "..", "node_modules", "playwright", ".downloaded-browsers.json"),)
+
 export const getPlaywright = (id: string): Playwright => {
   const pw = new Playwright({
-    downloadPath: path.join(__dirname, "..", "node_modules", "playwright"),
     browsers: ['webkit', 'chromium', 'firefox'],
-    respectEnvironmentVariables: false,
   });
+  pw.chromium._executablePath = downloadedBrowsers.crExecutablePath;
+  pw.firefox._executablePath = downloadedBrowsers.ffExecutablePath;
+  pw.webkit._executablePath = downloadedBrowsers.wkExecutablePath;
+
   // @ts-ignore
   const originalChromiumLaunch = pw.chromium.launch
   // @ts-ignore
