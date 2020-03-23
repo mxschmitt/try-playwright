@@ -1,22 +1,14 @@
 import path from 'path'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import { Browser, WebKitBrowser } from 'playwright-core'
+import playwright from 'playwright-core'
+import { Browser, WebKitBrowser, BrowserTypeLaunchOptions, PagePdfOptions, PageScreenshotOptions, ChromiumBrowser, FirefoxBrowser, Page as PageType } from 'playwright-core'
 // @ts-ignore
 import { Playwright } from 'playwright-core/lib/server/playwright'
 // @ts-ignore
-import { CRBrowser } from 'playwright-core/lib/chromium/crBrowser';
-// @ts-ignore
 import { CRPage } from 'playwright-core/lib/chromium/crPage';
 // @ts-ignore
-import { Page, FirefoxBrowser } from 'playwright-core/lib/api';
-// @ts-ignore
-import { ScreenshotOptions, PDFOptions } from 'playwright-core/lib/types';
-// @ts-ignore
-import { BufferType } from 'playwright-core/lib/platform';
-// @ts-ignore
-import { LaunchOptions } from 'playwright-core/lib/server/browserType';
-// @ts-nocheck
+import { Page } from 'playwright-core/lib/api';
 import { saveVideo, PageVideoCapture } from 'playwright-video'
 
 const BROWSER_ID = Symbol('BROWSER_ID');
@@ -35,7 +27,7 @@ export const registerFileListener = (browserId: string): (() => FileWrapper[]) =
   }
 }
 
-const superScreenshot = Page.prototype.screenshot;
+const superScreenshot: PageType["screenshot"] = Page.prototype.screenshot;
 
 export const emitNewFile = (browserId: string, originalFileName: string): string => {
   const ext = path.extname(originalFileName)
@@ -49,7 +41,7 @@ export const emitNewFile = (browserId: string, originalFileName: string): string
   return publicPath
 }
 
-Page.prototype.screenshot = async function (options?: ScreenshotOptions): Promise<BufferType> {
+Page.prototype.screenshot = async function (this: PageType, options?: PageScreenshotOptions): Promise<Buffer> {
   if (options?.path) {
     // @ts-ignore
     const browserId = this.context()._browser[BROWSER_ID];
@@ -63,9 +55,9 @@ Page.prototype.screenshot = async function (options?: ScreenshotOptions): Promis
   return Buffer.from([]);
 }
 
-const superCRPDF = CRPage.prototype.pdf;
+const superCRPDF: PageType["pdf"] = CRPage.prototype.pdf;
 
-CRPage.prototype.pdf = async function (options?: PDFOptions): Promise<BufferType> {
+CRPage.prototype.pdf = async function (this: PageType, options?: PagePdfOptions): Promise<Buffer> {
   if (options?.path && superCRPDF) {
     // @ts-ignore
     const browserId = this.page().context()._browser[BROWSER_ID];
@@ -93,18 +85,19 @@ const preBrowserLaunch = async (browser: Browser, id: string): Promise<void> => 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const downloadedBrowsers = require(path.join(__dirname, "..", "node_modules", "playwright", ".downloaded-browsers.json"),)
 
-export const getPlaywright = (id: string): Playwright => {
-  const pw = new Playwright({
+export const getPlaywright = (id: string): typeof playwright => {
+  const pw: typeof playwright = new Playwright({
     browsers: ['webkit', 'chromium', 'firefox'],
   });
+  // @ts-ignore
   pw.chromium._executablePath = downloadedBrowsers.crExecutablePath;
+  // @ts-ignore
   pw.firefox._executablePath = downloadedBrowsers.ffExecutablePath;
+  // @ts-ignore
   pw.webkit._executablePath = downloadedBrowsers.wkExecutablePath;
 
-  // @ts-ignore
   const originalChromiumLaunch = pw.chromium.launch
-  // @ts-ignore
-  pw.chromium.launch = async (options: LaunchOptions = {}): Promise<CRBrowser> => {
+  pw.chromium.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<ChromiumBrowser> => {
     const browser = await originalChromiumLaunch.apply(pw.chromium, [{
       ...options,
       args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
@@ -113,19 +106,15 @@ export const getPlaywright = (id: string): Playwright => {
     return browser
   }
 
-  // @ts-ignore
   const originalWebKitLaunch = pw.webkit.launch
-  // @ts-ignore
-  pw.webkit.launch = async (options: LaunchOptions = {}): Promise<WebKitBrowser> => {
+  pw.webkit.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<WebKitBrowser> => {
     const browser = await originalWebKitLaunch.apply(pw.webkit, [options])
     await preBrowserLaunch(browser, id)
     return browser
   }
 
-  // @ts-ignore
   const originalFirefoxLaunch = pw.firefox.launch
-  // @ts-ignore
-  pw.firefox.launch = async (options: LaunchOptions = {}): Promise<FirefoxBrowser> => {
+  pw.firefox.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<FirefoxBrowser> => {
     const browser = await originalFirefoxLaunch.apply(pw.firefox, [options])
     await preBrowserLaunch(browser, id)
     return browser
