@@ -149,7 +149,7 @@ const App: React.FunctionComponent = () => {
               value={code}
               options={MONACO_OPTIONS}
               editorDidMount={handleEditorDidMount}
-              height={500}
+              height={600}
             />
           </Panel>
         </Col>
