@@ -85,17 +85,21 @@ const preBrowserLaunch = async (browser: Browser, id: string): Promise<void> => 
   browser[BROWSER_ID] = id
 }
 
+const pwDirname = path.join(__dirname, "..", "node_modules", "playwright")
+const crExecutablePath = downloadOptionsFromENV(pwDirname, 'chromium').executablePath
+const ffExecutablePath = downloadOptionsFromENV(pwDirname, 'firefox').executablePath
+const wkExecutablePath = downloadOptionsFromENV(pwDirname, 'webkit').executablePath
+
 export const getPlaywright = (id: string): typeof playwright => {
   const pw: typeof playwright = new Playwright({
     browsers: ['webkit', 'chromium', 'firefox'],
   });
-  const pwDirname = path.join(__dirname, "..", "node_modules", "playwright")
   // @ts-ignore
-  pw.chromium._executablePath = downloadOptionsFromENV(pwDirname, 'chromium').executablePath;
+  pw.chromium._executablePath = crExecutablePath;
   // @ts-ignore
-  pw.webkit._executablePath = downloadOptionsFromENV(pwDirname, 'webkit').executablePath;
+  pw.webkit._executablePath = wkExecutablePath;
   // @ts-ignore
-  pw.firefox._executablePath = downloadOptionsFromENV(pwDirname, 'firefox').executablePath;
+  pw.firefox._executablePath = ffExecutablePath;
 
   const originalChromiumLaunch = pw.chromium.launch
   pw.chromium.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<ChromiumBrowser> => {
