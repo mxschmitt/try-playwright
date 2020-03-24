@@ -302,7 +302,7 @@ declare module 'playwright-core/chromium/crBrowser' {
   import { ConnectionTransport } from 'playwright-core/transport';
   import * as types from 'playwright-core/types';
   import { CRConnection, CRSession } from 'playwright-core/chromium/crConnection';
-  import { CRTarget } from 'playwright-core/chromium/crTarget';
+  import { CRPage } from 'playwright-core/chromium/crPage';
   import { Protocol } from 'playwright-core/chromium/protocol';
   export class CRBrowser extends platform.EventEmitter implements Browser {
       readonly _connection: CRConnection;
@@ -310,7 +310,9 @@ declare module 'playwright-core/chromium/crBrowser' {
       private _clientRootSessionPromise;
       readonly _defaultContext: CRBrowserContext;
       readonly _contexts: Map<string, CRBrowserContext>;
-      _targets: Map<string, CRTarget>;
+      _crPages: Map<string, CRPage>;
+      _backgroundPages: Map<string, CRPage>;
+      _serviceWorkers: Map<string, CRServiceWorker>;
       readonly _firstPagePromise: Promise<void>;
       private _firstPageCallback;
       private _tracingRecording;
@@ -322,9 +324,8 @@ declare module 'playwright-core/chromium/crBrowser' {
       contexts(): BrowserContext[];
       newPage(options?: BrowserContextOptions): Promise<Page>;
       _onAttachedToTarget({ targetInfo, sessionId, waitingForDebugger }: Protocol.Target.attachedToTargetPayload): void;
-      private _createTarget;
-      _onDetachedFromTarget({ targetId }: Protocol.Target.detachFromTargetParameters): void;
-      _closePage(page: Page): Promise<void>;
+      _onDetachedFromTarget(payload: Protocol.Target.detachFromTargetParameters): void;
+      _closePage(crPage: CRPage): Promise<void>;
       close(): Promise<void>;
       newBrowserCDPSession(): Promise<CRSession>;
       startTracing(page?: Page, options?: {
@@ -337,13 +338,16 @@ declare module 'playwright-core/chromium/crBrowser' {
       _clientRootSession(): Promise<CRSession>;
       _setDebugFunction(debugFunction: (message: string) => void): void;
   }
+  class CRServiceWorker extends Worker {
+      readonly _browserContext: CRBrowserContext;
+      constructor(browserContext: CRBrowserContext, session: CRSession, url: string);
+  }
   export class CRBrowserContext extends BrowserContextBase {
       readonly _browser: CRBrowser;
       readonly _browserContextId: string | null;
       readonly _evaluateOnNewDocumentSources: string[];
       constructor(browser: CRBrowser, browserContextId: string | null, options: BrowserContextOptions);
       _initialize(): Promise<void>;
-      _targets(): CRTarget[];
       pages(): Page[];
       newPage(): Promise<Page>;
       cookies(urls?: string | string[]): Promise<network.NetworkCookie[]>;
@@ -366,6 +370,7 @@ declare module 'playwright-core/chromium/crBrowser' {
       serviceWorkers(): Worker[];
       newCDPSession(page: Page): Promise<CRSession>;
   }
+  export {};
 
 }
 declare module 'playwright-core/chromium/crConnection' {
@@ -657,31 +662,34 @@ declare module 'playwright-core/chromium/crPage' {
   import { PageDelegate } from 'playwright-core/page';
   import { RawMouseImpl, RawKeyboardImpl } from 'playwright-core/chromium/crInput';
   import { CRCoverage } from 'playwright-core/chromium/crCoverage';
-  import { CRBrowser, CRBrowserContext } from 'playwright-core/chromium/crBrowser';
+  import { CRBrowserContext } from 'playwright-core/chromium/crBrowser';
   import * as types from 'playwright-core/types';
   import * as platform from 'playwright-core/platform';
   export class CRPage implements PageDelegate {
       readonly _client: CRSession;
-      private readonly _page;
+      readonly _page: Page;
       readonly _networkManager: CRNetworkManager;
       private readonly _contextIdToContext;
       private _eventListeners;
       readonly rawMouse: RawMouseImpl;
       readonly rawKeyboard: RawKeyboardImpl;
-      private readonly _browser;
+      readonly _targetId: string;
+      private readonly _opener;
       private readonly _pdf;
       private readonly _coverage;
-      private readonly _browserContext;
+      readonly _browserContext: CRBrowserContext;
       private _firstNonInitialNavigationCommittedPromise;
       private _firstNonInitialNavigationCommittedCallback;
-      constructor(client: CRSession, browser: CRBrowser, browserContext: CRBrowserContext);
-      initialize(): Promise<void>;
+      private readonly _pagePromise;
+      _initializedPage: Page | null;
+      constructor(client: CRSession, targetId: string, browserContext: CRBrowserContext, opener: CRPage | null);
+      pageOrError(): Promise<Page | Error>;
+      private _initialize;
       didClose(): void;
       navigateFrame(frame: frames.Frame, url: string, referrer: string | undefined): Promise<frames.GotoResult>;
       _onLifecycleEvent(event: Protocol.Page.lifecycleEventPayload): void;
       _onFrameStoppedLoading(frameId: string): void;
       _handleFrameTree(frameTree: Protocol.Page.FrameTree): void;
-      page(): Page;
       _onFrameAttached(frameId: string, parentFrameId: string | null): void;
       _onFrameNavigated(framePayload: Protocol.Page.Frame, initial: boolean): void;
       _onFrameRequestedNavigation(payload: Protocol.Page.frameRequestedNavigationPayload): void;
@@ -808,51 +816,6 @@ declare module 'playwright-core/chromium/crProtocolHelper' {
       columnNumber?: undefined;
   };
   export function exceptionToError(exceptionDetails: Protocol.Runtime.ExceptionDetails): Error;
-
-}
-declare module 'playwright-core/chromium/crTarget' {
-  /**
-   * Copyright 2019 Google Inc. All rights reserved.
-   * Modifications copyright (c) Microsoft Corporation.
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   *     http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   */
-  import { Page, Worker } from 'playwright-core/page';
-  import { CRBrowser, CRBrowserContext } from 'playwright-core/chromium/crBrowser';
-  import { CRSession } from 'playwright-core/chromium/crConnection';
-  import { CRPage } from 'playwright-core/chromium/crPage';
-  import { Protocol } from 'playwright-core/chromium/protocol';
-  export class CRTarget {
-      private readonly _targetInfo;
-      private readonly _browser;
-      private readonly _browserContext;
-      readonly _targetId: string;
-      private readonly _pagePromise;
-      readonly _crPage: CRPage | null;
-      _initializedPage: Page | null;
-      private readonly _workerPromise;
-      _initializedWorker: Worker | null;
-      static fromPage(page: Page): CRTarget;
-      static isPageType(type: string): boolean;
-      constructor(browser: CRBrowser, targetInfo: Protocol.Target.TargetInfo, browserContext: CRBrowserContext, session: CRSession);
-      _didClose(): void;
-      pageOrError(): Promise<Page | Error>;
-      private _initializeServiceWorker;
-      serviceWorkerOrError(): Promise<Worker | Error>;
-      type(): 'page' | 'background_page' | 'service_worker' | 'shared_worker' | 'other' | 'browser';
-      context(): CRBrowserContext;
-      opener(): CRTarget | null;
-  }
 
 }
 declare module 'playwright-core/chromium/events' {
@@ -18411,7 +18374,8 @@ declare module 'playwright-core/server/browserFetcher' {
       host?: string;
       progress?: OnProgressCallback;
   };
-  export function downloadBrowser(options: DownloadOptions): Promise<string>;
+  export function downloadBrowser(options: DownloadOptions): Promise<void>;
+  export function executablePath(options: DownloadOptions): string;
   export function canDownload(options: DownloadOptions): Promise<boolean>;
 
 }
