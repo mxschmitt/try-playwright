@@ -9,6 +9,9 @@ import { Playwright } from 'playwright-core/lib/server/playwright'
 import { CRPage } from 'playwright-core/lib/chromium/crPage';
 // @ts-ignore
 import { Page } from 'playwright-core/lib/api';
+// @ts-ignore
+import { downloadOptionsFromENV } from 'playwright-core/download-browser';
+
 import { saveVideo, PageVideoCapture } from 'playwright-video'
 
 const BROWSER_ID = Symbol('BROWSER_ID');
@@ -82,19 +85,17 @@ const preBrowserLaunch = async (browser: Browser, id: string): Promise<void> => 
   browser[BROWSER_ID] = id
 }
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const downloadedBrowsers = require(path.join(__dirname, "..", "node_modules", "playwright", ".downloaded-browsers.json"),)
-
 export const getPlaywright = (id: string): typeof playwright => {
   const pw: typeof playwright = new Playwright({
     browsers: ['webkit', 'chromium', 'firefox'],
   });
+  const pwDirname = path.join(__dirname, "..", "node_modules", "playwright")
   // @ts-ignore
-  pw.chromium._executablePath = downloadedBrowsers.crExecutablePath;
+  pw.chromium._executablePath = downloadOptionsFromENV(pwDirname, 'chromium').executablePath;
   // @ts-ignore
-  pw.firefox._executablePath = downloadedBrowsers.ffExecutablePath;
+  pw.webkit._executablePath = downloadOptionsFromENV(pwDirname, 'webkit').executablePath;
   // @ts-ignore
-  pw.webkit._executablePath = downloadedBrowsers.wkExecutablePath;
+  pw.firefox._executablePath = downloadOptionsFromENV(pwDirname, 'firefox').executablePath;
 
   const originalChromiumLaunch = pw.chromium.launch
   pw.chromium.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<ChromiumBrowser> => {
