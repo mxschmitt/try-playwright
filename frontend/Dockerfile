@@ -13,7 +13,7 @@ COPY frontend/src /frontend/src
 COPY types/ /types
 RUN npm run build
 
-FROM caddy/caddy:v2.0.0-beta.20-alpine
+FROM caddy/caddy:v2.0.0-beta.17-alpine
 
 COPY frontend/Caddyfile /etc/caddy/Caddyfile
 
