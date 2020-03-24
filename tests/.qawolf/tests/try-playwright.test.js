@@ -79,8 +79,13 @@ describe('Examples', () => {
     const allStartsWithHttpOrHttpsProtocol = logStatements.every(entry => entry.startsWith("http://") || entry.startsWith("https://"))
     expect(allStartsWithHttpOrHttpsProtocol).toBe(true)
   })
-  it("7: should be able to run the todomvc.com example", async () => {
+  it("7: should be able to intercept and modify network requests", async () => {
     await executeExample(7)
+    const imageNames = await getFileNames()
+    expect(imageNames).toEqual(["window.png"])
+  })
+  it("8: should be able to run the todomvc.com example", async () => {
+    await executeExample(8)
     await page.waitFor(".rs-panel-body video")
     const videoCount = await page.$$eval(".rs-panel-body > p video", (videos) => videos.length)
     expect(videoCount).toBe(1)
