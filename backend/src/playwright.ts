@@ -1,14 +1,17 @@
 import path from 'path'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import { Browser, WebKitBrowser } from 'playwright-core'
+import playwright from 'playwright-core'
+import { Browser, WebKitBrowser, BrowserTypeLaunchOptions, PagePdfOptions, PageScreenshotOptions, ChromiumBrowser, FirefoxBrowser, Page as PageType } from 'playwright-core'
+// @ts-ignore
 import { Playwright } from 'playwright-core/lib/server/playwright'
-import { CRBrowser } from 'playwright-core/lib/chromium/crBrowser';
+// @ts-ignore
 import { CRPage } from 'playwright-core/lib/chromium/crPage';
-import { Page, FirefoxBrowser } from 'playwright-core/lib/api';
-import { ScreenshotOptions, PDFOptions } from 'playwright-core/lib/types';
-import { BufferType } from 'playwright-core/lib/platform';
-import { LaunchOptions } from 'playwright-core/lib/server/browserType';
+// @ts-ignore
+import { Page } from 'playwright-core/lib/api';
+// @ts-ignore
+import { downloadOptionsFromENV } from 'playwright-core/download-browser';
+
 import { saveVideo, PageVideoCapture } from 'playwright-video'
 
 const BROWSER_ID = Symbol('BROWSER_ID');
@@ -27,7 +30,7 @@ export const registerFileListener = (browserId: string): (() => FileWrapper[]) =
   }
 }
 
-const superScreenshot = Page.prototype.screenshot;
+const superScreenshot: PageType["screenshot"] = Page.prototype.screenshot;
 
 export const emitNewFile = (browserId: string, originalFileName: string): string => {
   const ext = path.extname(originalFileName)
@@ -41,7 +44,7 @@ export const emitNewFile = (browserId: string, originalFileName: string): string
   return publicPath
 }
 
-Page.prototype.screenshot = async function (options?: ScreenshotOptions): Promise<BufferType> {
+Page.prototype.screenshot = async function (this: PageType, options?: PageScreenshotOptions): Promise<Buffer> {
   if (options?.path) {
     // @ts-ignore
     const browserId = this.context()._browser[BROWSER_ID];
@@ -55,12 +58,12 @@ Page.prototype.screenshot = async function (options?: ScreenshotOptions): Promis
   return Buffer.from([]);
 }
 
-const superCRPDF = CRPage.prototype.pdf;
+const superCRPDF: PageType["pdf"] = CRPage.prototype.pdf;
 
-CRPage.prototype.pdf = async function (options?: PDFOptions): Promise<BufferType> {
+CRPage.prototype.pdf = async function (this: PageType, options?: PagePdfOptions): Promise<Buffer> {
   if (options?.path && superCRPDF) {
     // @ts-ignore
-    const browserId = this.page().context()._browser[BROWSER_ID];
+    const browserId = this._page.context()._browser[BROWSER_ID];
     const publicPath = emitNewFile(browserId, options.path)
     const buffer = await superCRPDF.call(this, {
       ...options,
@@ -82,16 +85,24 @@ const preBrowserLaunch = async (browser: Browser, id: string): Promise<void> => 
   browser[BROWSER_ID] = id
 }
 
-export const getPlaywright = (id: string): Playwright => {
-  const pw = new Playwright({
-    downloadPath: path.join(__dirname, "..", "node_modules", "playwright"),
+const pwDirname = path.join(__dirname, "..", "node_modules", "playwright")
+const crExecutablePath = downloadOptionsFromENV(pwDirname, 'chromium').executablePath
+const ffExecutablePath = downloadOptionsFromENV(pwDirname, 'firefox').executablePath
+const wkExecutablePath = downloadOptionsFromENV(pwDirname, 'webkit').executablePath
+
+export const getPlaywright = (id: string): typeof playwright => {
+  const pw: typeof playwright = new Playwright({
     browsers: ['webkit', 'chromium', 'firefox'],
-    respectEnvironmentVariables: false,
   });
   // @ts-ignore
-  const originalChromiumLaunch = pw.chromium.launch
+  pw.chromium._executablePath = crExecutablePath;
   // @ts-ignore
-  pw.chromium.launch = async (options: LaunchOptions = {}): Promise<CRBrowser> => {
+  pw.webkit._executablePath = wkExecutablePath;
+  // @ts-ignore
+  pw.firefox._executablePath = ffExecutablePath;
+
+  const originalChromiumLaunch = pw.chromium.launch
+  pw.chromium.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<ChromiumBrowser> => {
     const browser = await originalChromiumLaunch.apply(pw.chromium, [{
       ...options,
       args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
@@ -100,19 +111,15 @@ export const getPlaywright = (id: string): Playwright => {
     return browser
   }
 
-  // @ts-ignore
   const originalWebKitLaunch = pw.webkit.launch
-  // @ts-ignore
-  pw.webkit.launch = async (options: LaunchOptions = {}): Promise<WebKitBrowser> => {
+  pw.webkit.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<WebKitBrowser> => {
     const browser = await originalWebKitLaunch.apply(pw.webkit, [options])
     await preBrowserLaunch(browser, id)
     return browser
   }
 
-  // @ts-ignore
   const originalFirefoxLaunch = pw.firefox.launch
-  // @ts-ignore
-  pw.firefox.launch = async (options: LaunchOptions = {}): Promise<FirefoxBrowser> => {
+  pw.firefox.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<FirefoxBrowser> => {
     const browser = await originalFirefoxLaunch.apply(pw.firefox, [options])
     await preBrowserLaunch(browser, id)
     return browser

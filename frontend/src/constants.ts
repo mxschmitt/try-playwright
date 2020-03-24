@@ -101,7 +101,7 @@ export const Examples: Example[] = [
     viewport: iPhone11.viewport,
     userAgent: iPhone11.userAgent,
     geolocation: { longitude: 12.492507, latitude: 41.889938 },
-    permissions: { 'https://www.google.com': ['geolocation'] }
+    permissions: ['geolocation']
   });
   const page = await context.newPage();
   await page.goto('https://maps.google.com');
@@ -181,9 +181,9 @@ const { saveVideo } = require('playwright-video');
   const page = await context.newPage();
 
   // Log and continue all network requests
-  page.route('**', request => {
+  page.route('**', (route, request) => {
     console.log(request.url());
-    request.continue();
+    route.continue();
   });
 
   await page.goto('http://todomvc.com');
