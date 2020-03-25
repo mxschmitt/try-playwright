@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      SITE_ADDRESS: http://localhost
+      SITE_ADDRESS: https://localhost
     steps:
     - name: Install dependencies
       run: |
@@ -23,6 +23,8 @@ jobs:
     - name: Install dependencies
       run: npm install
       working-directory: tests
+    - name: Generate self-signed certificate
+      run: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
     - name: Build Docker images
       run: docker-compose build
     - name: Start Docker containers

@@ -12,6 +12,9 @@ services:
       - backend
     environment:
       - SITE_ADDRESS
+    volumes:
+      - ${PWD}/cert.pem:/cert.pem
+      - ${PWD}/key.pem:/key.pem
   backend:
     build:
       context: .
