@@ -1,6 +1,6 @@
 
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useContext } from 'react'
 import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
@@ -8,6 +8,7 @@ import useDarkMode from "../../hooks/useDarkMode"
 
 // eslint-disable-next-line import/no-webpack-loader-syntax
 import staticTypes from '!!raw-loader!./types.txt';
+import { CodeContext } from '../CodeContext';
 
 const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
     minimap: {
@@ -22,13 +23,12 @@ const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
 }
 
 interface EditorProps {
-    onChange: (code: string) => void;
-    value: string;
     onExecutionRef: React.MutableRefObject<(() => void) | undefined>;
 }
 
-const Editor: React.FunctionComponent<EditorProps> = ({ value, onChange, onExecutionRef }) => {
+const Editor: React.FunctionComponent<EditorProps> = ({ onExecutionRef }) => {
     const [darkMode] = useDarkMode()
+    const { code, onChange } = useContext(CodeContext)
     useEffect(() => {
         monacoEditor.editor.defineTheme('custom-dark', {
             base: 'vs-dark',
@@ -58,15 +58,17 @@ const Editor: React.FunctionComponent<EditorProps> = ({ value, onChange, onExecu
         })
     }
     return (
-        <MonacoEditor
-            onChange={onChange}
-            language="typescript"
-            theme={darkMode ? "custom-dark" : "vs"}
-            value={value}
-            options={MONACO_OPTIONS}
-            editorDidMount={handleEditorDidMount}
-            height={600}
-        />
+        <div style={{ paddingTop: 5 }}>
+            <MonacoEditor
+                onChange={onChange}
+                language="typescript"
+                theme={darkMode ? "custom-dark" : "vs"}
+                value={code}
+                options={MONACO_OPTIONS}
+                editorDidMount={handleEditorDidMount}
+                height={600}
+            />
+        </div>
     )
 }
 

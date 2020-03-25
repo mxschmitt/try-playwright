@@ -8,15 +8,6 @@ export const decodeCode = (code: string | null): string => {
   return lzString.decompressFromEncodedURIComponent(code)
 }
 
-export const fetchSharedCode = async (code: string): Promise<string | null> => {
-  const resp = await fetch(`/api/v1/share/get/${code}`)
-  if (!resp.ok) {
-    return null
-  }
-  const body = await resp.json()
-  return body?.code
-}
-
 export const runCode = async (code: string): Promise<APIResponse> => {
   const resp = await fetch("/api/v1/run", {
     method: "POST",
@@ -47,24 +38,39 @@ export const trackEvent = (): void => {
   }
 }
 
+const fetchSharedCode = async (code: string): Promise<string | null> => {
+  const resp = await fetch(`/api/v1/share/get/${code}`)
+  if (!resp.ok) {
+    return null
+  }
+  const body = await resp.json()
+  return body?.code
+}
+
 export const determineCode = async (setCode: ((code: string) => void)): Promise<void> => {
   const urlParams = new URLSearchParams(window.location.search);
   const localStorageCode = window.localStorage.getItem("code")
   // TODO: remove (if: code) after a couple of months. Was kept for backwards compatibility
   if (urlParams.has("code")) {
     const newCode = decodeCode(urlParams.get("code"))
-    setCode(newCode)
+    return setCode(newCode)
   } else if (urlParams.has("s")) {
     const key = urlParams.get("s")
     if (key) {
       const sharedCode = await fetchSharedCode(key)
       if (sharedCode) {
-        setCode(sharedCode)
+        return setCode(sharedCode)
       }
     }
+  } else if (urlParams.has("e")) {
+    const id = urlParams.get("e")
+    const example = Examples.find(example => example.id === id)
+    if (example) {
+      return setCode(example.code)
+    }
   } else if (localStorageCode) {
-    setCode(localStorageCode)
-  } else {
-    setCode(Examples[0].code)
+    return setCode(localStorageCode)
   }
+  // Fallback
+  setCode(Examples[0].code)
 }
