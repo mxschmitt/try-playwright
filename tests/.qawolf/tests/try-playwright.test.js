@@ -3,7 +3,7 @@ const qawolf = require("qawolf");
 let browser;
 let page;
 
-const ROOT_URL = process.env.ROOT_TEST_URL || "http://localhost"
+const ROOT_URL = process.env.ROOT_TEST_URL || "https://localhost"
 
 beforeAll(async () => {
   browser = await qawolf.launch();
