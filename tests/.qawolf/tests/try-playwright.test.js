@@ -86,6 +86,8 @@ describe('Examples', () => {
   })
   it("7: should be able to intercept and modify network requests", async () => {
     await executeExample(7)
+    const imageCount = await getImageCount()
+    expect(imageCount).toBe(1)
     const imageNames = await getFileNames()
     expect(imageNames).toEqual(["window.png"])
   })
