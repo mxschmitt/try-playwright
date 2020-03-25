@@ -6,5 +6,7 @@ file_server
 
 log
 
+tls /cert.crt /cert.key
+
 reverse_proxy /api/*  backend:8080
 reverse_proxy /public/*  backend:8080

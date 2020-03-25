@@ -12,6 +12,9 @@ services:
       - backend
     environment:
       - SITE_ADDRESS
+    volumes:
+      - ${PWD}/cert.crt:/cert.crt
+      - ${PWD}/cert.key:/cert.key
   backend:
     build:
       context: .
