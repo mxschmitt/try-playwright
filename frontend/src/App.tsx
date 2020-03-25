@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Col, Grid, IconButton, Icon, Loader, Panel, Notification } from 'rsuite'
 
 import { runCode, trackEvent } from './utils'
@@ -11,9 +11,8 @@ const App: React.FunctionComponent = () => {
   const { code, onChangeRightPanelMode } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>(null)
-  const handleExecutionContainer = useRef<() => void>()
 
-  // store the code which was entered if the user is leaving the page
+  // Store the code which was entered if the user is leaving the page
   useEffect((): (() => void) => {
     const handler = (): void => {
       window.localStorage.setItem("code", code)
@@ -39,13 +38,6 @@ const App: React.FunctionComponent = () => {
     setLoading(false)
     onChangeRightPanelMode(false)
   }
-  handleExecutionContainer.current = handleExecution
-
-  const RunButton: React.FunctionComponent = () => (
-    <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
-      Run
-    </IconButton>
-  );
 
   return (
     <>
@@ -58,11 +50,13 @@ const App: React.FunctionComponent = () => {
             header={
               <>
                 Editor
-                <RunButton />
+               <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
+                  Run
+              </IconButton>
               </>
             }
           >
-            <Editor onExecutionRef={handleExecutionContainer} />
+            <Editor onExecution={handleExecution} />
           </Panel>
         </Col>
         <Col xs={24} md={12}>

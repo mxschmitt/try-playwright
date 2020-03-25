@@ -23,10 +23,10 @@ const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
 }
 
 interface EditorProps {
-    onExecutionRef: React.MutableRefObject<(() => void) | undefined>;
+    onExecution: () => void;
 }
 
-const Editor: React.FunctionComponent<EditorProps> = ({ onExecutionRef }) => {
+const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     const [darkMode] = useDarkMode()
     const { code, onChange } = useContext(CodeContext)
     useEffect(() => {
@@ -47,9 +47,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecutionRef }) => {
             if (event.keyCode === monacoEditor.KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
                 event.stopPropagation()
-                if (onExecutionRef.current) {
-                    onExecutionRef.current()
-                }
+                onExecution()
             }
         });
         monaco.languages.typescript.typescriptDefaults.addExtraLib(staticTypes)

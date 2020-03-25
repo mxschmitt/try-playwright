@@ -8,6 +8,7 @@ import { CodeContext } from '../CodeContext'
 const RightExamplesPanel: React.FunctionComponent = () => {
     const [expandedID, setExpandedId] = useState<string>()
     const { onChange } = useContext(CodeContext)
+    // Try to find the matching example and set it to expanded
     useEffect(() => {
         determineCode((code) => {
             const example = Examples.find(example => example.code === code)

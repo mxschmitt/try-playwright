@@ -28,7 +28,7 @@ jobs:
     - name: Start Docker containers
       run: docker-compose up -d
     - name: Run e2e tests
-      run: npx qawolf test --headless
+      run: npx qawolf test --headless --webkit
       working-directory: tests
   build:
     runs-on: ubuntu-latest

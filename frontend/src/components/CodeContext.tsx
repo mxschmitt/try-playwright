@@ -20,6 +20,7 @@ export const CodeContext = React.createContext<CodeContextContent>({
 const CodeContextWrapper: React.FunctionComponent = ({ children }) => {
     const [code, setCode] = useState(Examples[0].id)
     const [rightPanelMode, setRightPanelMode] = useState(true)
+    // determine the code which should be loaded on the application start
     useEffect(() => {
         determineCode(code => setCode(code))
     }, [])
