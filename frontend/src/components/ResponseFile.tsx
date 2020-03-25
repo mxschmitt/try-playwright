@@ -6,7 +6,7 @@ interface ResponseFileProps {
 
 const ResponseFile: React.FunctionComponent<ResponseFileProps> = ({ file }) => {
     const { publicURL, filename, extension } = file
-    return <p style={{ marginBottom: 10 }}>
+    return <p style={{ marginBottom: 10 }} data-test-id="file">
         <span className="file-name">{filename}</span>
         {extension === ".pdf" ? <>
             <object type="application/pdf" data={publicURL} style={{

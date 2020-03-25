@@ -24,26 +24,26 @@ const meta: MetaExample[] = [
     description: "This code snippet navigates to whatsmyuseragent.org in Chromium and WebKit, and saves 2 screenshots.",
   }, {
     id: "mobile-and-geolocation",
-    title: "Mobile and geolocation",
+    title: "Mobile and geolocation emulation",
     description: "This snippet emulates Mobile Safari on a device at a given geolocation, navigates to maps.google.com, performs action and takes a screenshot.",
   }, {
     id: "generate-pdf",
-    title: "Generate a PDF",
+    title: "PDF generation with Chromium",
     description: "This example will search for 'Google' on Google and stores the rendered site as a PDF.",
   }, {
     id: "record-video",
-    title: "Record a video using 'playwright-video'",
+    title: "Video recording using 'playwright-video'",
     description: "This example navigates to 'example.com', clicks on the first 'a' link and stores it as a video.",
   }, {
     id: "evaluate-javascript",
-    title: "Evaluate in browser context",
+    title: "JavaScript evaluation in browser context",
     description: "This code snippet navigates to example.com in WebKit, and executes a script in the page context.",
   }, {
     id: "intercept-requests",
     title: `Logging network requests`,
     description: "This code snippet sets up network interception for a WebKit page to log all network requests.",
   }, {
-    id: "intercept-requests-complex",
+    id: "intercept-modify-requests",
     title: "Modifying network requests",
     description: "In that example Try Playwright opens itself and emulates the endpoint for running code by returning a hard-coded image."
   }, {

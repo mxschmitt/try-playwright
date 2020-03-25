@@ -17,18 +17,21 @@ afterAll(async () => {
   await browser.close();
 });
 
-const executeExample = async (nth) => {
-  await page.click(".rs-dropdown > a");
-  await page.click(`.rs-dropdown li:nth-child(${nth}) > a`);
+const executeExample = async (nth, switchToExamples=true) => {
+  if (switchToExamples) {
+    await page.click('button[data-test-id="toggel-right-panel"]')
+  }
+  await page.click(`.rs-panel-group > .rs-panel:nth-child(${nth})`);
   await page.click('text="Run"');
   await page.waitForResponse(resp => resp.url().endsWith("/api/v1/run"))
 }
 
 const getImageCount = async () => {
-  await page.waitFor(".rs-panel-body > p img")
-  return await page.$$eval(".rs-panel-body > p img", (images) => images.length)
+  await page.waitFor('p[data-test-id="file"]')
+  return await page.$$eval('p[data-test-id="file"] > img', (images) => images.length)
 }
-const getFileNames = () => page.$$eval(".rs-panel-body span.file-name", (elements) => elements.map(el => el.innerText))
+const getVideoCount = () => page.$$eval('p[data-test-id="file"] video', (videos) => videos.length)
+const getFileNames = () => page.$$eval('p[data-test-id="file"] span.file-name', (elements) => elements.map(el => el.innerText))
 const getConsoleLines = async () => {
   await page.waitFor(".rs-panel-body code")
   return await page.$eval(".rs-panel-body code", (code) => code.innerText.split(/\n/).filter(Boolean))
@@ -36,7 +39,7 @@ const getConsoleLines = async () => {
 
 describe('Examples', () => {
   it("1: should be able to make screenshots in all browsers", async () => {
-    await executeExample(1)
+    await executeExample(1, false)
     const imageCount = await getImageCount()
     expect(imageCount).toBe(2)
     const imageNames = await getFileNames()
@@ -52,7 +55,7 @@ describe('Examples', () => {
   it("3: should be able to generate a PDF file", async () => {
     await executeExample(3)
     await page.waitFor(".rs-panel-body object")
-    const pdfCount = await page.$$eval(".rs-panel-body > p object", (objects) => objects.length)
+    const pdfCount = await page.$$eval('p[data-test-id="file"] object', (objects) => objects.length)
     expect(pdfCount).toBe(1)
     const imageNames = await getFileNames()
     expect(imageNames).toEqual(["document.pdf"])
@@ -60,7 +63,7 @@ describe('Examples', () => {
   it("4: should be able to record via 'playwright-video'", async () => {
     await executeExample(4)
     await page.waitFor(".rs-panel-body video")
-    const videoCount = await page.$$eval(".rs-panel-body > p video", (videos) => videos.length)
+    const videoCount = await getVideoCount()
     expect(videoCount).toBe(1)
     const imageNames = await getFileNames()
     expect(imageNames).toEqual(["/tmp/video.mp4"])
@@ -87,7 +90,7 @@ describe('Examples', () => {
   it("8: should be able to run the todomvc.com example", async () => {
     await executeExample(8)
     await page.waitFor(".rs-panel-body video")
-    const videoCount = await page.$$eval(".rs-panel-body > p video", (videos) => videos.length)
+    const videoCount = await getVideoCount()
     expect(videoCount).toBe(1)
     const imageNames = await getFileNames()
     expect(imageNames).toEqual(["video.mp4"])

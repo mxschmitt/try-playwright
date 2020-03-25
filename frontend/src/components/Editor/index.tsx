@@ -1,10 +1,11 @@
 
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useContext } from 'react'
 import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import useDarkMode from "../../hooks/useDarkMode"
+import { CodeContext } from '../CodeContext';
 
 // eslint-disable-next-line import/no-webpack-loader-syntax
 import staticTypes from '!!raw-loader!./types.txt';
@@ -22,13 +23,12 @@ const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
 }
 
 interface EditorProps {
-    onChange: (code: string) => void;
-    value: string;
-    onExecutionRef: React.MutableRefObject<(() => void) | undefined>;
+    onExecution: () => void;
 }
 
-const Editor: React.FunctionComponent<EditorProps> = ({ value, onChange, onExecutionRef }) => {
+const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     const [darkMode] = useDarkMode()
+    const { code, onChange } = useContext(CodeContext)
     useEffect(() => {
         monacoEditor.editor.defineTheme('custom-dark', {
             base: 'vs-dark',
@@ -47,9 +47,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ value, onChange, onExecu
             if (event.keyCode === monacoEditor.KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
                 event.stopPropagation()
-                if (onExecutionRef.current) {
-                    onExecutionRef.current()
-                }
+                onExecution()
             }
         });
         monaco.languages.typescript.typescriptDefaults.addExtraLib(staticTypes)
@@ -58,15 +56,17 @@ const Editor: React.FunctionComponent<EditorProps> = ({ value, onChange, onExecu
         })
     }
     return (
-        <MonacoEditor
-            onChange={onChange}
-            language="typescript"
-            theme={darkMode ? "custom-dark" : "vs"}
-            value={value}
-            options={MONACO_OPTIONS}
-            editorDidMount={handleEditorDidMount}
-            height={600}
-        />
+        <div style={{ paddingTop: 5 }}>
+            <MonacoEditor
+                onChange={onChange}
+                language="typescript"
+                theme={darkMode ? "custom-dark" : "vs"}
+                value={code}
+                options={MONACO_OPTIONS}
+                editorDidMount={handleEditorDidMount}
+                height={600}
+            />
+        </div>
     )
 }
 
