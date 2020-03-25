@@ -5,7 +5,7 @@ export const ErrorMaxIdsReached = new Error("database unique limit of IDs reache
 
 export class ShareStore {
   private db!: sqlite.Database
-  static maxLength = 5
+   maxLength = 5
   async init(dbPath: string): Promise<void> {
     this.db = await sqlite.open(dbPath);
     await this.db.run(`CREATE TABLE IF NOT EXISTS shares (id TEXT NOT NULL PRIMARY KEY, code TEXT UNIQUE)`)
@@ -28,17 +28,17 @@ export class ShareStore {
     let retryCount = 0
     while (retryCount <= 3) {
       try {
-        const key = ShareStore.getRandomID()
+        const key = this.getRandomID()
         await this.db.run("INSERT INTO shares(id, code) VALUES(?, ?)", [key, code])
         return key
       } catch (err) {
-        console.log(`Could not set an ID, retry number: ${retryCount}`, err)
+        console.log(`Could not set an ID, retry number: ${retryCount} (${err})`)
       }
       retryCount++
     }
     throw ErrorMaxIdsReached
   }
-  static getRandomID(): string {
-    return [...Array(ShareStore.maxLength)].map(() => Math.random().toString(36)[2]).join('')
+   getRandomID(): string {
+    return [...Array(this.maxLength)].map(() => Math.random().toString(36)[2]).join('')
   }
 }

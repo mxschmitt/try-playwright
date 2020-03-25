@@ -7,11 +7,11 @@ const unlinkFile = promisify(fs.unlink)
 
 describe("Store", () => {
   const dbPath = "./testdb.sqlite"
-  let store!: ShareStore;
-  ShareStore.maxLength = 1
+  let store: ShareStore;
   beforeEach(async () => {
     store = new ShareStore()
     await store.init(dbPath)
+    store.maxLength = 1
   })
   afterEach(async()=> {
     await store.close()
