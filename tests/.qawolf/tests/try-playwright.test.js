@@ -7,7 +7,9 @@ const ROOT_URL = process.env.ROOT_TEST_URL || "http://localhost"
 
 beforeAll(async () => {
   browser = await qawolf.launch();
-  const context = await browser.newContext();
+  const context = await browser.newContext({
+    ignoreHTTPSErrors: true
+  });
   await qawolf.register(context);
   page = await context.newPage();
   await page.goto(ROOT_URL);

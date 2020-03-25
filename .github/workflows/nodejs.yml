@@ -27,6 +27,8 @@ jobs:
       run: docker-compose build
     - name: Start Docker containers
       run: docker-compose up -d
+    - name: Generate self-signed certificate
+      run: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
     - name: Run e2e tests
       run: npx qawolf test --headless --webkit
       working-directory: tests
