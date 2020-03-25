@@ -30,7 +30,7 @@ const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
                 </>
             }
         >
-            <div style={{ paddingTop: 5 }}>
+            <div style={{ padding: 5 }}>
                 {rightPanelMode ? <RightExamplesPanel /> : <RightOutputPanel resp={resp} />}
             </div>
         </Panel>
