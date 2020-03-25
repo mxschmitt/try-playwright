@@ -6,7 +6,7 @@ import { determineCode } from '../../utils'
 import { CodeContext } from '../CodeContext'
 
 const RightExamplesPanel: React.FunctionComponent = () => {
-    const [expandedID, setExpandedId] = useState<string>(Examples[0].id)
+    const [expandedID, setExpandedId] = useState<string>()
     const { onChange } = useContext(CodeContext)
     useEffect(() => {
         determineCode((code) => {

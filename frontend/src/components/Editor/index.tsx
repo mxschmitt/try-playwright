@@ -5,10 +5,10 @@ import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import useDarkMode from "../../hooks/useDarkMode"
+import { CodeContext } from '../CodeContext';
 
 // eslint-disable-next-line import/no-webpack-loader-syntax
 import staticTypes from '!!raw-loader!./types.txt';
-import { CodeContext } from '../CodeContext';
 
 const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
     minimap: {
