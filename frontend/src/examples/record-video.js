@@ -1,23 +1,17 @@
-const playwright = require("playwright");
-const { saveVideo } = require('playwright-video');
+const { chromium } = require("playwright");
+const { saveVideo } = require("playwright-video");
 
 (async () => {
-  const { devices } = playwright
-  const iPhone = devices['iPhone 6'];
-  const browser = await playwright.chromium.launch();
-  const context = await browser.newContext({
-    viewport: iPhone.viewport,
-    userAgent: iPhone.userAgent,
-  });
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
   const page = await context.newPage();
+  const capture = await saveVideo(page, "/tmp/video.mp4");
 
-  const caputure = await saveVideo(page, '/tmp/video.mp4');
+  await page.goto("https://github.com");
+  await page.type('input[name="q"]', "Playwright");
+  await page.press('input[name="q"]', "Enter");
+  await page.click(".repo-list-item:nth-child(1) a");
 
-  await page.goto('http://example.org');
-  await Promise.all([
-    page.waitForNavigation({ waitUntil: 'networkidle0' }),
-    page.click('a'),
-  ]);
-  await caputure.stop()
+  await capture.stop();
   await browser.close();
 })();
