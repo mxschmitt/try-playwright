@@ -50,6 +50,10 @@ const meta: MetaExample[] = [
     id: "todo-mvc",
     title: "End-to-End test a todo application",
     description: "In this example we are going to make a fully e2e test by asserting the shown data of the todomvc.com application.",
+  }, {
+    id:"crawl-y-combinator",
+    title: "Crawling a website: Y-Combinator",
+    description: "In this example we are going to execute selectors and get the crawled data which was determined in the browsers context back to the main thread."
   }
 ]
 
