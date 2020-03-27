@@ -32,7 +32,10 @@ const getImageCount = async () => {
   await page.waitFor('p[data-test-id="file"]')
   return await page.$$eval('p[data-test-id="file"] > img', (images) => images.length)
 }
-const getVideoCount = () => page.$$eval('p[data-test-id="file"] video', (videos) => videos.length)
+const getVideoCount = async () => {
+  await page.waitFor(".rs-panel-body video")
+  return await page.$$eval('p[data-test-id="file"] video', (videos) => videos.length)
+}
 const getFileNames = () => page.$$eval('p[data-test-id="file"] span.file-name', (elements) => elements.map(el => el.innerText))
 const getConsoleLines = async () => {
   await page.waitFor(".rs-panel-body code")
@@ -64,7 +67,6 @@ describe('Examples', () => {
   })
   it("4: should be able to record via 'playwright-video'", async () => {
     await executeExample(4)
-    await page.waitFor(".rs-panel-body video")
     const videoCount = await getVideoCount()
     expect(videoCount).toBe(1)
     const imageNames = await getFileNames()
@@ -93,10 +95,18 @@ describe('Examples', () => {
   })
   it("8: should be able to run the todomvc.com example", async () => {
     await executeExample(8)
-    await page.waitFor(".rs-panel-body video")
     const videoCount = await getVideoCount()
     expect(videoCount).toBe(1)
     const imageNames = await getFileNames()
     expect(imageNames).toEqual(["video.mp4"])
+  })
+  it("9: should be able to run the y-combinator crawling example", async () => {
+    await executeExample(9)
+    const imageCount = await getImageCount()
+    expect(imageCount).toBe(1)
+    const imageNames = await getFileNames()
+    expect(imageNames).toEqual(["Y-Combinator.png"])
+    const logStatements = await getConsoleLines()
+    expect(logStatements.length).toBeGreaterThan(20)
   })
 });
