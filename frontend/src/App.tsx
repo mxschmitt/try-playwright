@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Col, Grid, IconButton, Icon, Loader, Panel, Notification } from 'rsuite'
 
 import { runCode, trackEvent } from './utils'
@@ -11,6 +11,7 @@ const App: React.FunctionComponent = () => {
   const { code, onChangeRightPanelMode } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<APIResponse | null>(null)
+  const handleExecutionRef = useRef<() => Promise<void>>()
 
   // Store the code which was entered if the user is leaving the page
   useEffect((): (() => void) => {
@@ -38,6 +39,7 @@ const App: React.FunctionComponent = () => {
     setLoading(false)
     onChangeRightPanelMode(false)
   }
+  handleExecutionRef.current = handleExecution
 
   return (
     <>
@@ -56,7 +58,7 @@ const App: React.FunctionComponent = () => {
               </>
             }
           >
-            <Editor onExecution={handleExecution} />
+            <Editor onExecution={handleExecutionRef} />
           </Panel>
         </Col>
         <Col xs={24} md={12}>
