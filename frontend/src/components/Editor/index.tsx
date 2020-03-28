@@ -23,7 +23,7 @@ const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
 }
 
 interface EditorProps {
-    onExecution: () => void;
+    onExecution: React.MutableRefObject<(() => Promise<void>) | undefined>;
 }
 
 const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
@@ -47,7 +47,9 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
             if (event.keyCode === monacoEditor.KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
                 event.stopPropagation()
-                onExecution()
+                if (onExecution.current) {
+                    onExecution.current()
+                }
             }
         });
         monaco.languages.typescript.typescriptDefaults.addExtraLib(staticTypes)
