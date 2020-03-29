@@ -44,11 +44,15 @@ const App: React.FunctionComponent = () => {
   return (
     <>
       <Header />
-      <Grid fluid>
+      <Grid fluid style={{
+        display: "flex"
+      }}>
         <Col xs={24} md={12}>
           {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
           <Panel
             bodyFill
+            className="panel-editor"
+            style={{ height: "100%" }}
             header={
               <>
                 Editor

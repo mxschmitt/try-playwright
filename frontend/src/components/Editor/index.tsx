@@ -58,7 +58,8 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         })
     }
     return (
-        <div style={{ paddingTop: 5 }}>
+        <div
+            style={{ height: "100%" }}>
             <MonacoEditor
                 onChange={onChange}
                 language="typescript"
@@ -66,7 +67,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
                 value={code}
                 options={MONACO_OPTIONS}
                 editorDidMount={handleEditorDidMount}
-                height={600}
+                height="100%"
             />
         </div>
     )
