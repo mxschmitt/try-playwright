@@ -1,11 +1,12 @@
 
 
-import React, { useEffect, useContext } from 'react'
+import React, { useEffect, useContext, useRef } from 'react'
 import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import useDarkMode from "../../hooks/useDarkMode"
 import { CodeContext } from '../CodeContext';
+import styles from './index.module.css'
 
 // eslint-disable-next-line import/no-webpack-loader-syntax
 import staticTypes from '!!raw-loader!./types.txt';
@@ -19,7 +20,7 @@ const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
     overviewRulerLanes: 0,
     scrollbar: {
         vertical: "hidden"
-    },
+    }
 }
 
 interface EditorProps {
@@ -56,10 +57,11 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
             diagnosticCodesToIgnore: [80005]
         })
+        editor.focus()
     }
+
     return (
-        <div
-            style={{ height: "100%" }}>
+        <div className={styles.monacoEditorWrapper}>
             <MonacoEditor
                 onChange={onChange}
                 language="typescript"

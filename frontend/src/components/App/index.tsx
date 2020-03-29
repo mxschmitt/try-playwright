@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Col, Grid, IconButton, Icon, Loader, Panel, Notification } from 'rsuite'
 
-import { runCode, trackEvent } from './utils'
-import RightPanel from './components/RightPanel'
-import Header from './components/Header'
-import Editor from './components/Editor'
-import { CodeContext } from './components/CodeContext'
+import { runCode, trackEvent } from '../../utils'
+import RightPanel from '../RightPanel'
+import Header from '../Header'
+import Editor from '../Editor'
+import { CodeContext } from '../CodeContext'
+
+import styles from './index.module.css'
 
 const App: React.FunctionComponent = () => {
   const { code, onChangeRightPanelMode } = useContext(CodeContext)
@@ -44,19 +46,16 @@ const App: React.FunctionComponent = () => {
   return (
     <>
       <Header />
-      <Grid fluid style={{
-        display: "flex"
-      }}>
+      <Grid fluid className={styles.grid}>
         <Col xs={24} md={12}>
-          {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
+          {loading && <Loader center content="loading" backdrop className={styles.loader} />}
           <Panel
             bodyFill
-            className="panel-editor"
-            style={{ height: "100%" }}
+            className={styles.editorPanel}
             header={
               <>
                 Editor
-               <IconButton onClick={handleExecution} style={{ float: "right" }} icon={<Icon icon="play" />}>
+               <IconButton onClick={handleExecution} className={styles.runButton} icon={<Icon icon="play" />}>
                   Run
               </IconButton>
               </>

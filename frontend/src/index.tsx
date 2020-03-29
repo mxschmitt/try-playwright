@@ -4,7 +4,7 @@ import * as Sentry from '@sentry/browser';
 
 import './index.css'
 
-import App from './App';
+import App from './components/App';
 import CodeContextWrapper from './components/CodeContext';
 
 if (process.env.NODE_ENV === "production") {

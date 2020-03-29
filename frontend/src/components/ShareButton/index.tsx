@@ -1,14 +1,11 @@
-import React, { CSSProperties, useEffect, useContext } from 'react'
+import React, { useEffect, useContext } from 'react'
 import { IconButton, Icon, Notification } from 'rsuite'
 import clipboard from 'clipboard-polyfill'
-import { CodeContext } from './CodeContext'
-import { Examples } from '../constants'
+import { CodeContext } from '../CodeContext'
+import { Examples } from '../../constants'
+import styles from './index.module.css'
 
-interface ShareButtonProps {
-    style: CSSProperties;
-}
-
-const ShareButton: React.FunctionComponent<ShareButtonProps> = ({  style }) => {
+const ShareButton: React.FunctionComponent = () => {
     const { code } = useContext(CodeContext)
     const handleOnClick = async (): Promise<void> => {
         let path = ""
@@ -59,7 +56,7 @@ const ShareButton: React.FunctionComponent<ShareButtonProps> = ({  style }) => {
         window.addEventListener("keydown", handler);
         return (): void => window.removeEventListener("keydown", handler)
     })
-    return (<IconButton style={style} onClick={handleOnClick} icon={<Icon icon="share" />}>
+    return (<IconButton className={styles.iconButton} onClick={handleOnClick} icon={<Icon icon="share" />}>
         Share
     </IconButton>)
 }

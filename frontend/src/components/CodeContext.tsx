@@ -17,7 +17,8 @@ export const CodeContext = React.createContext<CodeContextContent>({
 })
 
 const CodeContextWrapper: React.FunctionComponent = ({ children }) => {
-    const [code, setCode] = useState<string>("")
+    // keep some value in there due a bug with react-monaco-editor
+    const [code, setCode] = useState<string>(" ")
     const [rightPanelMode, setRightPanelMode] = useState(true)
     // determine the code which should be loaded on the application start
     useEffect(() => {

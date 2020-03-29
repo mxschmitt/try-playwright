@@ -1,6 +1,2 @@
 @import '~rsuite/dist/styles/rsuite-default.css' screen;
 @import '~rsuite/dist/styles/rsuite-dark.css' screen and (prefers-color-scheme: dark);
-
-.panel-editor > .rs-panel-body {
-    height: 100%
-}

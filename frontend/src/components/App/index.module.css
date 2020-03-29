@@ -1,0 +1,28 @@
+.editorPanel > :global.rs-panel-body {
+    height: inherit
+}
+
+.loader {
+    z-index: 10;
+}
+
+.runButton {
+    float: right
+}
+
+@media (min-width: 992px) {
+    .grid {
+        display: flex;
+    }
+    .editorPanel {
+        /** (Editor bottom padding - Panel header - Navbar) */
+        min-height: calc(100vh - 10px - 60px - 56px);
+        height: 100%;
+    }
+}
+
+@media (max-width: 991px) {
+    .editorPanel {
+        height: 500px;
+    }
+}

@@ -1,6 +1,8 @@
 import React from 'react'
 
-import ResponseFile from '../ResponseFile'
+import ResponseFile from '../../ResponseFile'
+
+import styles from './index.module.css'
 
 interface RightOutputPanelProps {
     resp: APIResponse | null;
@@ -11,7 +13,7 @@ const RightOutputPanel: React.FunctionComponent<RightOutputPanelProps> = ({ resp
         <>
             {resp && <>
                 {resp.logs.length > 0 && <h4>Logs</h4>}
-                <code style={{ wordBreak: "break-all" }}>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
+                <code className={styles.logsWrapper}>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
                     {entry.args.join(" ")}
                     <br />
                 </React.Fragment>)}</code>
