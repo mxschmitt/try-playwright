@@ -7,6 +7,8 @@ import RightOutputPanel from './RightOutputPanel'
 import RightExamplesPanel from './RightExamplesPanel'
 import { CodeContext } from '../CodeContext'
 
+import styles from './index.module.css'
+
 interface RightPanelProps {
     resp: APIResponse | null;
 }
@@ -25,12 +27,12 @@ const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
             header={
                 <>
                     {getHeaderText(!rightPanelMode)}
-                    <ShareButton  style={{ float: "right" }} />
-                    <Button onClick={handleShowExamplesClick} style={{ float: "right", marginRight: 10 }} data-test-id="toggel-right-panel">Show {getHeaderText(rightPanelMode)}</Button>
+                    <ShareButton />
+                    <Button onClick={handleShowExamplesClick} className={styles.togglePanelModeButton} data-test-id="toggel-right-panel">Show {getHeaderText(rightPanelMode)}</Button>
                 </>
             }
         >
-            <div style={{ padding: 5 }}>
+            <div className={styles.rightPanelWrapper}>
                 {rightPanelMode ? <RightExamplesPanel /> : <RightOutputPanel resp={resp} />}
             </div>
         </Panel>
