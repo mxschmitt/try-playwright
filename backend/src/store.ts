@@ -1,15 +1,16 @@
-import sqlite from 'sqlite'
+import { open, Database } from 'sqlite'
+import sqlite3 from 'sqlite3'
 
 export const ErrorNoRecordFound = new Error("no record found")
 export const ErrorMaxIdsReached = new Error("database unique limit of IDs reached")
 
 export class ShareStore {
-  private db!: sqlite.Database
-   maxLength = 5
+  private db!: Database
+  maxLength = 5
   async init(dbPath: string): Promise<void> {
-    this.db = await sqlite.open({
+    this.db = await open({
       filename: dbPath,
-      driver: sqlite.Database
+      driver: sqlite3.Database
     });
     await this.db.run(`CREATE TABLE IF NOT EXISTS shares (id TEXT NOT NULL PRIMARY KEY, code TEXT UNIQUE)`)
   }
@@ -41,7 +42,7 @@ export class ShareStore {
     }
     throw ErrorMaxIdsReached
   }
-   getRandomID(): string {
+  getRandomID(): string {
     return [...Array(this.maxLength)].map(() => Math.random().toString(36)[2]).join('')
   }
 }
