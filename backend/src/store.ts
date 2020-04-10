@@ -7,7 +7,10 @@ export class ShareStore {
   private db!: sqlite.Database
    maxLength = 5
   async init(dbPath: string): Promise<void> {
-    this.db = await sqlite.open(dbPath);
+    this.db = await sqlite.open({
+      filename: dbPath,
+      driver: sqlite.Database
+    });
     await this.db.run(`CREATE TABLE IF NOT EXISTS shares (id TEXT NOT NULL PRIMARY KEY, code TEXT UNIQUE)`)
   }
   async close(): Promise<void> {
