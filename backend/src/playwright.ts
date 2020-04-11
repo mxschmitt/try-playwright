@@ -2,7 +2,7 @@ import path from 'path'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
 import playwright from 'playwright-core'
-import { Browser, WebKitBrowser, BrowserTypeLaunchOptions, PagePdfOptions, PageScreenshotOptions, ChromiumBrowser, FirefoxBrowser, Page as PageType } from 'playwright-core'
+import { Browser, WebKitBrowser, ChromiumBrowser, FirefoxBrowser, Page as PageType } from 'playwright-core'
 // @ts-ignore
 import { Playwright } from 'playwright-core/lib/server/playwright'
 // @ts-ignore
@@ -44,7 +44,8 @@ export const emitNewFile = (browserId: string, originalFileName: string): string
   return publicPath
 }
 
-Page.prototype.screenshot = async function (this: PageType, options?: PageScreenshotOptions): Promise<Buffer> {
+
+Page.prototype.screenshot = async function (this: PageType, options?: any): Promise<Buffer> {
   if (options?.path) {
     // @ts-ignore
     const browserId = this.context()._browser[BROWSER_ID];
@@ -60,7 +61,7 @@ Page.prototype.screenshot = async function (this: PageType, options?: PageScreen
 
 const superCRPDF: PageType["pdf"] = CRPage.prototype.pdf;
 
-CRPage.prototype.pdf = async function (this: PageType, options?: PagePdfOptions): Promise<Buffer> {
+CRPage.prototype.pdf = async function (this: PageType, options?: any): Promise<Buffer> {
   if (options?.path && superCRPDF) {
     // @ts-ignore
     const browserId = this._page.context()._browser[BROWSER_ID];
@@ -102,7 +103,7 @@ export const getPlaywright = (id: string): typeof playwright => {
   pw.firefox._executablePath = ffExecutablePath;
 
   const originalChromiumLaunch = pw.chromium.launch
-  pw.chromium.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<ChromiumBrowser> => {
+  pw.chromium.launch = async (options: any = {}): Promise<ChromiumBrowser> => {
     const browser = await originalChromiumLaunch.apply(pw.chromium, [{
       ...options,
       args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
@@ -112,14 +113,14 @@ export const getPlaywright = (id: string): typeof playwright => {
   }
 
   const originalWebKitLaunch = pw.webkit.launch
-  pw.webkit.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<WebKitBrowser> => {
+  pw.webkit.launch = async (options: any = {}): Promise<WebKitBrowser> => {
     const browser = await originalWebKitLaunch.apply(pw.webkit, [options])
     await preBrowserLaunch(browser, id)
     return browser
   }
 
   const originalFirefoxLaunch = pw.firefox.launch
-  pw.firefox.launch = async (options: BrowserTypeLaunchOptions = {}): Promise<FirefoxBrowser> => {
+  pw.firefox.launch = async (options: any = {}): Promise<FirefoxBrowser> => {
     const browser = await originalFirefoxLaunch.apply(pw.firefox, [options])
     await preBrowserLaunch(browser, id)
     return browser

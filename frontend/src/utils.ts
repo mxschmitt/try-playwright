@@ -5,7 +5,7 @@ export const decodeCode = (code: string | null): string => {
   if (!code) {
     return ""
   }
-  return lzString.decompressFromEncodedURIComponent(code)
+  return lzString.decompressFromEncodedURIComponent(code) || ""
 }
 
 export const runCode = async (code: string): Promise<APIResponse> => {

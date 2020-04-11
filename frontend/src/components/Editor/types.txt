@@ -84,6 +84,7 @@ declare module 'playwright-core/api' {
   export { BrowserContext } from 'playwright-core/browserContext';
   export { ConsoleMessage } from 'playwright-core/console';
   export { Dialog } from 'playwright-core/dialog';
+  export { Download } from 'playwright-core/download';
   export { ElementHandle } from 'playwright-core/dom';
   export { TimeoutError } from 'playwright-core/errors';
   export { Frame } from 'playwright-core/frames';
@@ -118,22 +119,33 @@ declare module 'playwright-core/browser' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
+  /// <reference types="debug" />
   import { BrowserContext, BrowserContextOptions } from 'playwright-core/browserContext';
-  import * as platform from 'playwright-core/platform';
   import { Page } from 'playwright-core/page';
-  export interface Browser extends platform.EventEmitterType {
+  import { EventEmitter } from 'events';
+  import type { BrowserServer } from 'playwright-core/server/browserServer';
+  export interface Browser extends EventEmitter {
       newContext(options?: BrowserContextOptions): Promise<BrowserContext>;
       contexts(): BrowserContext[];
       newPage(options?: BrowserContextOptions): Promise<Page>;
       isConnected(): boolean;
       close(): Promise<void>;
-      _setDebugFunction(debugFunction: (message: string) => void): void;
   }
-  export type ConnectOptions = {
-      slowMo?: number;
-      wsEndpoint: string;
-  };
-  export function createPageInNewContext(browser: Browser, options?: BrowserContextOptions): Promise<Page>;
+  export abstract class BrowserBase extends EventEmitter implements Browser {
+      _downloadsPath: string;
+      private _downloads;
+      _debugProtocol: import("debug").IDebugger;
+      _ownedServer: BrowserServer | null;
+      abstract newContext(options?: BrowserContextOptions): Promise<BrowserContext>;
+      abstract contexts(): BrowserContext[];
+      abstract isConnected(): boolean;
+      abstract _disconnect(): void;
+      newPage(options?: BrowserContextOptions): Promise<Page>;
+      _downloadCreated(page: Page, uuid: string, url: string): void;
+      _downloadFinished(uuid: string, error?: string): void;
+      close(): Promise<void>;
+  }
   export type LaunchType = 'local' | 'server' | 'persistent';
 
 }
@@ -156,9 +168,10 @@ declare module 'playwright-core/browserContext' {
    */
   import * as network from 'playwright-core/network';
   import { Page, PageBinding } from 'playwright-core/page';
-  import * as platform from 'playwright-core/platform';
   import { TimeoutSettings } from 'playwright-core/timeoutSettings';
   import * as types from 'playwright-core/types';
+  import { ExtendedEventEmitter } from 'playwright-core/extendedEventEmitter';
+  import { Download } from 'playwright-core/download';
   export type BrowserContextOptions = {
       viewport?: types.Size | null;
       ignoreHTTPSErrors?: boolean;
@@ -175,6 +188,8 @@ declare module 'playwright-core/browserContext' {
       deviceScaleFactor?: number;
       isMobile?: boolean;
       hasTouch?: boolean;
+      colorScheme?: types.ColorScheme;
+      acceptDownloads?: boolean;
   };
   export interface BrowserContext {
       setDefaultNavigationTimeout(timeout: number): void;
@@ -203,7 +218,7 @@ declare module 'playwright-core/browserContext' {
       })): Promise<any>;
       close(): Promise<void>;
   }
-  export abstract class BrowserContextBase extends platform.EventEmitter implements BrowserContext {
+  export abstract class BrowserContextBase extends ExtendedEventEmitter implements BrowserContext {
       readonly _timeoutSettings: TimeoutSettings;
       readonly _pageBindings: Map<string, PageBinding>;
       readonly _options: BrowserContextOptions;
@@ -215,9 +230,12 @@ declare module 'playwright-core/browserContext' {
       private readonly _closePromise;
       private _closePromiseFulfill;
       readonly _permissions: Map<string, string[]>;
+      readonly _downloads: Set<Download>;
       constructor(options: BrowserContextOptions);
+      protected _abortPromiseForEvent(event: string): Promise<Error>;
+      protected _computeDeadline(options?: types.TimeoutOptions): number;
       _browserClosed(): void;
-      _didCloseInternal(): void;
+      _didCloseInternal(omitDeleteDownloads?: boolean): Promise<void>;
       abstract pages(): Page[];
       abstract newPage(): Promise<Page>;
       abstract cookies(...urls: string[]): Promise<network.NetworkCookie[]>;
@@ -242,9 +260,6 @@ declare module 'playwright-core/browserContext' {
       clearPermissions(): Promise<void>;
       setDefaultNavigationTimeout(timeout: number): void;
       setDefaultTimeout(timeout: number): void;
-      waitForEvent(event: string, optionsOrPredicate?: Function | (types.TimeoutOptions & {
-          predicate?: Function;
-      })): Promise<any>;
   }
   export function assertBrowserContextIsNotOwned(context: BrowserContextBase): void;
   export function validateBrowserContextOptions(options: BrowserContextOptions): BrowserContextOptions;
@@ -294,17 +309,17 @@ declare module 'playwright-core/chromium/crBrowser' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import { Browser } from 'playwright-core/browser';
+  /// <reference types="node" />
+  import { BrowserBase } from 'playwright-core/browser';
   import { BrowserContext, BrowserContextBase, BrowserContextOptions } from 'playwright-core/browserContext';
   import * as network from 'playwright-core/network';
   import { Page, Worker } from 'playwright-core/page';
-  import * as platform from 'playwright-core/platform';
   import { ConnectionTransport } from 'playwright-core/transport';
   import * as types from 'playwright-core/types';
   import { CRConnection, CRSession } from 'playwright-core/chromium/crConnection';
   import { CRPage } from 'playwright-core/chromium/crPage';
   import { Protocol } from 'playwright-core/chromium/protocol';
-  export class CRBrowser extends platform.EventEmitter implements Browser {
+  export class CRBrowser extends BrowserBase {
       readonly _connection: CRConnection;
       _session: CRSession;
       private _clientRootSessionPromise;
@@ -322,21 +337,19 @@ declare module 'playwright-core/chromium/crBrowser' {
       constructor(connection: CRConnection);
       newContext(options?: BrowserContextOptions): Promise<BrowserContext>;
       contexts(): BrowserContext[];
-      newPage(options?: BrowserContextOptions): Promise<Page>;
       _onAttachedToTarget({ targetInfo, sessionId, waitingForDebugger }: Protocol.Target.attachedToTargetPayload): void;
       _onDetachedFromTarget(payload: Protocol.Target.detachFromTargetParameters): void;
       _closePage(crPage: CRPage): Promise<void>;
-      close(): Promise<void>;
+      _disconnect(): void;
       newBrowserCDPSession(): Promise<CRSession>;
       startTracing(page?: Page, options?: {
           path?: string;
           screenshots?: boolean;
           categories?: string[];
       }): Promise<void>;
-      stopTracing(): Promise<platform.BufferType>;
+      stopTracing(): Promise<Buffer>;
       isConnected(): boolean;
       _clientRootSession(): Promise<CRSession>;
-      _setDebugFunction(debugFunction: (message: string) => void): void;
   }
   class CRServiceWorker extends Worker {
       readonly _browserContext: CRBrowserContext;
@@ -390,25 +403,25 @@ declare module 'playwright-core/chromium/crConnection' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import * as platform from 'playwright-core/platform';
-  import { ConnectionTransport } from 'playwright-core/transport';
+  /// <reference types="node" />
+  import { ConnectionTransport, ProtocolResponse } from 'playwright-core/transport';
   import { Protocol } from 'playwright-core/chromium/protocol';
+  import { EventEmitter } from 'events';
   export const ConnectionEvents: {
       Disconnected: symbol;
   };
   export const kBrowserCloseMessageId = -9999;
-  export class CRConnection extends platform.EventEmitter {
+  export class CRConnection extends EventEmitter {
       private _lastId;
       private readonly _transport;
       private readonly _sessions;
       readonly rootSession: CRSession;
       _closed: boolean;
-      _debugProtocol: (message: string) => void;
       constructor(transport: ConnectionTransport);
       static fromSession(session: CRSession): CRConnection;
       session(sessionId: string): CRSession | null;
-      _rawSend(sessionId: string, message: any): number;
-      _onMessage(message: string): Promise<void>;
+      _rawSend(sessionId: string, method: string, params: any): number;
+      _onMessage(message: ProtocolResponse): Promise<void>;
       _onClose(): void;
       close(): void;
       createSession(targetInfo: Protocol.Target.TargetInfo): Promise<CRSession>;
@@ -417,12 +430,13 @@ declare module 'playwright-core/chromium/crConnection' {
   export const CRSessionEvents: {
       Disconnected: symbol;
   };
-  export class CRSession extends platform.EventEmitter {
+  export class CRSession extends EventEmitter {
       _connection: CRConnection | null;
       private readonly _callbacks;
       private readonly _targetType;
       private readonly _sessionId;
       private readonly _rootSessionId;
+      private _unhandledException;
       on: <T extends keyof Protocol.Events | symbol>(event: T, listener: (payload: T extends symbol ? any : Protocol.Events[T extends keyof Protocol.Events ? T : never]) => void) => this;
       addListener: <T extends keyof Protocol.Events | symbol>(event: T, listener: (payload: T extends symbol ? any : Protocol.Events[T extends keyof Protocol.Events ? T : never]) => void) => this;
       off: <T extends keyof Protocol.Events | symbol>(event: T, listener: (payload: T extends symbol ? any : Protocol.Events[T extends keyof Protocol.Events ? T : never]) => void) => this;
@@ -430,16 +444,7 @@ declare module 'playwright-core/chromium/crConnection' {
       once: <T extends keyof Protocol.Events | symbol>(event: T, listener: (payload: T extends symbol ? any : Protocol.Events[T extends keyof Protocol.Events ? T : never]) => void) => this;
       constructor(connection: CRConnection, rootSessionId: string, targetType: string, sessionId: string);
       send<T extends keyof Protocol.CommandParameters>(method: T, params?: Protocol.CommandParameters[T]): Promise<Protocol.CommandReturnValues[T]>;
-      _onMessage(object: {
-          id?: number;
-          method: string;
-          params: any;
-          error: {
-              message: string;
-              data: any;
-          };
-          result?: any;
-      }): void;
+      _onMessage(object: ProtocolResponse): void;
       detach(): Promise<void>;
       _onClosed(): void;
   }
@@ -653,6 +658,7 @@ declare module 'playwright-core/chromium/crPage' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
   import * as dom from 'playwright-core/dom';
   import * as frames from 'playwright-core/frames';
   import { CRSession } from 'playwright-core/chromium/crConnection';
@@ -664,13 +670,10 @@ declare module 'playwright-core/chromium/crPage' {
   import { CRCoverage } from 'playwright-core/chromium/crCoverage';
   import { CRBrowserContext } from 'playwright-core/chromium/crBrowser';
   import * as types from 'playwright-core/types';
-  import * as platform from 'playwright-core/platform';
   export class CRPage implements PageDelegate {
-      readonly _client: CRSession;
+      readonly _mainFrameSession: FrameSession;
+      readonly _sessions: Map<string, FrameSession>;
       readonly _page: Page;
-      readonly _networkManager: CRNetworkManager;
-      private readonly _contextIdToContext;
-      private _eventListeners;
       readonly rawMouse: RawMouseImpl;
       readonly rawKeyboard: RawKeyboardImpl;
       readonly _targetId: string;
@@ -678,41 +681,24 @@ declare module 'playwright-core/chromium/crPage' {
       private readonly _pdf;
       private readonly _coverage;
       readonly _browserContext: CRBrowserContext;
-      private _firstNonInitialNavigationCommittedPromise;
-      private _firstNonInitialNavigationCommittedCallback;
       private readonly _pagePromise;
       _initializedPage: Page | null;
       constructor(client: CRSession, targetId: string, browserContext: CRBrowserContext, opener: CRPage | null);
+      private _forAllFrameSessions;
+      private _sessionForFrame;
+      private _sessionForHandle;
+      addFrameSession(targetId: Protocol.Target.TargetID, session: CRSession): void;
+      removeFrameSession(targetId: Protocol.Target.TargetID): void;
       pageOrError(): Promise<Page | Error>;
-      private _initialize;
       didClose(): void;
       navigateFrame(frame: frames.Frame, url: string, referrer: string | undefined): Promise<frames.GotoResult>;
-      _onLifecycleEvent(event: Protocol.Page.lifecycleEventPayload): void;
-      _onFrameStoppedLoading(frameId: string): void;
-      _handleFrameTree(frameTree: Protocol.Page.FrameTree): void;
-      _onFrameAttached(frameId: string, parentFrameId: string | null): void;
-      _onFrameNavigated(framePayload: Protocol.Page.Frame, initial: boolean): void;
-      _onFrameRequestedNavigation(payload: Protocol.Page.frameRequestedNavigationPayload): void;
-      _onFrameNavigatedWithinDocument(frameId: string, url: string): void;
-      _onFrameDetached(frameId: string): void;
-      _onExecutionContextCreated(contextPayload: Protocol.Runtime.ExecutionContextDescription): void;
-      _onExecutionContextDestroyed(executionContextId: number): void;
-      _onExecutionContextsCleared(): void;
-      _onAttachedToTarget(event: Protocol.Target.attachedToTargetPayload): void;
-      _onDetachedFromTarget(event: Protocol.Target.detachedFromTargetPayload): void;
-      _onConsoleAPI(event: Protocol.Runtime.consoleAPICalledPayload): Promise<void>;
       exposeBinding(binding: PageBinding): Promise<void>;
-      _initBinding(binding: PageBinding): Promise<void>;
-      _onBindingCalled(event: Protocol.Runtime.bindingCalledPayload): void;
-      _onDialog(event: Protocol.Page.javascriptDialogOpeningPayload): void;
-      _handleException(exceptionDetails: Protocol.Runtime.ExceptionDetails): void;
-      _onTargetCrashed(): void;
-      _onLogEntryAdded(event: Protocol.Log.entryAddedPayload): void;
-      _onFileChooserOpened(event: Protocol.Page.fileChooserOpenedPayload): Promise<void>;
       updateExtraHTTPHeaders(): Promise<void>;
+      updateGeolocation(): Promise<void>;
+      updateOffline(): Promise<void>;
+      updateHttpCredentials(): Promise<void>;
       setViewportSize(viewportSize: types.Size): Promise<void>;
-      _updateViewport(updateTouch: boolean): Promise<void>;
-      setEmulateMedia(mediaType: types.MediaType | null, colorScheme: types.ColorScheme | null): Promise<void>;
+      updateEmulateMedia(): Promise<void>;
       updateRequestInterception(): Promise<void>;
       setFileChooserIntercepted(enabled: boolean): Promise<void>;
       opener(): Promise<Page | null>;
@@ -729,7 +715,7 @@ declare module 'playwright-core/chromium/crPage' {
           b: number;
           a: number;
       }): Promise<void>;
-      takeScreenshot(format: 'png' | 'jpeg', documentRect: types.Rect | undefined, viewportRect: types.Rect | undefined, quality: number | undefined): Promise<platform.BufferType>;
+      takeScreenshot(format: 'png' | 'jpeg', documentRect: types.Rect | undefined, viewportRect: types.Rect | undefined, quality: number | undefined): Promise<Buffer>;
       resetViewport(): Promise<void>;
       getContentFrame(handle: dom.ElementHandle): Promise<frames.Frame | null>;
       getOwnerFrame(handle: dom.ElementHandle): Promise<string | null>;
@@ -743,16 +729,72 @@ declare module 'playwright-core/chromium/crPage' {
       }>;
       setInputFiles(handle: dom.ElementHandle<HTMLInputElement>, files: types.FilePayload[]): Promise<void>;
       adoptElementHandle<T extends Node>(handle: dom.ElementHandle<T>, to: dom.FrameExecutionContext): Promise<dom.ElementHandle<T>>;
-      adoptBackendNodeId(backendNodeId: Protocol.DOM.BackendNodeId, to: dom.FrameExecutionContext): Promise<dom.ElementHandle>;
       getAccessibilityTree(needle?: dom.ElementHandle): Promise<{
           tree: import("playwright-core/accessibility").AXNode;
           needle: import("playwright-core/accessibility").AXNode | null;
       }>;
       inputActionEpilogue(): Promise<void>;
-      pdf(options?: types.PDFOptions): Promise<platform.BufferType>;
+      pdf(options?: types.PDFOptions): Promise<Buffer>;
       coverage(): CRCoverage;
       getFrameElement(frame: frames.Frame): Promise<dom.ElementHandle>;
   }
+  class FrameSession {
+      readonly _client: CRSession;
+      readonly _crPage: CRPage;
+      readonly _page: Page;
+      readonly _networkManager: CRNetworkManager;
+      private readonly _contextIdToContext;
+      private _eventListeners;
+      readonly _targetId: string;
+      private _firstNonInitialNavigationCommittedPromise;
+      private _firstNonInitialNavigationCommittedCallback;
+      constructor(crPage: CRPage, client: CRSession, targetId: string);
+      private _isMainFrame;
+      private _addSessionListeners;
+      _initialize(): Promise<void>;
+      dispose(): void;
+      _navigate(frame: frames.Frame, url: string, referrer: string | undefined): Promise<frames.GotoResult>;
+      _onLifecycleEvent(event: Protocol.Page.lifecycleEventPayload): void;
+      _onFrameStoppedLoading(frameId: string): void;
+      _handleFrameTree(frameTree: Protocol.Page.FrameTree): void;
+      _onFrameAttached(frameId: string, parentFrameId: string | null): void;
+      _onFrameNavigated(framePayload: Protocol.Page.Frame, initial: boolean): void;
+      _onFrameRequestedNavigation(payload: Protocol.Page.frameRequestedNavigationPayload): void;
+      _onFrameNavigatedWithinDocument(frameId: string, url: string): void;
+      _onFrameDetached(frameId: string): void;
+      _onExecutionContextCreated(contextPayload: Protocol.Runtime.ExecutionContextDescription): void;
+      _onExecutionContextDestroyed(executionContextId: number): void;
+      _onExecutionContextsCleared(): void;
+      _onAttachedToTarget(event: Protocol.Target.attachedToTargetPayload): void;
+      _onDetachedFromTarget(event: Protocol.Target.detachedFromTargetPayload): void;
+      _onConsoleAPI(event: Protocol.Runtime.consoleAPICalledPayload): Promise<void>;
+      _initBinding(binding: PageBinding): Promise<void>;
+      _onBindingCalled(event: Protocol.Runtime.bindingCalledPayload): void;
+      _onDialog(event: Protocol.Page.javascriptDialogOpeningPayload): void;
+      _handleException(exceptionDetails: Protocol.Runtime.ExceptionDetails): void;
+      _onTargetCrashed(): void;
+      _onLogEntryAdded(event: Protocol.Log.entryAddedPayload): void;
+      _onFileChooserOpened(event: Protocol.Page.fileChooserOpenedPayload): Promise<void>;
+      _onDownloadWillBegin(payload: Protocol.Page.downloadWillBeginPayload): void;
+      _onDownloadProgress(payload: Protocol.Page.downloadProgressPayload): void;
+      _updateExtraHTTPHeaders(): Promise<void>;
+      _updateGeolocation(): Promise<void>;
+      _updateOffline(): Promise<void>;
+      _updateHttpCredentials(): Promise<void>;
+      _updateViewport(): Promise<void>;
+      _updateEmulateMedia(): Promise<void>;
+      _updateRequestInterception(): Promise<void>;
+      _setFileChooserIntercepted(enabled: boolean): Promise<void>;
+      _evaluateOnNewDocument(source: string): Promise<void>;
+      _getContentFrame(handle: dom.ElementHandle): Promise<frames.Frame | null>;
+      _getOwnerFrame(handle: dom.ElementHandle): Promise<string | null>;
+      _getBoundingBox(handle: dom.ElementHandle): Promise<types.Rect | null>;
+      _scrollRectIntoViewIfNeeded(handle: dom.ElementHandle, rect?: types.Rect): Promise<void>;
+      _getContentQuads(handle: dom.ElementHandle): Promise<types.Quad[] | null>;
+      _adoptElementHandle<T extends Node>(handle: dom.ElementHandle<T>, to: dom.FrameExecutionContext): Promise<dom.ElementHandle<T>>;
+      _adoptBackendNodeId(backendNodeId: Protocol.DOM.BackendNodeId, to: dom.FrameExecutionContext): Promise<dom.ElementHandle>;
+  }
+  export {};
 
 }
 declare module 'playwright-core/chromium/crPdf' {
@@ -772,13 +814,13 @@ declare module 'playwright-core/chromium/crPdf' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import * as platform from 'playwright-core/platform';
+  /// <reference types="node" />
   import * as types from 'playwright-core/types';
   import { CRSession } from 'playwright-core/chromium/crConnection';
   export class CRPDF {
       private _client;
       constructor(client: CRSession);
-      generate(options?: types.PDFOptions): Promise<platform.BufferType>;
+      generate(options?: types.PDFOptions): Promise<Buffer>;
   }
 
 }
@@ -799,13 +841,13 @@ declare module 'playwright-core/chromium/crProtocolHelper' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
   import { CRSession } from 'playwright-core/chromium/crConnection';
   import { Protocol } from 'playwright-core/chromium/protocol';
-  import * as platform from 'playwright-core/platform';
   export function getExceptionMessage(exceptionDetails: Protocol.Runtime.ExceptionDetails): string;
   export function valueFromRemoteObject(remoteObject: Protocol.Runtime.RemoteObject): any;
   export function releaseObject(client: CRSession, remoteObject: Protocol.Runtime.RemoteObject): Promise<void>;
-  export function readProtocolStream(client: CRSession, handle: string, path: string | null): Promise<platform.BufferType>;
+  export function readProtocolStream(client: CRSession, handle: string, path: string | null): Promise<Buffer>;
   export function toConsoleMessageLocation(stackTrace: Protocol.Runtime.StackTrace | undefined): {
       url: string;
       lineNumber: number;
@@ -1441,11 +1483,61 @@ declare module 'playwright-core/chromium/protocol' {
        * Audits domain allows investigation of page violations and possible improvements.
        */
       module Audits {
-          interface Issue {
-              code: string;
+          /**
+           * Information about a cookie that is affected by an inspector issue.
+           */
+          interface AffectedCookie {
+              /**
+               * The following three properties uniquely identify a cookie
+               */
+              name: string;
+              path: string;
+              domain: string;
+              /**
+               * Optionally identifies the site-for-cookies, which may be used by the
+        front-end as additional context.
+               */
+              siteForCookies?: string;
+          }
+          type SameSiteCookieExclusionReason = "ExcludeSameSiteUnspecifiedTreatedAsLax" | "ExcludeSameSiteNoneInsecure";
+          type SameSiteCookieWarningReason = "WarnSameSiteUnspecifiedCrossSiteContext" | "WarnSameSiteNoneInsecure" | "WarnSameSiteUnspecifiedLaxAllowUnsafe" | "WarnSameSiteCrossSchemeSecureUrlMethodUnsafe" | "WarnSameSiteCrossSchemeSecureUrlLax" | "WarnSameSiteCrossSchemeSecureUrlStrict" | "WarnSameSiteCrossSchemeInsecureUrlMethodUnsafe" | "WarnSameSiteCrossSchemeInsecureUrlLax" | "WarnSameSiteCrossSchemeInsecureUrlStrict";
+          /**
+           * This information is currently necessary, as the front-end has a difficult
+      time finding a specific cookie. With this, we can convey specific error
+      information without the cookie.
+           */
+          interface SameSiteCookieIssueDetails {
+              cookieWarningReasons: SameSiteCookieWarningReason[];
+              cookieExclusionReasons: SameSiteCookieExclusionReason[];
+          }
+          interface AffectedResources {
+              cookies?: AffectedCookie[];
+          }
+          /**
+           * A unique identifier for the type of issue. Each type may use one of the
+      optional fields in InspectorIssueDetails to convey more specific
+      information about the kind of issue, and AffectedResources to identify
+      resources that are affected by this issue.
+           */
+          type InspectorIssueCode = "SameSiteCookieIssue";
+          /**
+           * This struct holds a list of optional fields with additional information
+      pertaining to the kind of issue. This is useful if there is a number of
+      very similar issues that only differ in details.
+           */
+          interface InspectorIssueDetails {
+              sameSiteCookieIssueDetails?: SameSiteCookieIssueDetails;
+          }
+          /**
+           * An inspector issue reported from the back-end.
+           */
+          interface InspectorIssue {
+              code: InspectorIssueCode;
+              details: InspectorIssueDetails;
+              resources: AffectedResources;
           }
           type issueAddedPayload = {
-              issue: Issue;
+              issue: InspectorIssue;
           };
           /**
            * Returns the response body and size if it were re-encoded with the specified settings. Only
@@ -1736,6 +1828,27 @@ declare module 'playwright-core/chromium/protocol' {
               browserContextId?: BrowserContextID;
           };
           type resetPermissionsReturnValue = {};
+          /**
+           * Set the behavior when downloading a file.
+           */
+          type setDownloadBehaviorParameters = {
+              /**
+               * Whether to allow all or deny all download requests, or use default Chrome behavior if
+        available (otherwise deny). |allowAndName| allows download and names files according to
+        their dowmload guids.
+               */
+              behavior: "deny" | "allow" | "allowAndName" | "default";
+              /**
+               * BrowserContext to set download behavior. When omitted, default browser context is used.
+               */
+              browserContextId?: BrowserContextID;
+              /**
+               * The default path to save downloaded files to. This is requred if behavior is set to 'allow'
+        or 'allowAndName'.
+               */
+              downloadPath?: string;
+          };
+          type setDownloadBehaviorReturnValue = {};
           /**
            * Close browser gracefully.
            */
@@ -5171,7 +5284,7 @@ declare module 'playwright-core/chromium/protocol' {
               /**
                * Vision deficiency to emulate.
                */
-              type: "none" | "achromatomaly" | "achromatopsia" | "blurredVision" | "deuteranomaly" | "deuteranopia" | "protanomaly" | "protanopia" | "tritanomaly" | "tritanopia";
+              type: "none" | "achromatopsia" | "blurredVision" | "deuteranopia" | "protanopia" | "tritanopia";
           };
           type setEmulatedVisionDeficiencyReturnValue = {};
           /**
@@ -9166,9 +9279,34 @@ declare module 'playwright-core/chromium/protocol' {
                */
               frameId: FrameId;
               /**
+               * Global unique identifier of the download.
+               */
+              guid: string;
+              /**
                * URL of the resource being downloaded.
                */
               url: string;
+          };
+          /**
+           * Fired when download makes progress. Last call has |done| == true.
+           */
+          type downloadProgressPayload = {
+              /**
+               * Global unique identifier of the download.
+               */
+              guid: string;
+              /**
+               * Total expected bytes to download.
+               */
+              totalBytes: number;
+              /**
+               * Total bytes received.
+               */
+              receivedBytes: number;
+              /**
+               * Download status.
+               */
+              state: "inProgress" | "completed" | "canceled";
           };
           /**
            * Fired when interstitial page was hidden
@@ -11745,7 +11883,7 @@ declare module 'playwright-core/chromium/protocol' {
                */
               postData?: string;
               /**
-               * If set, overrides the request headrts.
+               * If set, overrides the request headers.
                */
               headers?: HeaderEntry[];
           };
@@ -12376,7 +12514,7 @@ declare module 'playwright-core/chromium/protocol' {
               /**
                * Scope type.
                */
-              type: "global" | "local" | "with" | "closure" | "catch" | "block" | "script" | "eval" | "module";
+              type: "global" | "local" | "with" | "closure" | "catch" | "block" | "script" | "eval" | "module" | "wasm-expression-stack";
               /**
                * Object representing the scope. For `global` and `with` scopes it represents the actual
         object; for the rest of the scopes, it is artificial transient object enumerating scope
@@ -13668,11 +13806,11 @@ declare module 'playwright-core/chromium/protocol' {
               /**
                * Object type.
                */
-              type: "object" | "function" | "undefined" | "string" | "number" | "boolean" | "symbol" | "bigint";
+              type: "object" | "function" | "undefined" | "string" | "number" | "boolean" | "symbol" | "bigint" | "wasm";
               /**
-               * Object subtype hint. Specified for `object` type values only.
+               * Object subtype hint. Specified for `object` or `wasm` type values only.
                */
-              subtype?: "array" | "null" | "node" | "regexp" | "date" | "map" | "set" | "weakmap" | "weakset" | "iterator" | "generator" | "error" | "proxy" | "promise" | "typedarray" | "arraybuffer" | "dataview";
+              subtype?: "array" | "null" | "node" | "regexp" | "date" | "map" | "set" | "weakmap" | "weakset" | "iterator" | "generator" | "error" | "proxy" | "promise" | "typedarray" | "arraybuffer" | "dataview" | "i32" | "i64" | "f32" | "f64" | "v128";
               /**
                * Object class (constructor) name. Specified for `object` type values only.
                */
@@ -14649,6 +14787,7 @@ declare module 'playwright-core/chromium/protocol' {
           "Page.frameStartedLoading": Page.frameStartedLoadingPayload;
           "Page.frameStoppedLoading": Page.frameStoppedLoadingPayload;
           "Page.downloadWillBegin": Page.downloadWillBeginPayload;
+          "Page.downloadProgress": Page.downloadProgressPayload;
           "Page.interstitialHidden": Page.interstitialHiddenPayload;
           "Page.interstitialShown": Page.interstitialShownPayload;
           "Page.javascriptDialogClosed": Page.javascriptDialogClosedPayload;
@@ -14752,6 +14891,7 @@ declare module 'playwright-core/chromium/protocol' {
           "Browser.setPermission": Browser.setPermissionParameters;
           "Browser.grantPermissions": Browser.grantPermissionsParameters;
           "Browser.resetPermissions": Browser.resetPermissionsParameters;
+          "Browser.setDownloadBehavior": Browser.setDownloadBehaviorParameters;
           "Browser.close": Browser.closeParameters;
           "Browser.crash": Browser.crashParameters;
           "Browser.crashGpuProcess": Browser.crashGpuProcessParameters;
@@ -15230,6 +15370,7 @@ declare module 'playwright-core/chromium/protocol' {
           "Browser.setPermission": Browser.setPermissionReturnValue;
           "Browser.grantPermissions": Browser.grantPermissionsReturnValue;
           "Browser.resetPermissions": Browser.resetPermissionsReturnValue;
+          "Browser.setDownloadBehavior": Browser.setDownloadBehaviorReturnValue;
           "Browser.close": Browser.closeReturnValue;
           "Browser.crash": Browser.crashReturnValue;
           "Browser.crashGpuProcess": Browser.crashGpuProcessReturnValue;
@@ -15790,13 +15931,13 @@ declare module 'playwright-core/dom' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
   import * as frames from 'playwright-core/frames';
+  import Injected from 'playwright-core/injected/injected';
   import * as input from 'playwright-core/input';
   import * as js from 'playwright-core/javascript';
-  import * as types from 'playwright-core/types';
-  import Injected from 'playwright-core/injected/injected';
   import { Page } from 'playwright-core/page';
-  import * as platform from 'playwright-core/platform';
+  import * as types from 'playwright-core/types';
   export type PointerActionOptions = {
       modifiers?: input.Modifier[];
       position?: types.Point;
@@ -15806,15 +15947,11 @@ declare module 'playwright-core/dom' {
   export class FrameExecutionContext extends js.ExecutionContext {
       readonly frame: frames.Frame;
       private _injectedPromise?;
-      private _injectedGeneration;
       constructor(delegate: js.ExecutionContextDelegate, frame: frames.Frame);
       _adoptIfNeeded(handle: js.JSHandle): Promise<js.JSHandle> | null;
       _doEvaluateInternal(returnByValue: boolean, waitForNavigations: boolean, pageFunction: string | Function, ...args: any[]): Promise<any>;
       _createHandle(remoteObject: any): js.JSHandle;
       _injected(): Promise<js.JSHandle<Injected>>;
-      _$(selector: string, scope?: ElementHandle): Promise<ElementHandle<Element> | null>;
-      _$array(selector: string, scope?: ElementHandle): Promise<js.JSHandle<Element[]>>;
-      _$$(selector: string, scope?: ElementHandle): Promise<ElementHandle<Element>[]>;
   }
   export class ElementHandle<T extends Node = Node> extends js.JSHandle<T> {
       readonly _context: FrameExecutionContext;
@@ -15827,6 +15964,10 @@ declare module 'playwright-core/dom' {
       }, Arg, R>, arg: Arg): Promise<R>;
       ownerFrame(): Promise<frames.Frame | null>;
       contentFrame(): Promise<frames.Frame | null>;
+      getAttribute(name: string): Promise<string | null>;
+      textContent(): Promise<string | null>;
+      innerText(): Promise<string | null>;
+      innerHTML(): Promise<string | null>;
       _scrollRectIntoViewIfNeeded(rect?: types.Rect): Promise<void>;
       scrollIntoViewIfNeeded(): Promise<void>;
       private _clickablePoint;
@@ -15837,7 +15978,7 @@ declare module 'playwright-core/dom' {
       dblclick(options?: MultiClickOptions & types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
       selectOption(values: string | ElementHandle | types.SelectOption | string[] | ElementHandle[] | types.SelectOption[], options?: types.NavigatingActionWaitOptions): Promise<string[]>;
       fill(value: string, options?: types.NavigatingActionWaitOptions): Promise<void>;
-      setInputFiles(files: string | types.FilePayload | string[] | types.FilePayload[]): Promise<void>;
+      setInputFiles(files: string | types.FilePayload | string[] | types.FilePayload[], options?: types.NavigatingActionWaitOptions): Promise<void>;
       focus(): Promise<void>;
       type(text: string, options?: {
           delay?: number;
@@ -15849,17 +15990,56 @@ declare module 'playwright-core/dom' {
       uncheck(options?: types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
       private _setChecked;
       boundingBox(): Promise<types.Rect | null>;
-      screenshot(options?: types.ElementScreenshotOptions): Promise<platform.BufferType>;
+      screenshot(options?: types.ElementScreenshotOptions): Promise<Buffer>;
       $(selector: string): Promise<ElementHandle | null>;
       $$(selector: string): Promise<ElementHandle<Element>[]>;
       $eval<R, Arg>(selector: string, pageFunction: types.FuncOn<Element, Arg, R>, arg: Arg): Promise<R>;
       $eval<R>(selector: string, pageFunction: types.FuncOn<Element, void, R>, arg?: any): Promise<R>;
       $$eval<R, Arg>(selector: string, pageFunction: types.FuncOn<Element[], Arg, R>, arg: Arg): Promise<R>;
       $$eval<R>(selector: string, pageFunction: types.FuncOn<Element[], void, R>, arg?: any): Promise<R>;
-      _waitForDisplayedAtStablePosition(options?: types.TimeoutOptions): Promise<void>;
-      _waitForHitTargetAt(point: types.Point, options?: types.TimeoutOptions): Promise<void>;
+      _waitForDisplayedAtStablePosition(deadline: number): Promise<void>;
+      _waitForHitTargetAt(point: types.Point, deadline: number): Promise<void>;
   }
   export const setFileInputFunction: (element: HTMLInputElement, payloads: types.FilePayload[]) => Promise<void>;
+
+}
+declare module 'playwright-core/download' {
+  /**
+   * Copyright (c) Microsoft Corporation.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *     http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  /// <reference types="node" />
+  import { Page } from 'playwright-core/page';
+  import { Readable } from 'stream';
+  export class Download {
+      private _downloadsPath;
+      private _uuid;
+      private _finishedCallback;
+      private _finishedPromise;
+      private _page;
+      private _acceptDownloads;
+      private _failure;
+      private _deleted;
+      private _url;
+      constructor(page: Page, downloadsPath: string, uuid: string, url: string);
+      url(): string;
+      path(): Promise<string | null>;
+      failure(): Promise<string | null>;
+      createReadStream(): Promise<Readable | null>;
+      delete(): Promise<void>;
+      _reportFinished(error?: string): void;
+  }
 
 }
 declare module 'playwright-core/errors' {
@@ -15919,6 +16099,7 @@ declare module 'playwright-core/events' {
           Close: string;
           Console: string;
           Dialog: string;
+          Download: string;
           FileChooser: string;
           DOMContentLoaded: string;
           PageError: string;
@@ -15937,6 +16118,35 @@ declare module 'playwright-core/events' {
           Close: string;
       };
   };
+
+}
+declare module 'playwright-core/extendedEventEmitter' {
+  /**
+   * Copyright (c) Microsoft Corporation.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   * http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  /// <reference types="node" />
+  import { EventEmitter } from 'events';
+  import { TimeoutOptions } from 'playwright-core/types';
+  export class ExtendedEventEmitter extends EventEmitter {
+      protected _abortPromiseForEvent(event: string): Promise<Error>;
+      protected _computeDeadline(options?: TimeoutOptions): number;
+      waitForEvent(event: string, optionsOrPredicate?: Function | {
+          predicate?: Function;
+          timeout?: number;
+      }): Promise<any>;
+  }
 
 }
 declare module 'playwright-core/firefox/ffAccessibility' {
@@ -15982,17 +16192,16 @@ declare module 'playwright-core/firefox/ffBrowser' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import { Browser } from 'playwright-core/browser';
+  import { BrowserBase } from 'playwright-core/browser';
   import { BrowserContext, BrowserContextBase, BrowserContextOptions } from 'playwright-core/browserContext';
   import * as network from 'playwright-core/network';
   import { Page } from 'playwright-core/page';
-  import * as platform from 'playwright-core/platform';
   import { ConnectionTransport } from 'playwright-core/transport';
   import * as types from 'playwright-core/types';
   import { FFConnection } from 'playwright-core/firefox/ffConnection';
   import { FFPage } from 'playwright-core/firefox/ffPage';
   import { Protocol } from 'playwright-core/firefox/protocol';
-  export class FFBrowser extends platform.EventEmitter implements Browser {
+  export class FFBrowser extends BrowserBase {
       _connection: FFConnection;
       readonly _ffPages: Map<string, FFPage>;
       readonly _defaultContext: FFBrowserContext;
@@ -16005,11 +16214,11 @@ declare module 'playwright-core/firefox/ffBrowser' {
       isConnected(): boolean;
       newContext(options?: BrowserContextOptions): Promise<BrowserContext>;
       contexts(): BrowserContext[];
-      newPage(options?: BrowserContextOptions): Promise<Page>;
       _onDetachedFromTarget(payload: Protocol.Browser.detachedFromTargetPayload): void;
       _onAttachedToTarget(payload: Protocol.Browser.attachedToTargetPayload): void;
-      close(): Promise<void>;
-      _setDebugFunction(debugFunction: (message: string) => void): void;
+      _onDownloadCreated(payload: Protocol.Browser.downloadCreatedPayload): void;
+      _onDownloadFinished(payload: Protocol.Browser.downloadFinishedPayload): void;
+      _disconnect(): void;
   }
   export class FFBrowserContext extends BrowserContextBase {
       readonly _browser: FFBrowser;
@@ -16030,6 +16239,7 @@ declare module 'playwright-core/firefox/ffBrowser' {
       setGeolocation(geolocation: types.Geolocation | null): Promise<void>;
       setExtraHTTPHeaders(headers: network.Headers): Promise<void>;
       setOffline(offline: boolean): Promise<void>;
+      _setColorScheme(colorScheme?: types.ColorScheme): Promise<void>;
       setHTTPCredentials(httpCredentials: types.Credentials | null): Promise<void>;
       addInitScript(script: Function | string | {
           path?: string;
@@ -16058,19 +16268,19 @@ declare module 'playwright-core/firefox/ffConnection' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import * as platform from 'playwright-core/platform';
-  import { ConnectionTransport } from 'playwright-core/transport';
+  /// <reference types="node" />
+  import { EventEmitter } from 'events';
+  import { ConnectionTransport, ProtocolRequest, ProtocolResponse } from 'playwright-core/transport';
   import { Protocol } from 'playwright-core/firefox/protocol';
   export const ConnectionEvents: {
       Disconnected: symbol;
   };
   export const kBrowserCloseMessageId = -9999;
-  export class FFConnection extends platform.EventEmitter {
+  export class FFConnection extends EventEmitter {
       private _lastId;
       private _callbacks;
       private _transport;
       readonly _sessions: Map<string, FFSession>;
-      _debugProtocol: (message: string) => void;
       _closed: boolean;
       on: <T extends keyof Protocol.Events | symbol>(event: T, listener: (payload: T extends symbol ? any : Protocol.Events[T extends keyof Protocol.Events ? T : never]) => void) => this;
       addListener: <T extends keyof Protocol.Events | symbol>(event: T, listener: (payload: T extends symbol ? any : Protocol.Events[T extends keyof Protocol.Events ? T : never]) => void) => this;
@@ -16080,8 +16290,8 @@ declare module 'playwright-core/firefox/ffConnection' {
       constructor(transport: ConnectionTransport);
       send<T extends keyof Protocol.CommandParameters>(method: T, params?: Protocol.CommandParameters[T]): Promise<Protocol.CommandReturnValues[T]>;
       nextMessageId(): number;
-      _rawSend(message: any): void;
-      _onMessage(message: string): Promise<void>;
+      _rawSend(message: ProtocolRequest): void;
+      _onMessage(message: ProtocolResponse): Promise<void>;
       _onClose(): void;
       close(): void;
       createSession(sessionId: string, type: string): FFSession;
@@ -16089,7 +16299,7 @@ declare module 'playwright-core/firefox/ffConnection' {
   export const FFSessionEvents: {
       Disconnected: symbol;
   };
-  export class FFSession extends platform.EventEmitter {
+  export class FFSession extends EventEmitter {
       _connection: FFConnection;
       _disposed: boolean;
       private _callbacks;
@@ -16103,16 +16313,7 @@ declare module 'playwright-core/firefox/ffConnection' {
       once: <T extends keyof Protocol.Events | symbol>(event: T, listener: (payload: T extends symbol ? any : Protocol.Events[T extends keyof Protocol.Events ? T : never]) => void) => this;
       constructor(connection: FFConnection, targetType: string, sessionId: string, rawSend: (message: any) => void);
       send<T extends keyof Protocol.CommandParameters>(method: T, params?: Protocol.CommandParameters[T]): Promise<Protocol.CommandReturnValues[T]>;
-      dispatchMessage(object: {
-          id?: number;
-          method: string;
-          params: object;
-          error: {
-              message: string;
-              data: any;
-          };
-          result?: any;
-      }): void;
+      dispatchMessage(object: ProtocolResponse): void;
       dispose(): void;
   }
 
@@ -16240,10 +16441,10 @@ declare module 'playwright-core/firefox/ffPage' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
   import * as dom from 'playwright-core/dom';
   import * as frames from 'playwright-core/frames';
   import { Page, PageBinding, PageDelegate } from 'playwright-core/page';
-  import * as platform from 'playwright-core/platform';
   import * as types from 'playwright-core/types';
   import { FFBrowserContext } from 'playwright-core/firefox/ffBrowser';
   import { FFSession } from 'playwright-core/firefox/ffConnection';
@@ -16265,14 +16466,13 @@ declare module 'playwright-core/firefox/ffPage' {
       private _eventListeners;
       private _workers;
       constructor(session: FFSession, browserContext: FFBrowserContext, opener: FFPage | null);
-      _initialize(): Promise<void>;
       _initializedPage(): Page | null;
       pageOrError(): Promise<Page | Error>;
       _onExecutionContextCreated(payload: Protocol.Runtime.executionContextCreatedPayload): void;
       _onExecutionContextDestroyed(payload: Protocol.Runtime.executionContextDestroyedPayload): void;
       private _removeContextsForFrame;
       _onLinkClicked(phase: 'before' | 'after'): void;
-      _onNavigationStarted(frameId: string): void;
+      _onNavigationStarted(params: Protocol.Page.navigationStartedPayload): void;
       _onNavigationAborted(params: Protocol.Page.navigationAbortedPayload): void;
       _onNavigationCommitted(params: Protocol.Page.navigationCommittedPayload): void;
       _onSameDocumentNavigation(params: Protocol.Page.sameDocumentNavigationPayload): void;
@@ -16293,7 +16493,7 @@ declare module 'playwright-core/firefox/ffPage' {
       navigateFrame(frame: frames.Frame, url: string, referer: string | undefined): Promise<frames.GotoResult>;
       updateExtraHTTPHeaders(): Promise<void>;
       setViewportSize(viewportSize: types.Size): Promise<void>;
-      setEmulateMedia(mediaType: types.MediaType | null, colorScheme: types.ColorScheme | null): Promise<void>;
+      updateEmulateMedia(): Promise<void>;
       updateRequestInterception(): Promise<void>;
       setFileChooserIntercepted(enabled: boolean): Promise<void>;
       opener(): Promise<Page | null>;
@@ -16309,7 +16509,7 @@ declare module 'playwright-core/firefox/ffPage' {
           b: number;
           a: number;
       }): Promise<void>;
-      takeScreenshot(format: 'png' | 'jpeg', documentRect: types.Rect | undefined, viewportRect: types.Rect | undefined, quality: number | undefined): Promise<platform.BufferType>;
+      takeScreenshot(format: 'png' | 'jpeg', documentRect: types.Rect | undefined, viewportRect: types.Rect | undefined, quality: number | undefined): Promise<Buffer>;
       resetViewport(): Promise<void>;
       getContentFrame(handle: dom.ElementHandle): Promise<frames.Frame | null>;
       getOwnerFrame(handle: dom.ElementHandle): Promise<string | null>;
@@ -16369,6 +16569,10 @@ declare module 'playwright-core/firefox/protocol' {
               longitude: number;
               accuracy?: number;
           };
+          type DownloadOptions = {
+              behavior?: ("saveToDisk" | "cancel");
+              downloadsDir?: string;
+          };
           type attachedToTargetPayload = {
               sessionId: string;
               targetInfo: {
@@ -16382,6 +16586,18 @@ declare module 'playwright-core/firefox/protocol' {
               sessionId: string;
               targetId: string;
           };
+          type downloadCreatedPayload = {
+              uuid: string;
+              browserContextId: string;
+              pageTargetId: string;
+              url: string;
+              suggestedFileName: string;
+          };
+          type downloadFinishedPayload = {
+              uuid: string;
+              canceled?: boolean;
+              error?: string;
+          };
           type enableParameters = {
               attachToDefaultContext: boolean;
           };
@@ -16390,6 +16606,7 @@ declare module 'playwright-core/firefox/protocol' {
               removeOnDetach?: boolean;
               userAgent?: string;
               bypassCSP?: boolean;
+              ignoreHTTPSErrors?: boolean;
               javaScriptDisabled?: boolean;
               viewport?: {
                   viewportSize: {
@@ -16401,6 +16618,11 @@ declare module 'playwright-core/firefox/protocol' {
                   hasTouch: boolean;
               };
               locale?: string;
+              timezoneId?: string;
+              downloadOptions?: {
+                  behavior?: ("saveToDisk" | "cancel");
+                  downloadsDir?: string;
+              };
           };
           type createBrowserContextReturnValue = {
               browserContextId: string;
@@ -16422,10 +16644,6 @@ declare module 'playwright-core/firefox/protocol' {
               userAgent: string;
               version: string;
           };
-          type setIgnoreHTTPSErrorsParameters = {
-              enabled: boolean;
-          };
-          type setIgnoreHTTPSErrorsReturnValue = void;
           type setExtraHTTPHeadersParameters = {
               browserContextId?: string;
               headers: {
@@ -16518,6 +16736,11 @@ declare module 'playwright-core/firefox/protocol' {
               override?: ("online" | "offline");
           };
           type setOnlineOverrideReturnValue = void;
+          type setColorSchemeParameters = {
+              browserContextId?: string;
+              colorScheme?: ("dark" | "light" | "no-preference");
+          };
+          type setColorSchemeReturnValue = void;
       }
       module Page {
           type DOMPoint = {
@@ -17159,6 +17382,8 @@ declare module 'playwright-core/firefox/protocol' {
       interface Events {
           "Browser.attachedToTarget": Browser.attachedToTargetPayload;
           "Browser.detachedFromTarget": Browser.detachedFromTargetPayload;
+          "Browser.downloadCreated": Browser.downloadCreatedPayload;
+          "Browser.downloadFinished": Browser.downloadFinishedPayload;
           "Page.ready": Page.readyPayload;
           "Page.crashed": Page.crashedPayload;
           "Page.eventFired": Page.eventFiredPayload;
@@ -17192,7 +17417,6 @@ declare module 'playwright-core/firefox/protocol' {
           "Browser.newPage": Browser.newPageParameters;
           "Browser.close": Browser.closeParameters;
           "Browser.getInfo": Browser.getInfoParameters;
-          "Browser.setIgnoreHTTPSErrors": Browser.setIgnoreHTTPSErrorsParameters;
           "Browser.setExtraHTTPHeaders": Browser.setExtraHTTPHeadersParameters;
           "Browser.setHTTPCredentials": Browser.setHTTPCredentialsParameters;
           "Browser.setRequestInterception": Browser.setRequestInterceptionParameters;
@@ -17205,6 +17429,7 @@ declare module 'playwright-core/firefox/protocol' {
           "Browser.clearCookies": Browser.clearCookiesParameters;
           "Browser.getCookies": Browser.getCookiesParameters;
           "Browser.setOnlineOverride": Browser.setOnlineOverrideParameters;
+          "Browser.setColorScheme": Browser.setColorSchemeParameters;
           "Page.close": Page.closeParameters;
           "Page.setFileInputFiles": Page.setFileInputFilesParameters;
           "Page.addBinding": Page.addBindingParameters;
@@ -17250,7 +17475,6 @@ declare module 'playwright-core/firefox/protocol' {
           "Browser.newPage": Browser.newPageReturnValue;
           "Browser.close": Browser.closeReturnValue;
           "Browser.getInfo": Browser.getInfoReturnValue;
-          "Browser.setIgnoreHTTPSErrors": Browser.setIgnoreHTTPSErrorsReturnValue;
           "Browser.setExtraHTTPHeaders": Browser.setExtraHTTPHeadersReturnValue;
           "Browser.setHTTPCredentials": Browser.setHTTPCredentialsReturnValue;
           "Browser.setRequestInterception": Browser.setRequestInterceptionReturnValue;
@@ -17263,6 +17487,7 @@ declare module 'playwright-core/firefox/protocol' {
           "Browser.clearCookies": Browser.clearCookiesReturnValue;
           "Browser.getCookies": Browser.getCookiesReturnValue;
           "Browser.setOnlineOverride": Browser.setOnlineOverrideReturnValue;
+          "Browser.setColorScheme": Browser.setColorSchemeReturnValue;
           "Page.close": Page.closeReturnValue;
           "Page.setFileInputFiles": Page.setFileInputFilesReturnValue;
           "Page.addBinding": Page.addBindingReturnValue;
@@ -17322,12 +17547,12 @@ declare module 'playwright-core/frames' {
    * limitations under the License.
    */
   /// <reference types="node" />
-  import * as types from 'playwright-core/types';
-  import * as js from 'playwright-core/javascript';
+  import { ConsoleMessage } from 'playwright-core/console';
   import * as dom from 'playwright-core/dom';
+  import * as js from 'playwright-core/javascript';
   import * as network from 'playwright-core/network';
   import { Page } from 'playwright-core/page';
-  import { ConsoleMessage } from 'playwright-core/console';
+  import * as types from 'playwright-core/types';
   type ContextType = 'main' | 'utility';
   export type GotoOptions = types.NavigateOptions & {
       referer?: string;
@@ -17347,10 +17572,11 @@ declare module 'playwright-core/frames' {
       frames(): Frame[];
       frame(frameId: string): Frame | null;
       frameAttached(frameId: string, parentFrameId: string | null | undefined): Frame;
-      waitForNavigationsCreatedBy<T>(action: () => Promise<T>, options?: types.NavigatingActionWaitOptions, input?: boolean): Promise<T>;
+      waitForNavigationsCreatedBy<T>(action: () => Promise<T>, deadline: number, options?: types.NavigatingActionWaitOptions, input?: boolean): Promise<T>;
       frameWillPotentiallyRequestNavigation(): void;
       frameDidPotentiallyRequestNavigation(): void;
-      frameRequestedNavigation(frameId: string): void;
+      frameRequestedNavigation(frameId: string, documentId: string): void;
+      frameUpdatedDocumentIdForNavigation(frameId: string, documentId: string): void;
       frameCommittedNewDocumentNavigation(frameId: string, url: string, name: string, documentId: string, initial: boolean): void;
       frameCommittedSameDocumentNavigation(frameId: string, url: string): void;
       frameDetached(frameId: string): void;
@@ -17363,6 +17589,7 @@ declare module 'playwright-core/frames' {
       requestFailed(request: network.Request, canceled: boolean): void;
       provisionalLoadFailed(frame: Frame, documentId: string, error: string): void;
       private _notifyLifecycle;
+      removeChildFramesRecursively(frame: Frame): void;
       private _removeFramesRecursively;
       private _inflightRequestFinished;
       private _inflightRequestStarted;
@@ -17374,6 +17601,7 @@ declare module 'playwright-core/frames' {
       _id: string;
       readonly _firedLifecycleEvents: Set<types.LifecycleEvent>;
       _lastDocumentId: string;
+      _pendingDocumentId: string;
       _frameTasks: Set<FrameTask>;
       readonly _page: Page;
       private _parentFrame;
@@ -17472,6 +17700,18 @@ declare module 'playwright-core/frames' {
   export {};
 
 }
+declare module 'playwright-core/generated/injectedSource' {
+  export const source = "(/******/ (function(modules) { // webpackBootstrap\n/******/ \t// The module cache\n/******/ \tvar installedModules = {};\n/******/\n/******/ \t// The require function\n/******/ \tfunction __webpack_require__(moduleId) {\n/******/\n/******/ \t\t// Check if module is in cache\n/******/ \t\tif(installedModules[moduleId]) {\n/******/ \t\t\treturn installedModules[moduleId].exports;\n/******/ \t\t}\n/******/ \t\t// Create a new module (and put it into the cache)\n/******/ \t\tvar module = installedModules[moduleId] = {\n/******/ \t\t\ti: moduleId,\n/******/ \t\t\tl: false,\n/******/ \t\t\texports: {}\n/******/ \t\t};\n/******/\n/******/ \t\t// Execute the module function\n/******/ \t\tmodules[moduleId].call(module.exports, module, module.exports, __webpack_require__);\n/******/\n/******/ \t\t// Flag the module as loaded\n/******/ \t\tmodule.l = true;\n/******/\n/******/ \t\t// Return the exports of the module\n/******/ \t\treturn module.exports;\n/******/ \t}\n/******/\n/******/\n/******/ \t// expose the modules object (__webpack_modules__)\n/******/ \t__webpack_require__.m = modules;\n/******/\n/******/ \t// expose the module cache\n/******/ \t__webpack_require__.c = installedModules;\n/******/\n/******/ \t// define getter function for harmony exports\n/******/ \t__webpack_require__.d = function(exports, name, getter) {\n/******/ \t\tif(!__webpack_require__.o(exports, name)) {\n/******/ \t\t\tObject.defineProperty(exports, name, { enumerable: true, get: getter });\n/******/ \t\t}\n/******/ \t};\n/******/\n/******/ \t// define __esModule on exports\n/******/ \t__webpack_require__.r = function(exports) {\n/******/ \t\tif(typeof Symbol !== 'undefined' && Symbol.toStringTag) {\n/******/ \t\t\tObject.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });\n/******/ \t\t}\n/******/ \t\tObject.defineProperty(exports, '__esModule', { value: true });\n/******/ \t};\n/******/\n/******/ \t// create a fake namespace object\n/******/ \t// mode & 1: value is a module id, require it\n/******/ \t// mode & 2: merge all properties of value into the ns\n/******/ \t// mode & 4: return value when already ns object\n/******/ \t// mode & 8|1: behave like require\n/******/ \t__webpack_require__.t = function(value, mode) {\n/******/ \t\tif(mode & 1) value = __webpack_require__(value);\n/******/ \t\tif(mode & 8) return value;\n/******/ \t\tif((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;\n/******/ \t\tvar ns = Object.create(null);\n/******/ \t\t__webpack_require__.r(ns);\n/******/ \t\tObject.defineProperty(ns, 'default', { enumerable: true, value: value });\n/******/ \t\tif(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));\n/******/ \t\treturn ns;\n/******/ \t};\n/******/\n/******/ \t// getDefaultExport function for compatibility with non-harmony modules\n/******/ \t__webpack_require__.n = function(module) {\n/******/ \t\tvar getter = module && module.__esModule ?\n/******/ \t\t\tfunction getDefault() { return module['default']; } :\n/******/ \t\t\tfunction getModuleExports() { return module; };\n/******/ \t\t__webpack_require__.d(getter, 'a', getter);\n/******/ \t\treturn getter;\n/******/ \t};\n/******/\n/******/ \t// Object.prototype.hasOwnProperty.call\n/******/ \t__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };\n/******/\n/******/ \t// __webpack_public_path__\n/******/ \t__webpack_require__.p = \"\";\n/******/\n/******/\n/******/ \t// Load entry module and return exports\n/******/ \treturn __webpack_require__(__webpack_require__.s = \"./src/injected/injected.ts\");\n/******/ })\n/************************************************************************/\n/******/ ({\n\n/***/ \"./src/injected/injected.ts\":\n/*!**********************************!*\\\n  !*** ./src/injected/injected.ts ***!\n  \\**********************************/\n/*! no static exports found */\n/***/ (function(module, exports, __webpack_require__) {\n\n\"use strict\";\n\n/**\n * Copyright (c) Microsoft Corporation.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n * http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\nObject.defineProperty(exports, \"__esModule\", { value: true });\nclass Injected {\n    isVisible(element) {\n        if (!element.ownerDocument || !element.ownerDocument.defaultView)\n            return true;\n        const style = element.ownerDocument.defaultView.getComputedStyle(element);\n        if (!style || style.visibility === 'hidden')\n            return false;\n        const rect = element.getBoundingClientRect();\n        return !!(rect.top || rect.bottom || rect.width || rect.height);\n    }\n    _pollMutation(predicate, timeout) {\n        let timedOut = false;\n        if (timeout)\n            setTimeout(() => timedOut = true, timeout);\n        const success = predicate();\n        if (success)\n            return Promise.resolve(success);\n        let fulfill;\n        const result = new Promise(x => fulfill = x);\n        const observer = new MutationObserver(() => {\n            if (timedOut) {\n                observer.disconnect();\n                fulfill();\n                return;\n            }\n            const success = predicate();\n            if (success) {\n                observer.disconnect();\n                fulfill(success);\n            }\n        });\n        observer.observe(document, {\n            childList: true,\n            subtree: true,\n            attributes: true\n        });\n        return result;\n    }\n    _pollRaf(predicate, timeout) {\n        let timedOut = false;\n        if (timeout)\n            setTimeout(() => timedOut = true, timeout);\n        let fulfill;\n        const result = new Promise(x => fulfill = x);\n        const onRaf = () => {\n            if (timedOut) {\n                fulfill();\n                return;\n            }\n            const success = predicate();\n            if (success)\n                fulfill(success);\n            else\n                requestAnimationFrame(onRaf);\n        };\n        onRaf();\n        return result;\n    }\n    _pollInterval(pollInterval, predicate, timeout) {\n        let timedOut = false;\n        if (timeout)\n            setTimeout(() => timedOut = true, timeout);\n        let fulfill;\n        const result = new Promise(x => fulfill = x);\n        const onTimeout = () => {\n            if (timedOut) {\n                fulfill();\n                return;\n            }\n            const success = predicate();\n            if (success)\n                fulfill(success);\n            else\n                setTimeout(onTimeout, pollInterval);\n        };\n        onTimeout();\n        return result;\n    }\n    poll(polling, timeout, predicate) {\n        if (polling === 'raf')\n            return this._pollRaf(predicate, timeout);\n        if (polling === 'mutation')\n            return this._pollMutation(predicate, timeout);\n        return this._pollInterval(polling, predicate, timeout);\n    }\n    getElementBorderWidth(node) {\n        if (node.nodeType !== Node.ELEMENT_NODE || !node.ownerDocument || !node.ownerDocument.defaultView)\n            return { left: 0, top: 0 };\n        const style = node.ownerDocument.defaultView.getComputedStyle(node);\n        return { left: parseInt(style.borderLeftWidth || '', 10), top: parseInt(style.borderTopWidth || '', 10) };\n    }\n    selectOptions(node, optionsToSelect) {\n        if (node.nodeName.toLowerCase() !== 'select')\n            throw new Error('Element is not a <select> element.');\n        const element = node;\n        const options = Array.from(element.options);\n        element.value = undefined;\n        for (let index = 0; index < options.length; index++) {\n            const option = options[index];\n            option.selected = optionsToSelect.some(optionToSelect => {\n                if (optionToSelect instanceof Node)\n                    return option === optionToSelect;\n                let matches = true;\n                if (optionToSelect.value !== undefined)\n                    matches = matches && optionToSelect.value === option.value;\n                if (optionToSelect.label !== undefined)\n                    matches = matches && optionToSelect.label === option.label;\n                if (optionToSelect.index !== undefined)\n                    matches = matches && optionToSelect.index === index;\n                return matches;\n            });\n            if (option.selected && !element.multiple)\n                break;\n        }\n        element.dispatchEvent(new Event('input', { 'bubbles': true }));\n        element.dispatchEvent(new Event('change', { 'bubbles': true }));\n        return options.filter(option => option.selected).map(option => option.value);\n    }\n    fill(node, value) {\n        if (node.nodeType !== Node.ELEMENT_NODE)\n            return 'Node is not of type HTMLElement';\n        const element = node;\n        if (!this.isVisible(element))\n            return 'Element is not visible';\n        if (element.nodeName.toLowerCase() === 'input') {\n            const input = element;\n            const type = input.getAttribute('type') || '';\n            const kTextInputTypes = new Set(['', 'email', 'number', 'password', 'search', 'tel', 'text', 'url']);\n            if (!kTextInputTypes.has(type.toLowerCase()))\n                return 'Cannot fill input of type \"' + type + '\".';\n            if (type.toLowerCase() === 'number') {\n                value = value.trim();\n                if (!value || isNaN(Number(value)))\n                    return 'Cannot type text into input[type=number].';\n            }\n            if (input.disabled)\n                return 'Cannot fill a disabled input.';\n            if (input.readOnly)\n                return 'Cannot fill a readonly input.';\n            input.select();\n            input.focus();\n        }\n        else if (element.nodeName.toLowerCase() === 'textarea') {\n            const textarea = element;\n            if (textarea.disabled)\n                return 'Cannot fill a disabled textarea.';\n            if (textarea.readOnly)\n                return 'Cannot fill a readonly textarea.';\n            textarea.selectionStart = 0;\n            textarea.selectionEnd = textarea.value.length;\n            textarea.focus();\n        }\n        else if (element.isContentEditable) {\n            const range = element.ownerDocument.createRange();\n            range.selectNodeContents(element);\n            const selection = element.ownerDocument.defaultView.getSelection();\n            if (!selection)\n                return 'Element belongs to invisible iframe.';\n            selection.removeAllRanges();\n            selection.addRange(range);\n            element.focus();\n        }\n        else {\n            return 'Element is not an <input>, <textarea> or [contenteditable] element.';\n        }\n        return false;\n    }\n    isCheckboxChecked(node) {\n        if (node.nodeType !== Node.ELEMENT_NODE)\n            throw new Error('Not a checkbox or radio button');\n        let element = node;\n        if (element.getAttribute('role') === 'checkbox')\n            return element.getAttribute('aria-checked') === 'true';\n        if (element.nodeName === 'LABEL') {\n            const forId = element.getAttribute('for');\n            if (forId && element.ownerDocument)\n                element = element.ownerDocument.querySelector(`input[id=\"${forId}\"]`) || undefined;\n            else\n                element = element.querySelector('input[type=checkbox],input[type=radio]') || undefined;\n        }\n        if (element && element.nodeName === 'INPUT') {\n            const type = element.getAttribute('type');\n            if (type && (type.toLowerCase() === 'checkbox' || type.toLowerCase() === 'radio'))\n                return element.checked;\n        }\n        throw new Error('Not a checkbox');\n    }\n    async waitForDisplayedAtStablePosition(node, timeout) {\n        if (!node.isConnected)\n            throw new Error('Element is not attached to the DOM');\n        const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;\n        if (!element)\n            throw new Error('Element is not attached to the DOM');\n        let lastRect;\n        let counter = 0;\n        const result = await this.poll('raf', timeout, () => {\n            // First raf happens in the same animation frame as evaluation, so it does not produce\n            // any client rect difference compared to synchronous call. We skip the synchronous call\n            // and only force layout during actual rafs as a small optimisation.\n            if (++counter === 1)\n                return false;\n            const clientRect = element.getBoundingClientRect();\n            const rect = { x: clientRect.top, y: clientRect.left, width: clientRect.width, height: clientRect.height };\n            const isDisplayedAndStable = lastRect && rect.x === lastRect.x && rect.y === lastRect.y && rect.width === lastRect.width && rect.height === lastRect.height && rect.width > 0 && rect.height > 0;\n            lastRect = rect;\n            return isDisplayedAndStable;\n        });\n        if (!result)\n            throw new Error(`waiting for element to be displayed and not moving failed: timeout ${timeout}ms exceeded`);\n    }\n    async waitForHitTargetAt(node, timeout, point) {\n        const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;\n        if (!element)\n            throw new Error('Element is not attached to the DOM');\n        const result = await this.poll('raf', timeout, () => {\n            let hitElement = this._deepElementFromPoint(document, point.x, point.y);\n            while (hitElement && hitElement !== element)\n                hitElement = this._parentElementOrShadowHost(hitElement);\n            return hitElement === element;\n        });\n        if (!result)\n            throw new Error(`waiting for element to receive mouse events failed: timeout ${timeout}ms exceeded`);\n    }\n    _parentElementOrShadowHost(element) {\n        if (element.parentElement)\n            return element.parentElement;\n        if (!element.parentNode)\n            return;\n        if (element.parentNode.nodeType === Node.DOCUMENT_FRAGMENT_NODE && element.parentNode.host)\n            return element.parentNode.host;\n    }\n    _deepElementFromPoint(document, x, y) {\n        let container = document;\n        let element;\n        while (container) {\n            const innerElement = container.elementFromPoint(x, y);\n            if (!innerElement || element === innerElement)\n                break;\n            element = innerElement;\n            container = element.shadowRoot;\n        }\n        return element;\n    }\n}\nexports.default = Injected;\n\n\n/***/ })\n\n/******/ })).default";
+
+}
+declare module 'playwright-core/generated/selectorEvaluatorSource' {
+  export const source = "(/******/ (function(modules) { // webpackBootstrap\n/******/ \t// The module cache\n/******/ \tvar installedModules = {};\n/******/\n/******/ \t// The require function\n/******/ \tfunction __webpack_require__(moduleId) {\n/******/\n/******/ \t\t// Check if module is in cache\n/******/ \t\tif(installedModules[moduleId]) {\n/******/ \t\t\treturn installedModules[moduleId].exports;\n/******/ \t\t}\n/******/ \t\t// Create a new module (and put it into the cache)\n/******/ \t\tvar module = installedModules[moduleId] = {\n/******/ \t\t\ti: moduleId,\n/******/ \t\t\tl: false,\n/******/ \t\t\texports: {}\n/******/ \t\t};\n/******/\n/******/ \t\t// Execute the module function\n/******/ \t\tmodules[moduleId].call(module.exports, module, module.exports, __webpack_require__);\n/******/\n/******/ \t\t// Flag the module as loaded\n/******/ \t\tmodule.l = true;\n/******/\n/******/ \t\t// Return the exports of the module\n/******/ \t\treturn module.exports;\n/******/ \t}\n/******/\n/******/\n/******/ \t// expose the modules object (__webpack_modules__)\n/******/ \t__webpack_require__.m = modules;\n/******/\n/******/ \t// expose the module cache\n/******/ \t__webpack_require__.c = installedModules;\n/******/\n/******/ \t// define getter function for harmony exports\n/******/ \t__webpack_require__.d = function(exports, name, getter) {\n/******/ \t\tif(!__webpack_require__.o(exports, name)) {\n/******/ \t\t\tObject.defineProperty(exports, name, { enumerable: true, get: getter });\n/******/ \t\t}\n/******/ \t};\n/******/\n/******/ \t// define __esModule on exports\n/******/ \t__webpack_require__.r = function(exports) {\n/******/ \t\tif(typeof Symbol !== 'undefined' && Symbol.toStringTag) {\n/******/ \t\t\tObject.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });\n/******/ \t\t}\n/******/ \t\tObject.defineProperty(exports, '__esModule', { value: true });\n/******/ \t};\n/******/\n/******/ \t// create a fake namespace object\n/******/ \t// mode & 1: value is a module id, require it\n/******/ \t// mode & 2: merge all properties of value into the ns\n/******/ \t// mode & 4: return value when already ns object\n/******/ \t// mode & 8|1: behave like require\n/******/ \t__webpack_require__.t = function(value, mode) {\n/******/ \t\tif(mode & 1) value = __webpack_require__(value);\n/******/ \t\tif(mode & 8) return value;\n/******/ \t\tif((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;\n/******/ \t\tvar ns = Object.create(null);\n/******/ \t\t__webpack_require__.r(ns);\n/******/ \t\tObject.defineProperty(ns, 'default', { enumerable: true, value: value });\n/******/ \t\tif(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));\n/******/ \t\treturn ns;\n/******/ \t};\n/******/\n/******/ \t// getDefaultExport function for compatibility with non-harmony modules\n/******/ \t__webpack_require__.n = function(module) {\n/******/ \t\tvar getter = module && module.__esModule ?\n/******/ \t\t\tfunction getDefault() { return module['default']; } :\n/******/ \t\t\tfunction getModuleExports() { return module; };\n/******/ \t\t__webpack_require__.d(getter, 'a', getter);\n/******/ \t\treturn getter;\n/******/ \t};\n/******/\n/******/ \t// Object.prototype.hasOwnProperty.call\n/******/ \t__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };\n/******/\n/******/ \t// __webpack_public_path__\n/******/ \t__webpack_require__.p = \"\";\n/******/\n/******/\n/******/ \t// Load entry module and return exports\n/******/ \treturn __webpack_require__(__webpack_require__.s = \"./src/injected/selectorEvaluator.ts\");\n/******/ })\n/************************************************************************/\n/******/ ({\n\n/***/ \"./src/injected/attributeSelectorEngine.ts\":\n/*!*************************************************!*\\\n  !*** ./src/injected/attributeSelectorEngine.ts ***!\n  \\*************************************************/\n/*! no static exports found */\n/***/ (function(module, exports, __webpack_require__) {\n\n\"use strict\";\n\n/**\n * Copyright (c) Microsoft Corporation.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n * http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\nObject.defineProperty(exports, \"__esModule\", { value: true });\nfunction createAttributeEngine(attribute) {\n    const engine = {\n        create(root, target) {\n            const value = target.getAttribute(attribute);\n            if (!value)\n                return;\n            if (queryInternal(root, attribute, value) === target)\n                return value;\n        },\n        query(root, selector) {\n            return queryInternal(root, attribute, selector);\n        },\n        queryAll(root, selector) {\n            const result = [];\n            queryAllInternal(root, attribute, selector, result);\n            return result;\n        }\n    };\n    return engine;\n}\nexports.createAttributeEngine = createAttributeEngine;\nfunction queryInternal(root, attribute, value) {\n    const single = root.querySelector(`[${attribute}=${JSON.stringify(value)}]`);\n    if (single)\n        return single;\n    const all = root.querySelectorAll('*');\n    for (let i = 0; i < all.length; i++) {\n        const shadowRoot = all[i].shadowRoot;\n        if (shadowRoot) {\n            const single = queryInternal(shadowRoot, attribute, value);\n            if (single)\n                return single;\n        }\n    }\n}\nfunction queryAllInternal(root, attribute, value, result) {\n    const document = root instanceof Document ? root : root.ownerDocument;\n    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);\n    const shadowRoots = [];\n    while (walker.nextNode()) {\n        const element = walker.currentNode;\n        if (element.getAttribute(attribute) === value)\n            result.push(element);\n        if (element.shadowRoot)\n            shadowRoots.push(element.shadowRoot);\n    }\n    for (const shadowRoot of shadowRoots)\n        queryAllInternal(shadowRoot, attribute, value, result);\n}\n\n\n/***/ }),\n\n/***/ \"./src/injected/cssSelectorEngine.ts\":\n/*!*******************************************!*\\\n  !*** ./src/injected/cssSelectorEngine.ts ***!\n  \\*******************************************/\n/*! no static exports found */\n/***/ (function(module, exports, __webpack_require__) {\n\n\"use strict\";\n\n/**\n * Copyright (c) Microsoft Corporation.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n * http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\nObject.defineProperty(exports, \"__esModule\", { value: true });\nexports.CSSEngine = {\n    create(root, targetElement) {\n        const tokens = [];\n        function uniqueCSSSelector(prefix) {\n            const path = tokens.slice();\n            if (prefix)\n                path.unshift(prefix);\n            const selector = path.join(' > ');\n            const nodes = Array.from(root.querySelectorAll(selector));\n            return nodes[0] === targetElement ? selector : undefined;\n        }\n        for (let element = targetElement; element && element !== root; element = element.parentElement) {\n            const nodeName = element.nodeName.toLowerCase();\n            // Element ID is the strongest signal, use it.\n            let bestTokenForLevel = '';\n            if (element.id) {\n                const token = /^[a-zA-Z][a-zA-Z0-9\\-\\_]+$/.test(element.id) ? '#' + element.id : `[id=\"${element.id}\"]`;\n                const selector = uniqueCSSSelector(token);\n                if (selector)\n                    return selector;\n                bestTokenForLevel = token;\n            }\n            const parent = element.parentElement;\n            // Combine class names until unique.\n            const classes = Array.from(element.classList);\n            for (let i = 0; i < classes.length; ++i) {\n                const token = '.' + classes.slice(0, i + 1).join('.');\n                const selector = uniqueCSSSelector(token);\n                if (selector)\n                    return selector;\n                // Even if not unique, does this subset of classes uniquely identify node as a child?\n                if (!bestTokenForLevel && parent) {\n                    const sameClassSiblings = parent.querySelectorAll(token);\n                    if (sameClassSiblings.length === 1)\n                        bestTokenForLevel = token;\n                }\n            }\n            // Ordinal is the weakest signal.\n            if (parent) {\n                const siblings = Array.from(parent.children);\n                const sameTagSiblings = siblings.filter(sibling => (sibling).nodeName.toLowerCase() === nodeName);\n                const token = sameTagSiblings.length === 1 ? nodeName : `${nodeName}:nth-child(${1 + siblings.indexOf(element)})`;\n                const selector = uniqueCSSSelector(token);\n                if (selector)\n                    return selector;\n                if (!bestTokenForLevel)\n                    bestTokenForLevel = token;\n            }\n            else if (!bestTokenForLevel) {\n                bestTokenForLevel = nodeName;\n            }\n            tokens.unshift(bestTokenForLevel);\n        }\n        return uniqueCSSSelector();\n    },\n    query(root, selector) {\n        return root.querySelector(selector) || undefined;\n    },\n    queryAll(root, selector) {\n        return Array.from(root.querySelectorAll(selector));\n    }\n};\n\n\n/***/ }),\n\n/***/ \"./src/injected/injected.ts\":\n/*!**********************************!*\\\n  !*** ./src/injected/injected.ts ***!\n  \\**********************************/\n/*! no static exports found */\n/***/ (function(module, exports, __webpack_require__) {\n\n\"use strict\";\n\n/**\n * Copyright (c) Microsoft Corporation.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n * http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\nObject.defineProperty(exports, \"__esModule\", { value: true });\nclass Injected {\n    isVisible(element) {\n        if (!element.ownerDocument || !element.ownerDocument.defaultView)\n            return true;\n        const style = element.ownerDocument.defaultView.getComputedStyle(element);\n        if (!style || style.visibility === 'hidden')\n            return false;\n        const rect = element.getBoundingClientRect();\n        return !!(rect.top || rect.bottom || rect.width || rect.height);\n    }\n    _pollMutation(predicate, timeout) {\n        let timedOut = false;\n        if (timeout)\n            setTimeout(() => timedOut = true, timeout);\n        const success = predicate();\n        if (success)\n            return Promise.resolve(success);\n        let fulfill;\n        const result = new Promise(x => fulfill = x);\n        const observer = new MutationObserver(() => {\n            if (timedOut) {\n                observer.disconnect();\n                fulfill();\n                return;\n            }\n            const success = predicate();\n            if (success) {\n                observer.disconnect();\n                fulfill(success);\n            }\n        });\n        observer.observe(document, {\n            childList: true,\n            subtree: true,\n            attributes: true\n        });\n        return result;\n    }\n    _pollRaf(predicate, timeout) {\n        let timedOut = false;\n        if (timeout)\n            setTimeout(() => timedOut = true, timeout);\n        let fulfill;\n        const result = new Promise(x => fulfill = x);\n        const onRaf = () => {\n            if (timedOut) {\n                fulfill();\n                return;\n            }\n            const success = predicate();\n            if (success)\n                fulfill(success);\n            else\n                requestAnimationFrame(onRaf);\n        };\n        onRaf();\n        return result;\n    }\n    _pollInterval(pollInterval, predicate, timeout) {\n        let timedOut = false;\n        if (timeout)\n            setTimeout(() => timedOut = true, timeout);\n        let fulfill;\n        const result = new Promise(x => fulfill = x);\n        const onTimeout = () => {\n            if (timedOut) {\n                fulfill();\n                return;\n            }\n            const success = predicate();\n            if (success)\n                fulfill(success);\n            else\n                setTimeout(onTimeout, pollInterval);\n        };\n        onTimeout();\n        return result;\n    }\n    poll(polling, timeout, predicate) {\n        if (polling === 'raf')\n            return this._pollRaf(predicate, timeout);\n        if (polling === 'mutation')\n            return this._pollMutation(predicate, timeout);\n        return this._pollInterval(polling, predicate, timeout);\n    }\n    getElementBorderWidth(node) {\n        if (node.nodeType !== Node.ELEMENT_NODE || !node.ownerDocument || !node.ownerDocument.defaultView)\n            return { left: 0, top: 0 };\n        const style = node.ownerDocument.defaultView.getComputedStyle(node);\n        return { left: parseInt(style.borderLeftWidth || '', 10), top: parseInt(style.borderTopWidth || '', 10) };\n    }\n    selectOptions(node, optionsToSelect) {\n        if (node.nodeName.toLowerCase() !== 'select')\n            throw new Error('Element is not a <select> element.');\n        const element = node;\n        const options = Array.from(element.options);\n        element.value = undefined;\n        for (let index = 0; index < options.length; index++) {\n            const option = options[index];\n            option.selected = optionsToSelect.some(optionToSelect => {\n                if (optionToSelect instanceof Node)\n                    return option === optionToSelect;\n                let matches = true;\n                if (optionToSelect.value !== undefined)\n                    matches = matches && optionToSelect.value === option.value;\n                if (optionToSelect.label !== undefined)\n                    matches = matches && optionToSelect.label === option.label;\n                if (optionToSelect.index !== undefined)\n                    matches = matches && optionToSelect.index === index;\n                return matches;\n            });\n            if (option.selected && !element.multiple)\n                break;\n        }\n        element.dispatchEvent(new Event('input', { 'bubbles': true }));\n        element.dispatchEvent(new Event('change', { 'bubbles': true }));\n        return options.filter(option => option.selected).map(option => option.value);\n    }\n    fill(node, value) {\n        if (node.nodeType !== Node.ELEMENT_NODE)\n            return 'Node is not of type HTMLElement';\n        const element = node;\n        if (!this.isVisible(element))\n            return 'Element is not visible';\n        if (element.nodeName.toLowerCase() === 'input') {\n            const input = element;\n            const type = (input.getAttribute('type') || '').toLowerCase();\n            const kDateTypes = new Set(['date', 'time', 'datetime', 'datetime-local']);\n            const kTextInputTypes = new Set(['', 'email', 'number', 'password', 'search', 'tel', 'text', 'url']);\n            if (!kTextInputTypes.has(type) && !kDateTypes.has(type))\n                return 'Cannot fill input of type \"' + type + '\".';\n            if (type === 'number') {\n                value = value.trim();\n                if (!value || isNaN(Number(value)))\n                    return 'Cannot type text into input[type=number].';\n            }\n            if (input.disabled)\n                return 'Cannot fill a disabled input.';\n            if (input.readOnly)\n                return 'Cannot fill a readonly input.';\n            if (kDateTypes.has(type)) {\n                value = value.trim();\n                input.focus();\n                input.value = value;\n                if (input.value !== value)\n                    return `Malformed ${type} \"${value}\"`;\n                element.dispatchEvent(new Event('input', { 'bubbles': true }));\n                element.dispatchEvent(new Event('change', { 'bubbles': true }));\n                return false; // We have already changed the value, no need to input it.\n            }\n            input.select();\n            input.focus();\n            return true;\n        }\n        if (element.nodeName.toLowerCase() === 'textarea') {\n            const textarea = element;\n            if (textarea.disabled)\n                return 'Cannot fill a disabled textarea.';\n            if (textarea.readOnly)\n                return 'Cannot fill a readonly textarea.';\n            textarea.selectionStart = 0;\n            textarea.selectionEnd = textarea.value.length;\n            textarea.focus();\n            return true;\n        }\n        if (element.isContentEditable) {\n            const range = element.ownerDocument.createRange();\n            range.selectNodeContents(element);\n            const selection = element.ownerDocument.defaultView.getSelection();\n            if (!selection)\n                return 'Element belongs to invisible iframe.';\n            selection.removeAllRanges();\n            selection.addRange(range);\n            element.focus();\n            return true;\n        }\n        return 'Element is not an <input>, <textarea> or [contenteditable] element.';\n    }\n    isCheckboxChecked(node) {\n        if (node.nodeType !== Node.ELEMENT_NODE)\n            throw new Error('Not a checkbox or radio button');\n        let element = node;\n        if (element.getAttribute('role') === 'checkbox')\n            return element.getAttribute('aria-checked') === 'true';\n        if (element.nodeName === 'LABEL') {\n            const forId = element.getAttribute('for');\n            if (forId && element.ownerDocument)\n                element = element.ownerDocument.querySelector(`input[id=\"${forId}\"]`) || undefined;\n            else\n                element = element.querySelector('input[type=checkbox],input[type=radio]') || undefined;\n        }\n        if (element && element.nodeName === 'INPUT') {\n            const type = element.getAttribute('type');\n            if (type && (type.toLowerCase() === 'checkbox' || type.toLowerCase() === 'radio'))\n                return element.checked;\n        }\n        throw new Error('Not a checkbox');\n    }\n    async waitForDisplayedAtStablePosition(node, timeout) {\n        if (!node.isConnected)\n            throw new Error('Element is not attached to the DOM');\n        const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;\n        if (!element)\n            throw new Error('Element is not attached to the DOM');\n        let lastRect;\n        let counter = 0;\n        const result = await this.poll('raf', timeout, () => {\n            // First raf happens in the same animation frame as evaluation, so it does not produce\n            // any client rect difference compared to synchronous call. We skip the synchronous call\n            // and only force layout during actual rafs as a small optimisation.\n            if (++counter === 1)\n                return false;\n            const clientRect = element.getBoundingClientRect();\n            const rect = { x: clientRect.top, y: clientRect.left, width: clientRect.width, height: clientRect.height };\n            const isDisplayedAndStable = lastRect && rect.x === lastRect.x && rect.y === lastRect.y && rect.width === lastRect.width && rect.height === lastRect.height && rect.width > 0 && rect.height > 0;\n            lastRect = rect;\n            return isDisplayedAndStable;\n        });\n        if (!result)\n            throw new Error(`waiting for element to be displayed and not moving failed: timeout exceeded`);\n    }\n    async waitForHitTargetAt(node, timeout, point) {\n        let element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;\n        while (element && window.getComputedStyle(element).pointerEvents === 'none')\n            element = element.parentElement;\n        if (!element)\n            throw new Error('Element is not attached to the DOM');\n        const result = await this.poll('raf', timeout, () => {\n            let hitElement = this._deepElementFromPoint(document, point.x, point.y);\n            while (hitElement && hitElement !== element)\n                hitElement = this._parentElementOrShadowHost(hitElement);\n            return hitElement === element;\n        });\n        if (!result)\n            throw new Error(`waiting for element to receive mouse events failed: timeout exceeded`);\n    }\n    _parentElementOrShadowHost(element) {\n        if (element.parentElement)\n            return element.parentElement;\n        if (!element.parentNode)\n            return;\n        if (element.parentNode.nodeType === Node.DOCUMENT_FRAGMENT_NODE && element.parentNode.host)\n            return element.parentNode.host;\n    }\n    _deepElementFromPoint(document, x, y) {\n        let container = document;\n        let element;\n        while (container) {\n            const innerElement = container.elementFromPoint(x, y);\n            if (!innerElement || element === innerElement)\n                break;\n            element = innerElement;\n            container = element.shadowRoot;\n        }\n        return element;\n    }\n}\nexports.default = Injected;\n\n\n/***/ }),\n\n/***/ \"./src/injected/selectorEvaluator.ts\":\n/*!*******************************************!*\\\n  !*** ./src/injected/selectorEvaluator.ts ***!\n  \\*******************************************/\n/*! no static exports found */\n/***/ (function(module, exports, __webpack_require__) {\n\n\"use strict\";\n\n/**\n * Copyright (c) Microsoft Corporation.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n * http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\nObject.defineProperty(exports, \"__esModule\", { value: true });\nconst cssSelectorEngine_1 = __webpack_require__(/*! ./cssSelectorEngine */ \"./src/injected/cssSelectorEngine.ts\");\nconst xpathSelectorEngine_1 = __webpack_require__(/*! ./xpathSelectorEngine */ \"./src/injected/xpathSelectorEngine.ts\");\nconst textSelectorEngine_1 = __webpack_require__(/*! ./textSelectorEngine */ \"./src/injected/textSelectorEngine.ts\");\nconst injected_1 = __webpack_require__(/*! ./injected */ \"./src/injected/injected.ts\");\nconst attributeSelectorEngine_1 = __webpack_require__(/*! ./attributeSelectorEngine */ \"./src/injected/attributeSelectorEngine.ts\");\nclass SelectorEvaluator {\n    constructor(customEngines) {\n        this.injected = new injected_1.default();\n        this.engines = new Map();\n        // Note: keep predefined names in sync with Selectors class.\n        this.engines.set('css', cssSelectorEngine_1.CSSEngine);\n        this.engines.set('xpath', xpathSelectorEngine_1.XPathEngine);\n        this.engines.set('text', textSelectorEngine_1.TextEngine);\n        this.engines.set('id', attributeSelectorEngine_1.createAttributeEngine('id'));\n        this.engines.set('data-testid', attributeSelectorEngine_1.createAttributeEngine('data-testid'));\n        this.engines.set('data-test-id', attributeSelectorEngine_1.createAttributeEngine('data-test-id'));\n        this.engines.set('data-test', attributeSelectorEngine_1.createAttributeEngine('data-test'));\n        for (const { name, engine } of customEngines)\n            this.engines.set(name, engine);\n    }\n    querySelector(selector, root) {\n        if (!root['querySelector'])\n            throw new Error('Node is not queryable.');\n        return this._querySelectorRecursively(root, selector, 0);\n    }\n    _querySelectorRecursively(root, selector, index) {\n        const current = selector[index];\n        root = root.shadowRoot || root;\n        if (index === selector.length - 1)\n            return this.engines.get(current.name).query(root, current.body);\n        const all = this.engines.get(current.name).queryAll(root, current.body);\n        for (const next of all) {\n            const result = this._querySelectorRecursively(next, selector, index + 1);\n            if (result)\n                return result;\n        }\n    }\n    querySelectorAll(selector, root) {\n        if (!root['querySelectorAll'])\n            throw new Error('Node is not queryable.');\n        let set = new Set([root]);\n        for (const { name, body } of selector) {\n            const newSet = new Set();\n            for (const prev of set) {\n                for (const next of this.engines.get(name).queryAll(prev.shadowRoot || prev, body)) {\n                    if (newSet.has(next))\n                        continue;\n                    newSet.add(next);\n                }\n            }\n            set = newSet;\n        }\n        return Array.from(set);\n    }\n}\nexports.default = SelectorEvaluator;\n\n\n/***/ }),\n\n/***/ \"./src/injected/textSelectorEngine.ts\":\n/*!********************************************!*\\\n  !*** ./src/injected/textSelectorEngine.ts ***!\n  \\********************************************/\n/*! no static exports found */\n/***/ (function(module, exports, __webpack_require__) {\n\n\"use strict\";\n\n/**\n * Copyright (c) Microsoft Corporation.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n * http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\nObject.defineProperty(exports, \"__esModule\", { value: true });\nexports.TextEngine = {\n    create(root, targetElement, type) {\n        const document = root instanceof Document ? root : root.ownerDocument;\n        if (!document)\n            return;\n        for (let child = targetElement.firstChild; child; child = child.nextSibling) {\n            if (child.nodeType === 3 /* Node.TEXT_NODE */) {\n                const text = child.nodeValue;\n                if (!text)\n                    continue;\n                if (text.match(/^\\s*[a-zA-Z0-9]+\\s*$/) && exports.TextEngine.query(root, text.trim()) === targetElement)\n                    return text.trim();\n                if (queryInternal(root, createMatcher(JSON.stringify(text))) === targetElement)\n                    return JSON.stringify(text);\n            }\n        }\n    },\n    query(root, selector) {\n        return queryInternal(root, createMatcher(selector));\n    },\n    queryAll(root, selector) {\n        const result = [];\n        queryAllInternal(root, createMatcher(selector), result);\n        return result;\n    }\n};\nfunction createMatcher(selector) {\n    if (selector[0] === '\"' && selector[selector.length - 1] === '\"') {\n        const parsed = JSON.parse(selector);\n        return text => text === parsed;\n    }\n    if (selector[0] === '/' && selector.lastIndexOf('/') > 0) {\n        const lastSlash = selector.lastIndexOf('/');\n        const re = new RegExp(selector.substring(1, lastSlash), selector.substring(lastSlash + 1));\n        return text => re.test(text);\n    }\n    selector = selector.trim().toLowerCase();\n    return text => text.toLowerCase().includes(selector);\n}\nfunction queryInternal(root, matcher) {\n    const document = root instanceof Document ? root : root.ownerDocument;\n    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);\n    const shadowRoots = [];\n    while (walker.nextNode()) {\n        const node = walker.currentNode;\n        if (node.nodeType === Node.ELEMENT_NODE) {\n            const element = node;\n            if ((element instanceof HTMLInputElement) && (element.type === 'submit' || element.type === 'button') && matcher(element.value))\n                return element;\n            if (element.shadowRoot)\n                shadowRoots.push(element.shadowRoot);\n        }\n        else {\n            const element = node.parentElement;\n            const text = node.nodeValue;\n            if (element && element.nodeName !== 'SCRIPT' && element.nodeName !== 'STYLE' && text && matcher(text))\n                return element;\n        }\n    }\n    for (const shadowRoot of shadowRoots) {\n        const element = queryInternal(shadowRoot, matcher);\n        if (element)\n            return element;\n    }\n}\nfunction queryAllInternal(root, matcher, result) {\n    const document = root instanceof Document ? root : root.ownerDocument;\n    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);\n    const shadowRoots = [];\n    while (walker.nextNode()) {\n        const node = walker.currentNode;\n        if (node.nodeType === Node.ELEMENT_NODE) {\n            const element = node;\n            if ((element instanceof HTMLInputElement) && (element.type === 'submit' || element.type === 'button') && matcher(element.value))\n                result.push(element);\n            if (element.shadowRoot)\n                shadowRoots.push(element.shadowRoot);\n        }\n        else {\n            const element = node.parentElement;\n            const text = node.nodeValue;\n            if (element && element.nodeName !== 'SCRIPT' && element.nodeName !== 'STYLE' && text && matcher(text))\n                result.push(element);\n        }\n    }\n    for (const shadowRoot of shadowRoots)\n        queryAllInternal(shadowRoot, matcher, result);\n}\n\n\n/***/ }),\n\n/***/ \"./src/injected/xpathSelectorEngine.ts\":\n/*!*********************************************!*\\\n  !*** ./src/injected/xpathSelectorEngine.ts ***!\n  \\*********************************************/\n/*! no static exports found */\n/***/ (function(module, exports, __webpack_require__) {\n\n\"use strict\";\n\n/**\n * Copyright (c) Microsoft Corporation.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n * http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\nObject.defineProperty(exports, \"__esModule\", { value: true });\nconst maxTextLength = 80;\nconst minMeaningfulSelectorLegth = 100;\nexports.XPathEngine = {\n    create(root, targetElement, type) {\n        const maybeDocument = root instanceof Document ? root : root.ownerDocument;\n        if (!maybeDocument)\n            return;\n        const document = maybeDocument;\n        const xpathCache = new Map();\n        if (type === 'notext')\n            return createNoText(root, targetElement);\n        const tokens = [];\n        function evaluateXPath(expression) {\n            let nodes = xpathCache.get(expression);\n            if (!nodes) {\n                nodes = [];\n                try {\n                    const result = document.evaluate(expression, root, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE);\n                    for (let node = result.iterateNext(); node; node = result.iterateNext()) {\n                        if (node.nodeType === Node.ELEMENT_NODE)\n                            nodes.push(node);\n                    }\n                }\n                catch (e) {\n                }\n                xpathCache.set(expression, nodes);\n            }\n            return nodes;\n        }\n        function uniqueXPathSelector(prefix) {\n            const path = tokens.slice();\n            if (prefix)\n                path.unshift(prefix);\n            let selector = '//' + path.join('/');\n            while (selector.includes('///'))\n                selector = selector.replace('///', '//');\n            if (selector.endsWith('/'))\n                selector = selector.substring(0, selector.length - 1);\n            const nodes = evaluateXPath(selector);\n            if (nodes[nodes.length - 1] === targetElement)\n                return selector;\n            // If we are looking at a small set of elements with long selector, fall back to ordinal.\n            if (nodes.length < 5 && selector.length > minMeaningfulSelectorLegth) {\n                const index = nodes.indexOf(targetElement);\n                if (index !== -1)\n                    return `(${selector})[${index + 1}]`;\n            }\n            return undefined;\n        }\n        function escapeAndCap(text) {\n            text = text.substring(0, maxTextLength);\n            // XPath 1.0 does not support quote escaping.\n            // 1. If there are no single quotes - use them.\n            if (text.indexOf(`'`) === -1)\n                return `'${text}'`;\n            // 2. If there are no double quotes - use them to enclose text.\n            if (text.indexOf(`\"`) === -1)\n                return `\"${text}\"`;\n            // 3. Otherwise, use popular |concat| trick.\n            const Q = `'`;\n            return `concat(${text.split(Q).map(token => Q + token + Q).join(`, \"'\", `)})`;\n        }\n        const defaultAttributes = new Set(['title', 'aria-label', 'disabled', 'role']);\n        const importantAttributes = new Map([\n            ['form', ['action']],\n            ['img', ['alt']],\n            ['input', ['placeholder', 'type', 'name', 'value']],\n        ]);\n        let usedTextConditions = false;\n        for (let element = targetElement; element && element !== root; element = element.parentElement) {\n            const nodeName = element.nodeName.toLowerCase();\n            const tag = nodeName === 'svg' ? '*' : nodeName;\n            const tagConditions = [];\n            if (nodeName === 'svg')\n                tagConditions.push('local-name()=\"svg\"');\n            const attrConditions = [];\n            const importantAttrs = [...defaultAttributes, ...(importantAttributes.get(tag) || [])];\n            for (const attr of importantAttrs) {\n                const value = element.getAttribute(attr);\n                if (value && value.length < maxTextLength)\n                    attrConditions.push(`normalize-space(@${attr})=${escapeAndCap(value)}`);\n                else if (value)\n                    attrConditions.push(`starts-with(normalize-space(@${attr}), ${escapeAndCap(value)})`);\n            }\n            const text = document.evaluate('normalize-space(.)', element).stringValue;\n            const textConditions = [];\n            if (tag !== 'select' && text.length && !usedTextConditions) {\n                if (text.length < maxTextLength)\n                    textConditions.push(`normalize-space(.)=${escapeAndCap(text)}`);\n                else\n                    textConditions.push(`starts-with(normalize-space(.), ${escapeAndCap(text)})`);\n                usedTextConditions = true;\n            }\n            // Always retain the last tag.\n            const conditions = [...tagConditions, ...textConditions, ...attrConditions];\n            const token = conditions.length ? `${tag}[${conditions.join(' and ')}]` : (tokens.length ? '' : tag);\n            const selector = uniqueXPathSelector(token);\n            if (selector)\n                return selector;\n            // Ordinal is the weakest signal.\n            const parent = element.parentElement;\n            let tagWithOrdinal = tag;\n            if (parent) {\n                const siblings = Array.from(parent.children);\n                const sameTagSiblings = siblings.filter(sibling => (sibling).nodeName.toLowerCase() === nodeName);\n                if (sameTagSiblings.length > 1)\n                    tagWithOrdinal += `[${1 + siblings.indexOf(element)}]`;\n            }\n            // Do not include text into this token, only tag / attributes.\n            // Topmost node will get all the text.\n            const nonTextConditions = [...tagConditions, ...attrConditions];\n            const levelToken = nonTextConditions.length ? `${tagWithOrdinal}[${nonTextConditions.join(' and ')}]` : tokens.length ? '' : tagWithOrdinal;\n            tokens.unshift(levelToken);\n        }\n        return uniqueXPathSelector();\n    },\n    query(root, selector) {\n        const document = root instanceof Document ? root : root.ownerDocument;\n        if (!document)\n            return;\n        const it = document.evaluate(selector, root, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE);\n        for (let node = it.iterateNext(); node; node = it.iterateNext()) {\n            if (node.nodeType === Node.ELEMENT_NODE)\n                return node;\n        }\n    },\n    queryAll(root, selector) {\n        const result = [];\n        const document = root instanceof Document ? root : root.ownerDocument;\n        if (!document)\n            return result;\n        const it = document.evaluate(selector, root, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE);\n        for (let node = it.iterateNext(); node; node = it.iterateNext()) {\n            if (node.nodeType === Node.ELEMENT_NODE)\n                result.push(node);\n        }\n        return result;\n    }\n};\nfunction createNoText(root, targetElement) {\n    const steps = [];\n    for (let element = targetElement; element && element !== root; element = element.parentElement) {\n        if (element.getAttribute('id')) {\n            steps.unshift(`//*[@id=\"${element.getAttribute('id')}\"]`);\n            return steps.join('/');\n        }\n        const siblings = element.parentElement ? Array.from(element.parentElement.children) : [];\n        const similarElements = siblings.filter(sibling => element.nodeName === sibling.nodeName);\n        const index = similarElements.length === 1 ? 0 : similarElements.indexOf(element) + 1;\n        steps.unshift(index ? `${element.nodeName}[${index}]` : element.nodeName);\n    }\n    return '/' + steps.join('/');\n}\n\n\n/***/ })\n\n/******/ })).default";
+
+}
+declare module 'playwright-core/generated/zsSelectorEngineSource' {
+  export const source = "(/******/ (function(modules) { // webpackBootstrap\n/******/ \t// The module cache\n/******/ \tvar installedModules = {};\n/******/\n/******/ \t// The require function\n/******/ \tfunction __webpack_require__(moduleId) {\n/******/\n/******/ \t\t// Check if module is in cache\n/******/ \t\tif(installedModules[moduleId]) {\n/******/ \t\t\treturn installedModules[moduleId].exports;\n/******/ \t\t}\n/******/ \t\t// Create a new module (and put it into the cache)\n/******/ \t\tvar module = installedModules[moduleId] = {\n/******/ \t\t\ti: moduleId,\n/******/ \t\t\tl: false,\n/******/ \t\t\texports: {}\n/******/ \t\t};\n/******/\n/******/ \t\t// Execute the module function\n/******/ \t\tmodules[moduleId].call(module.exports, module, module.exports, __webpack_require__);\n/******/\n/******/ \t\t// Flag the module as loaded\n/******/ \t\tmodule.l = true;\n/******/\n/******/ \t\t// Return the exports of the module\n/******/ \t\treturn module.exports;\n/******/ \t}\n/******/\n/******/\n/******/ \t// expose the modules object (__webpack_modules__)\n/******/ \t__webpack_require__.m = modules;\n/******/\n/******/ \t// expose the module cache\n/******/ \t__webpack_require__.c = installedModules;\n/******/\n/******/ \t// define getter function for harmony exports\n/******/ \t__webpack_require__.d = function(exports, name, getter) {\n/******/ \t\tif(!__webpack_require__.o(exports, name)) {\n/******/ \t\t\tObject.defineProperty(exports, name, { enumerable: true, get: getter });\n/******/ \t\t}\n/******/ \t};\n/******/\n/******/ \t// define __esModule on exports\n/******/ \t__webpack_require__.r = function(exports) {\n/******/ \t\tif(typeof Symbol !== 'undefined' && Symbol.toStringTag) {\n/******/ \t\t\tObject.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });\n/******/ \t\t}\n/******/ \t\tObject.defineProperty(exports, '__esModule', { value: true });\n/******/ \t};\n/******/\n/******/ \t// create a fake namespace object\n/******/ \t// mode & 1: value is a module id, require it\n/******/ \t// mode & 2: merge all properties of value into the ns\n/******/ \t// mode & 4: return value when already ns object\n/******/ \t// mode & 8|1: behave like require\n/******/ \t__webpack_require__.t = function(value, mode) {\n/******/ \t\tif(mode & 1) value = __webpack_require__(value);\n/******/ \t\tif(mode & 8) return value;\n/******/ \t\tif((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;\n/******/ \t\tvar ns = Object.create(null);\n/******/ \t\t__webpack_require__.r(ns);\n/******/ \t\tObject.defineProperty(ns, 'default', { enumerable: true, value: value });\n/******/ \t\tif(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));\n/******/ \t\treturn ns;\n/******/ \t};\n/******/\n/******/ \t// getDefaultExport function for compatibility with non-harmony modules\n/******/ \t__webpack_require__.n = function(module) {\n/******/ \t\tvar getter = module && module.__esModule ?\n/******/ \t\t\tfunction getDefault() { return module['default']; } :\n/******/ \t\t\tfunction getModuleExports() { return module; };\n/******/ \t\t__webpack_require__.d(getter, 'a', getter);\n/******/ \t\treturn getter;\n/******/ \t};\n/******/\n/******/ \t// Object.prototype.hasOwnProperty.call\n/******/ \t__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };\n/******/\n/******/ \t// __webpack_public_path__\n/******/ \t__webpack_require__.p = \"\";\n/******/\n/******/\n/******/ \t// Load entry module and return exports\n/******/ \treturn __webpack_require__(__webpack_require__.s = \"./src/injected/zsSelectorEngine.ts\");\n/******/ })\n/************************************************************************/\n/******/ ({\n\n/***/ \"./src/injected/zsSelectorEngine.ts\":\n/*!******************************************!*\\\n  !*** ./src/injected/zsSelectorEngine.ts ***!\n  \\******************************************/\n/*! no static exports found */\n/***/ (function(module, exports, __webpack_require__) {\n\n\"use strict\";\n\n/**\n * Copyright (c) Microsoft Corporation.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n * http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\nObject.defineProperty(exports, \"__esModule\", { value: true });\nfunction tokenize(selector) {\n    const tokens = [];\n    let pos = 0;\n    const skipWhitespace = () => {\n        while (pos < selector.length && selector[pos] === ' ')\n            pos++;\n    };\n    while (pos < selector.length) {\n        skipWhitespace();\n        if (pos === selector.length)\n            break;\n        if (!tokens.length && '^>~'.includes(selector[pos]))\n            return pos;\n        const token = { combinator: '' };\n        if (selector[pos] === '^') {\n            token.combinator = '^';\n            tokens.push(token);\n            pos++;\n            continue;\n        }\n        if (selector[pos] === '>') {\n            token.combinator = '>';\n            pos++;\n            skipWhitespace();\n            if (pos === selector.length)\n                return pos;\n        }\n        else if (selector[pos] === '~') {\n            token.combinator = '~';\n            pos++;\n            skipWhitespace();\n            if (pos === selector.length)\n                return pos;\n        }\n        let text = '';\n        let end = pos;\n        let stringQuote;\n        const isText = '`\"\\''.includes(selector[pos]);\n        while (end < selector.length) {\n            if (stringQuote) {\n                if (selector[end] === '\\\\' && end + 1 < selector.length) {\n                    if (!isText)\n                        text += selector[end];\n                    text += selector[end + 1];\n                    end += 2;\n                }\n                else if (selector[end] === stringQuote) {\n                    text += selector[end++];\n                    stringQuote = undefined;\n                    if (isText)\n                        break;\n                }\n                else {\n                    text += selector[end++];\n                }\n            }\n            else if (' >~^#'.includes(selector[end])) {\n                break;\n            }\n            else if ('`\"\\''.includes(selector[end])) {\n                stringQuote = selector[end];\n                text += selector[end++];\n            }\n            else {\n                text += selector[end++];\n            }\n        }\n        if (stringQuote)\n            return end;\n        if (isText)\n            token.text = JSON.stringify(text.substring(1, text.length - 1));\n        else\n            token.css = text;\n        pos = end;\n        if (pos < selector.length && selector[pos] === '#') {\n            pos++;\n            let end = pos;\n            while (end < selector.length && selector[end] >= '0' && selector[end] <= '9')\n                end++;\n            if (end === pos)\n                return pos;\n            const num = Number(selector.substring(pos, end));\n            if (isNaN(num))\n                return pos;\n            token.index = num;\n            pos = end;\n        }\n        tokens.push(token);\n    }\n    return tokens;\n}\nfunction pathFromRoot(root, targetElement) {\n    let target = targetElement;\n    const path = [target];\n    while (target !== root) {\n        if (!target.parentNode || target.parentNode.nodeType !== 1 /* Node.ELEMENT_NODE */ && target.parentNode.nodeType !== 11 /* Node.DOCUMENT_FRAGMENT_NODE */)\n            throw new Error('Target does not belong to the root subtree');\n        target = target.parentNode;\n        path.push(target);\n    }\n    path.reverse();\n    return path;\n}\nfunction detectLists(root, shouldConsider, getBox) {\n    const lists = new Map();\n    const add = (map, element, key) => {\n        let list = map.get(key);\n        if (!list) {\n            list = [];\n            map.set(key, list);\n        }\n        list.push(element);\n    };\n    const mark = (parent, map, used) => {\n        for (let list of map.values()) {\n            list = list.filter(item => !used.has(item));\n            if (list.length < 2)\n                continue;\n            let collection = lists.get(parent);\n            if (!collection) {\n                collection = [];\n                lists.set(parent, collection);\n            }\n            collection.push(list);\n            list.forEach(item => used.add(item));\n        }\n    };\n    // hashes list: s, vh, v, h\n    const kHashes = 4;\n    const visit = (element, produceHashes) => {\n        const consider = shouldConsider(element);\n        let size = 1;\n        let maps;\n        if (consider)\n            maps = new Array(kHashes).fill(0).map(_ => new Map());\n        let structure;\n        if (produceHashes)\n            structure = [element.nodeName];\n        for (let child = element.firstElementChild; child; child = child.nextElementSibling) {\n            const childResult = visit(child, consider);\n            size += childResult.size;\n            if (consider) {\n                for (let i = 0; i < childResult.hashes.length; i++) {\n                    if (childResult.hashes[i])\n                        add(maps[i], child, childResult.hashes[i]);\n                }\n            }\n            if (structure)\n                structure.push(child.nodeName);\n        }\n        if (consider) {\n            const used = new Set();\n            maps.forEach(map => mark(element, map, used));\n        }\n        let hashes;\n        if (produceHashes) {\n            const box = getBox(element);\n            hashes = [];\n            hashes.push((structure.length >= 4) || (size >= 10) ? structure.join('') : '');\n            hashes.push(`${element.nodeName},${(size / 3) | 0},${box.height | 0},${box.width | 0}`);\n            if (size <= 5)\n                hashes.push(`${element.nodeName},${(size / 3) | 0},${box.width | 0},${box.left | 0}`);\n            else\n                hashes.push(`${element.nodeName},${(size / 3) | 0},${box.width | 0},${box.left | 0},${2 * Math.log(box.height) | 0}`);\n            if (size <= 5)\n                hashes.push(`${element.nodeName},${(size / 3) | 0},${box.height | 0},${box.top | 0}`);\n            else\n                hashes.push(`${element.nodeName},${(size / 3) | 0},${box.height | 0},${box.top | 0},${2 * Math.log(box.width) | 0}`);\n        }\n        return { size, hashes };\n    };\n    visit(root, false);\n    return lists;\n}\nconst defaultOptions = {\n    genericTagScore: 10,\n    textScore: 1,\n    imgAltScore: 2,\n    ariaLabelScore: 2,\n    detectLists: true,\n    avoidShortText: false,\n    usePlaceholders: true,\n    debug: false,\n};\nfunction parentOrRoot(element) {\n    return element.parentNode;\n}\nclass Engine {\n    constructor(options = defaultOptions) {\n        this._cues = new Map();\n        this._metrics = new Map();\n        this.options = options;\n    }\n    query(root, selector, all) {\n        const tokens = tokenize(selector);\n        if (typeof tokens === 'number')\n            throw new Error('Cannot parse selector at position ' + tokens);\n        if (!tokens.length)\n            throw new Error('Empty selector');\n        if (!this._cues.has(root)) {\n            const cueMap = new Map();\n            const pathCues = this._preprocess(root, [root], Infinity).pathCues;\n            for (const [text, cue] of pathCues) {\n                cueMap.set(text, {\n                    type: cue.type,\n                    score: cue.score,\n                    elements: cue.elements[0]\n                });\n            }\n            this._cues.set(root, cueMap);\n        }\n        // Map from the element to the boundary used. We never go outside the boundary when doing '~'.\n        let currentStep = new Map();\n        currentStep.set(root, root);\n        for (const token of tokens) {\n            const nextStep = new Map();\n            for (let [element, boundary] of currentStep) {\n                let next = [];\n                if (token.combinator === '^') {\n                    if (element === boundary) {\n                        next = [];\n                    }\n                    else {\n                        const parent = parentOrRoot(element);\n                        next = parent ? [parent] : [];\n                    }\n                }\n                else if (token.combinator === '>') {\n                    boundary = element;\n                    next = this._matchChildren(element, token, all);\n                }\n                else if (token.combinator === '') {\n                    boundary = element;\n                    next = this._matchSubtree(element, token, all);\n                }\n                else if (token.combinator === '~') {\n                    while (true) {\n                        next = this._matchSubtree(element, token, all);\n                        if (next.length) {\n                            // Further '~' / '^' will not go outside of this boundary, which is\n                            // a container with both the cue and the target elements inside.\n                            boundary = element;\n                            break;\n                        }\n                        if (element === boundary)\n                            break;\n                        element = parentOrRoot(element);\n                    }\n                }\n                for (const nextElement of next) {\n                    if (!nextStep.has(nextElement))\n                        nextStep.set(nextElement, boundary);\n                }\n            }\n            currentStep = nextStep;\n        }\n        return Array.from(currentStep.keys()).filter(e => e.nodeType === 1 /* Node.ELEMENT_NODE */);\n    }\n    create(root, target, type) {\n        const path = pathFromRoot(root, target);\n        const maxCueCount = type === 'notext' ? 50 : 10;\n        const { pathCues, lcaMap } = this._preprocess(root, path, maxCueCount);\n        const lists = this.options.detectLists ?\n            this._buildLists(root, path) : undefined;\n        const queue = path.map(_ => new Map());\n        const startStep = {\n            token: { combinator: '' },\n            element: root,\n            depth: 0,\n            score: 0,\n            totalScore: 0\n        };\n        for (let stepDepth = -1; stepDepth < path.length; stepDepth++) {\n            const stepsMap = stepDepth === -1 ? new Map([[undefined, startStep]]) : queue[stepDepth];\n            const ancestorDepth = stepDepth === -1 ? 0 : stepDepth;\n            for (const [text, cue] of pathCues) {\n                const elements = cue.elements[ancestorDepth];\n                for (let index = 0; index < elements.length; index++) {\n                    const element = elements[index];\n                    const lca = lcaMap.get(element);\n                    const lcaDepth = lca.lcaDepth;\n                    // Always go deeper in the tree.\n                    if (lcaDepth <= stepDepth)\n                        continue;\n                    // 'notext' - do not use elements from the target's subtree.\n                    if (type === 'notext' && lcaDepth === path.length - 1 && lca.depth > 0)\n                        continue;\n                    // 'notext' - do not use target's own text.\n                    if (type === 'notext' && lcaDepth === path.length - 1 && !lca.depth && cue.type !== 'tag')\n                        continue;\n                    const targetAnchor = path[lcaDepth + 1];\n                    if (lists && lca.anchor && targetAnchor && lca.anchor !== targetAnchor) {\n                        const oldList = lists.get(lca.anchor);\n                        // Do not use cues from sibling list items (lca.anchor and targetAnchor).\n                        if (oldList && oldList === lists.get(targetAnchor))\n                            continue;\n                    }\n                    if (cue.type !== 'tag' && !this._isVisible(element))\n                        continue;\n                    const distanceToTarget = path.length - stepDepth;\n                    // Short text can be used more effectively in a smaller scope.\n                    let shortTextScore = 0;\n                    if (this.options.avoidShortText && cue.type === 'text')\n                        shortTextScore = Math.max(0, distanceToTarget - 2 * (text.length - 2));\n                    const score = (cue.score + shortTextScore) * (\n                    // Unique cues are heavily favored.\n                    1 * (index + elements.length * 1000) +\n                        // Larger text is preferred.\n                        5 * (cue.type === 'text' ? this._elementMetrics(element).fontMetric : 1) +\n                        // The closer to the target, the better.\n                        1 * lca.depth);\n                    for (const [anchor, step] of stepsMap) {\n                        // This ensures uniqueness when resolving the selector.\n                        if (anchor && (cue.anchorCount.get(anchor) || 0) > index)\n                            continue;\n                        let newStep = {\n                            token: {\n                                combinator: stepDepth === -1 ? '' : '~',\n                                text: cue.type === 'text' ? text : undefined,\n                                css: cue.type === 'text' ? undefined : text,\n                                index: index || undefined,\n                            },\n                            previous: step,\n                            depth: lca.depth,\n                            element,\n                            score,\n                            totalScore: step.totalScore + score\n                        };\n                        let nextStep = queue[lcaDepth].get(lca.anchor);\n                        if (!nextStep || nextStep.totalScore > newStep.totalScore)\n                            queue[lcaDepth].set(lca.anchor, newStep);\n                        // Try going to the ancestor.\n                        if (newStep.depth) {\n                            newStep = {\n                                token: { combinator: '^' },\n                                previous: newStep,\n                                depth: 0,\n                                element: lca.lca,\n                                score: 2000 * newStep.depth,\n                                totalScore: newStep.totalScore + 2000 * newStep.depth,\n                                repeat: newStep.depth\n                            };\n                            nextStep = queue[lcaDepth].get(undefined);\n                            if (!nextStep || nextStep.totalScore > newStep.totalScore)\n                                queue[lcaDepth].set(undefined, newStep);\n                        }\n                    }\n                }\n            }\n        }\n        let best;\n        for (const [, step] of queue[path.length - 1]) {\n            if (!best || step.totalScore < best.totalScore)\n                best = step;\n        }\n        if (!best)\n            return '';\n        const tokens = new Array(best.depth).fill({ combinator: '^' });\n        while (best && best !== startStep) {\n            for (let repeat = best.repeat || 1; repeat; repeat--)\n                tokens.push(best.token);\n            best = best.previous;\n        }\n        tokens.reverse();\n        return this._serialize(tokens);\n    }\n    _textMetric(text) {\n        // Text which looks like a float number or counter is most likely volatile.\n        if (/^\\$?[\\d,]+(\\.\\d+|(\\.\\d+)?[kKmMbBgG])?$/.test(text))\n            return 12;\n        const num = Number(text);\n        // Large numbers are likely volatile.\n        if (!isNaN(num) && (num >= 32 || num < 0))\n            return 6;\n        return 1;\n    }\n    _elementMetrics(element) {\n        let metrics = this._metrics.get(element);\n        if (!metrics) {\n            const style = element.ownerDocument ?\n                element.ownerDocument.defaultView.getComputedStyle(element) :\n                {};\n            const box = element.getBoundingClientRect();\n            const fontSize = (parseInt(style.fontSize || '', 10) || 12) / 12; // default 12 px\n            const fontWeight = (parseInt(style.fontWeight || '', 10) || 400) / 400; // default normal weight\n            let fontMetric = fontSize * (1 + (fontWeight - 1) / 5);\n            fontMetric = 1 / Math.exp(fontMetric - 1);\n            metrics = { box, style, fontMetric };\n            this._metrics.set(element, metrics);\n        }\n        return metrics;\n    }\n    _isVisible(element) {\n        const metrics = this._elementMetrics(element);\n        return metrics.box.width > 1 && metrics.box.height > 1;\n    }\n    _preprocess(root, path, maxCueCount) {\n        const pathCues = new Map();\n        const lcaMap = new Map();\n        const textScore = this.options.textScore || 1;\n        const appendCue = (text, type, score, element, lca, textValue) => {\n            let pathCue = pathCues.get(text);\n            if (!pathCue) {\n                pathCue = { type, score: (textValue ? this._textMetric(textValue) : 1) * score, elements: [], anchorCount: new Map() };\n                for (let i = 0; i < path.length; i++)\n                    pathCue.elements.push([]);\n                pathCues.set(text, pathCue);\n            }\n            for (let index = lca.lcaDepth; index >= 0; index--) {\n                const elements = pathCue.elements[index];\n                if (elements.length < maxCueCount)\n                    elements.push(element);\n            }\n            if (lca.anchor)\n                pathCue.anchorCount.set(lca.anchor, 1 + (pathCue.anchorCount.get(lca.anchor) || 0));\n        };\n        const appendElementCues = (element, lca, detached) => {\n            const nodeName = element.nodeName;\n            if (!detached && this.options.usePlaceholders && nodeName === 'INPUT') {\n                const placeholder = element.getAttribute('placeholder');\n                if (placeholder)\n                    appendCue(JSON.stringify(placeholder), 'text', textScore, element, lca, placeholder);\n            }\n            if (!detached && nodeName === 'INPUT' && element.getAttribute('type') === 'button') {\n                const value = element.getAttribute('value');\n                if (value)\n                    appendCue(JSON.stringify(value), 'text', textScore, element, lca, value);\n            }\n            if (!nodeName.startsWith('<pseudo') && !nodeName.startsWith('::'))\n                appendCue(nodeName, 'tag', this.options.genericTagScore, element, lca, '');\n            if (this.options.imgAltScore && nodeName === 'IMG') {\n                const alt = element.getAttribute('alt');\n                if (alt)\n                    appendCue(`img[alt=${JSON.stringify(alt)}]`, 'imgAlt', this.options.imgAltScore, element, lca, alt);\n            }\n            if (this.options.ariaLabelScore) {\n                const ariaLabel = element.getAttribute('aria-label');\n                if (ariaLabel)\n                    appendCue(JSON.stringify(`[aria-label=${JSON.stringify(ariaLabel)}]`), 'ariaLabel', this.options.ariaLabelScore, element, lca, ariaLabel);\n            }\n        };\n        const visit = (element, lca, depth) => {\n            // Check for elements STYLE, NOSCRIPT, SCRIPT, OPTION and other elements\n            // that have |display:none| behavior.\n            const detached = !element.offsetParent;\n            if (element.nodeType === 1 /* Node.ELEMENT_NODE */)\n                appendElementCues(element, lca, detached);\n            lcaMap.set(element, lca);\n            for (let childNode = element.firstChild; childNode; childNode = childNode.nextSibling) {\n                if (element.nodeType === 1 /* Node.ELEMENT_NODE */ && !detached && childNode.nodeType === 3 /* Node.TEXT_NODE */ && childNode.nodeValue) {\n                    const textValue = childNode.nodeValue.trim();\n                    if (textValue)\n                        appendCue(JSON.stringify(textValue), 'text', textScore, element, lca, textValue);\n                }\n                if (childNode.nodeType !== 1 /* Node.ELEMENT_NODE */)\n                    continue;\n                const childElement = childNode;\n                if (childElement.nodeName.startsWith('<pseudo:'))\n                    continue;\n                if (path[depth + 1] === childElement) {\n                    const childLca = { depth: 0, lca: childElement, lcaDepth: depth + 1, anchor: undefined };\n                    visit(childElement, childLca, depth + 1);\n                }\n                else {\n                    const childLca = { depth: lca.depth + 1, lca: lca.lca, lcaDepth: lca.lcaDepth, anchor: lca.anchor || element };\n                    visit(childElement, childLca, depth + 1);\n                }\n            }\n        };\n        visit(root, { depth: 0, lca: root, lcaDepth: 0, anchor: undefined }, 0);\n        return { pathCues: pathCues, lcaMap };\n    }\n    _filterCues(cues, root) {\n        const result = new Map();\n        for (const [text, cue] of cues) {\n            const filtered = cue.elements.filter(element => root.contains(element));\n            if (!filtered.length)\n                continue;\n            const newCue = { type: cue.type, score: cue.score, elements: filtered };\n            result.set(text, newCue);\n        }\n        return result;\n    }\n    _buildLists(root, path) {\n        const pathSet = new Set(path);\n        const map = detectLists(root, e => pathSet.has(e), e => this._elementMetrics(e).box);\n        const result = new Map();\n        let listNumber = 1;\n        for (const collection of map.values()) {\n            for (const list of collection) {\n                for (const child of list)\n                    result.set(child, listNumber);\n                ++listNumber;\n            }\n        }\n        return result;\n    }\n    _matchChildren(parent, token, all) {\n        const result = [];\n        if (token.index !== undefined)\n            all = false;\n        let index = token.index || 0;\n        if (token.css !== undefined) {\n            for (let child = parent.firstElementChild; child; child = child.nextElementSibling) {\n                if (child.matches(token.css) && (all || !index--)) {\n                    result.push(child);\n                    if (!all)\n                        return result;\n                }\n            }\n            return result;\n        }\n        if (token.text !== undefined) {\n            const cue = this._getCues(parent).get(token.text);\n            if (!cue || cue.type !== 'text')\n                return [];\n            for (const element of cue.elements) {\n                if (parentOrRoot(element) === parent && (all || !index--)) {\n                    result.push(element);\n                    if (!all)\n                        return result;\n                }\n            }\n            return result;\n        }\n        throw new Error('Unsupported token');\n    }\n    _matchSubtree(root, token, all) {\n        const result = [];\n        if (token.index !== undefined)\n            all = false;\n        let index = token.index || 0;\n        if (token.css !== undefined) {\n            if (root.nodeType === 1 /* Node.ELEMENT_NODE */) {\n                const rootElement = root;\n                if (rootElement.matches(token.css) && (all || !index--)) {\n                    result.push(rootElement);\n                    if (!all)\n                        return result;\n                }\n            }\n            const queried = root.querySelectorAll(token.css);\n            if (all)\n                result.push(...Array.from(queried));\n            else if (queried.length > index)\n                result.push(queried.item(index));\n            return result;\n        }\n        if (token.text !== undefined) {\n            const texts = this._getCues(root);\n            const cue = texts.get(token.text);\n            if (!cue || cue.type !== 'text')\n                return result;\n            if (all)\n                return cue.elements;\n            if (index < cue.elements.length)\n                result.push(cue.elements[index]);\n            return result;\n        }\n        throw new Error('Unsupported token');\n    }\n    _getCues(element) {\n        if (!this._cues.has(element)) {\n            let parent = element;\n            while (!this._cues.has(parent))\n                parent = parentOrRoot(parent);\n            this._cues.set(element, this._filterCues(this._cues.get(parent), element));\n        }\n        return this._cues.get(element);\n    }\n    _serialize(tokens) {\n        const result = tokens.map(token => (token.combinator === '' ? ' ' : token.combinator) +\n            (token.text !== undefined ? token.text : '') +\n            (token.css !== undefined ? token.css : '') +\n            (token.index !== undefined ? '#' + token.index : '')).join('');\n        if (result[0] !== ' ')\n            throw new Error('First token is wrong');\n        return result.substring(1);\n    }\n}\nconst ZSSelectorEngine = {\n    create(root, element, type) {\n        return new Engine().create(root, element, type || 'default');\n    },\n    query(root, selector) {\n        return new Engine().query(root, selector, false /* all */)[0];\n    },\n    queryAll(root, selector) {\n        return new Engine().query(root, selector, true /* all */);\n    }\n};\nZSSelectorEngine.test = () => {\n    const elements = Array.from(document.querySelectorAll('*')).slice(1500, 2000);\n    console.time('test'); // eslint-disable-line no-console\n    const failures = elements.filter((e, index) => {\n        const name = e.tagName.toUpperCase();\n        if (name === 'SCRIPT' || name === 'STYLE' || name === 'NOSCRIPT' || name === 'META' || name === 'LINK' || name === 'OPTION')\n            return false;\n        if (index % 100 === 0)\n            console.log(`${index} / ${elements.length}`); // eslint-disable-line no-console\n        if (e.nodeName.toLowerCase().startsWith('<pseudo:'))\n            e = e.parentElement;\n        while (e && e.namespaceURI && e.namespaceURI.endsWith('svg') && e.nodeName.toLowerCase() !== 'svg')\n            e = e.parentElement;\n        try {\n            document.documentElement.style.outline = '1px solid red';\n            const selector = new Engine().create(document.documentElement, e, 'default');\n            document.documentElement.style.outline = '1px solid green';\n            const e2 = new Engine().query(document.documentElement, selector, false)[0];\n            return e !== e2;\n        }\n        catch (e) {\n            return false;\n        }\n    });\n    console.timeEnd('test'); // eslint-disable-line no-console\n    console.log(failures); // eslint-disable-line no-console\n};\nexports.default = ZSSelectorEngine;\n\n\n/***/ })\n\n/******/ })).default";
+
+}
 declare module 'playwright-core/helper' {
   /**
    * Copyright 2017 Google Inc. All rights reserved.
@@ -17489,15 +17729,17 @@ declare module 'playwright-core/helper' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  /// <reference types="debug" />
-  import * as platform from 'playwright-core/platform';
+  /// <reference types="node" />
+  import * as debug from 'debug';
+  import { EventEmitter } from 'events';
   import * as types from 'playwright-core/types';
-  export const debugError: import("debug").IDebugger;
+  export const debugError: debug.IDebugger;
   export type RegisteredListener = {
-      emitter: platform.EventEmitterType;
+      emitter: EventEmitter;
       eventName: (string | symbol);
       handler: (...args: any[]) => void;
   };
+  export type Listener = (...args: any[]) => void;
   class Helper {
       static evaluationString(fun: Function | string, ...args: any[]): string;
       static evaluationScript(fun: Function | string | {
@@ -17505,9 +17747,9 @@ declare module 'playwright-core/helper' {
           content?: string;
       }, arg?: any, addSourceUrl?: boolean): Promise<string>;
       static installApiHooks(className: string, classType: any): void;
-      static addEventListener(emitter: platform.EventEmitterType, eventName: (string | symbol), handler: (...args: any[]) => void): RegisteredListener;
+      static addEventListener(emitter: EventEmitter, eventName: (string | symbol), handler: (...args: any[]) => void): RegisteredListener;
       static removeEventListeners(listeners: Array<{
-          emitter: platform.EventEmitterType;
+          emitter: EventEmitter;
           eventName: (string | symbol);
           handler: (...args: any[]) => void;
       }>): void;
@@ -17516,18 +17758,44 @@ declare module 'playwright-core/helper' {
       static isRegExp(obj: any): obj is RegExp;
       static isObject(obj: any): obj is NonNullable<object>;
       static isBoolean(obj: any): obj is boolean;
-      static waitForEvent(emitter: platform.EventEmitterType, eventName: (string | symbol), predicate: Function, timeout: number, abortPromise: Promise<Error>): Promise<any>;
+      static waitForEvent(emitter: EventEmitter, eventName: (string | symbol), predicate: Function, deadline: number, abortPromise: Promise<Error>): Promise<any>;
       static waitWithTimeout<T>(promise: Promise<T>, taskName: string, timeout: number): Promise<T>;
+      static waitWithDeadline<T>(promise: Promise<T>, taskName: string, deadline: number): Promise<T>;
       static globToRegex(glob: string): RegExp;
       static completeUserURL(urlString: string): string;
       static trimMiddle(string: string, maxLength: number): string;
       static enclosingIntRect(rect: types.Rect): types.Rect;
       static enclosingIntSize(size: types.Size): types.Size;
       static urlMatches(urlString: string, match: types.URLMatch | undefined): boolean;
+      static makeWaitForNextTask(): typeof setImmediate | ((callback: () => void) => void);
+      static guid(): string;
+      static monotonicTime(): number;
+      static timeUntilDeadline(deadline: number): number;
+      static optionsWithUpdatedTimeout<T extends types.TimeoutOptions>(options: T | undefined, deadline: number): T;
   }
   export function assert(value: any, message?: string): asserts value;
   export const helper: typeof Helper;
   export {};
+
+}
+declare module 'playwright-core/injected/attributeSelectorEngine' {
+  /**
+   * Copyright (c) Microsoft Corporation.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   * http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  import { SelectorEngine } from 'playwright-core/injected/selectorEngine';
+  export function createAttributeEngine(attribute: string): SelectorEngine;
 
 }
 declare module 'playwright-core/injected/cssSelectorEngine' {
@@ -17566,35 +17834,25 @@ declare module 'playwright-core/injected/injected' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import { SelectorEngine } from 'playwright-core/injected/selectorEngine';
-  import { Utils } from 'playwright-core/injected/utils';
   import * as types from 'playwright-core/types';
-  type Predicate = (element: Element | undefined) => any;
+  type Predicate = () => any;
   class Injected {
-      readonly utils: Utils;
-      readonly engines: Map<string, SelectorEngine>;
-      constructor(customEngines: {
-          name: string;
-          engine: SelectorEngine;
-      }[]);
-      querySelector(selector: string, root: Node): Element | undefined;
-      private _querySelectorRecursively;
-      querySelectorAll(selector: string, root: Node): Element[];
-      private _parseSelector;
       isVisible(element: Element): boolean;
       private _pollMutation;
       private _pollRaf;
       private _pollInterval;
-      poll(polling: 'raf' | 'mutation' | number, selector: string | undefined, timeout: number, predicate: Predicate): Promise<any>;
+      poll(polling: 'raf' | 'mutation' | number, timeout: number, predicate: Predicate): Promise<any>;
       getElementBorderWidth(node: Node): {
           left: number;
           top: number;
       };
       selectOptions(node: Node, optionsToSelect: (Node | types.SelectOption)[]): string[];
-      fill(node: Node, value: string): string | false;
+      fill(node: Node, value: string): string | boolean;
       isCheckboxChecked(node: Node): boolean;
       waitForDisplayedAtStablePosition(node: Node, timeout: number): Promise<void>;
       waitForHitTargetAt(node: Node, timeout: number, point: types.Point): Promise<void>;
+      private _parentElementOrShadowHost;
+      private _deepElementFromPoint;
   }
   export default Injected;
 
@@ -17624,6 +17882,39 @@ declare module 'playwright-core/injected/selectorEngine' {
   }
 
 }
+declare module 'playwright-core/injected/selectorEvaluator' {
+  /**
+   * Copyright (c) Microsoft Corporation.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   * http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  import { SelectorEngine } from 'playwright-core/injected/selectorEngine';
+  import Injected from 'playwright-core/injected/injected';
+  import * as types from 'playwright-core/types';
+  class SelectorEvaluator {
+      readonly engines: Map<string, SelectorEngine>;
+      readonly injected: Injected;
+      constructor(customEngines: {
+          name: string;
+          engine: SelectorEngine;
+      }[]);
+      querySelector(selector: types.ParsedSelector, root: Node): Element | undefined;
+      private _querySelectorRecursively;
+      querySelectorAll(selector: types.ParsedSelector, root: Node): Element[];
+  }
+  export default SelectorEvaluator;
+
+}
 declare module 'playwright-core/injected/textSelectorEngine' {
   /**
    * Copyright (c) Microsoft Corporation.
@@ -17642,28 +17933,6 @@ declare module 'playwright-core/injected/textSelectorEngine' {
    */
   import { SelectorEngine } from 'playwright-core/injected/selectorEngine';
   export const TextEngine: SelectorEngine;
-
-}
-declare module 'playwright-core/injected/utils' {
-  /**
-   * Copyright (c) Microsoft Corporation.
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   * http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   */
-  export class Utils {
-      parentElementOrShadowHost(element: Element): Element | undefined;
-      deepElementFromPoint(document: Document, x: number, y: number): Element | undefined;
-  }
 
 }
 declare module 'playwright-core/injected/xpathSelectorEngine' {
@@ -17866,8 +18135,8 @@ declare module 'playwright-core/network' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
   import * as frames from 'playwright-core/frames';
-  import * as platform from 'playwright-core/platform';
   export type NetworkCookie = {
       name: string;
       value: string;
@@ -17949,7 +18218,7 @@ declare module 'playwright-core/network' {
       }): Promise<void>;
   }
   export type RouteHandler = (route: Route, request: Request) => void;
-  type GetResponseBodyCallback = () => Promise<platform.BufferType>;
+  type GetResponseBodyCallback = () => Promise<Buffer>;
   export class Response {
       private _request;
       private _contentPromise;
@@ -17968,7 +18237,7 @@ declare module 'playwright-core/network' {
       statusText(): string;
       headers(): object;
       finished(): Promise<Error | null>;
-      body(): Promise<platform.BufferType>;
+      body(): Promise<Buffer>;
       text(): Promise<string>;
       json(): Promise<object>;
       request(): Request;
@@ -17978,7 +18247,7 @@ declare module 'playwright-core/network' {
       status?: number;
       headers?: Headers;
       contentType?: string;
-      body?: string | platform.BufferType;
+      body?: string | Buffer;
   };
   export interface RouteDelegate {
       abort(errorCode: string): Promise<void>;
@@ -18014,8 +18283,10 @@ declare module 'playwright-core/page' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
   import * as dom from 'playwright-core/dom';
   import * as frames from 'playwright-core/frames';
+  import { Listener } from 'playwright-core/helper';
   import * as input from 'playwright-core/input';
   import * as js from 'playwright-core/javascript';
   import * as network from 'playwright-core/network';
@@ -18025,7 +18296,8 @@ declare module 'playwright-core/page' {
   import { BrowserContext, BrowserContextBase } from 'playwright-core/browserContext';
   import { ConsoleMessageLocation } from 'playwright-core/console';
   import * as accessibility from 'playwright-core/accessibility';
-  import * as platform from 'playwright-core/platform';
+  import { ExtendedEventEmitter } from 'playwright-core/extendedEventEmitter';
+  import { EventEmitter } from 'events';
   export interface PageDelegate {
       readonly rawMouse: input.RawMouse;
       readonly rawKeyboard: input.RawKeyboard;
@@ -18039,7 +18311,7 @@ declare module 'playwright-core/page' {
       navigateFrame(frame: frames.Frame, url: string, referrer: string | undefined): Promise<frames.GotoResult>;
       updateExtraHTTPHeaders(): Promise<void>;
       setViewportSize(viewportSize: types.Size): Promise<void>;
-      setEmulateMedia(mediaType: types.MediaType | null, colorScheme: types.ColorScheme | null): Promise<void>;
+      updateEmulateMedia(): Promise<void>;
       updateRequestInterception(): Promise<void>;
       setFileChooserIntercepted(enabled: boolean): Promise<void>;
       canScreenshotOutsideViewport(): boolean;
@@ -18050,7 +18322,7 @@ declare module 'playwright-core/page' {
           b: number;
           a: number;
       }): Promise<void>;
-      takeScreenshot(format: string, documentRect: types.Rect | undefined, viewportRect: types.Rect | undefined, quality: number | undefined): Promise<platform.BufferType>;
+      takeScreenshot(format: string, documentRect: types.Rect | undefined, viewportRect: types.Rect | undefined, quality: number | undefined): Promise<Buffer>;
       isElementHandle(remoteObject: any): boolean;
       adoptElementHandle<T extends Node>(handle: dom.ElementHandle<T>, to: dom.FrameExecutionContext): Promise<dom.ElementHandle<T>>;
       getContentFrame(handle: dom.ElementHandle): Promise<frames.Frame | null>;
@@ -18068,7 +18340,7 @@ declare module 'playwright-core/page' {
           tree: accessibility.AXNode;
           needle: accessibility.AXNode | null;
       }>;
-      pdf?: (options?: types.PDFOptions) => Promise<platform.BufferType>;
+      pdf?: (options?: types.PDFOptions) => Promise<Buffer>;
       coverage?: () => any;
       inputActionEpilogue(): Promise<void>;
   }
@@ -18082,7 +18354,7 @@ declare module 'playwright-core/page' {
       element: dom.ElementHandle;
       multiple: boolean;
   };
-  export class Page extends platform.EventEmitter {
+  export class Page extends ExtendedEventEmitter {
       private _closed;
       private _closedCallback;
       private _closedPromise;
@@ -18100,7 +18372,7 @@ declare module 'playwright-core/page' {
       readonly _frameManager: frames.FrameManager;
       readonly accessibility: accessibility.Accessibility;
       private _workers;
-      readonly pdf: ((options?: types.PDFOptions) => Promise<platform.BufferType>) | undefined;
+      readonly pdf: ((options?: types.PDFOptions) => Promise<Buffer>) | undefined;
       readonly coverage: any;
       readonly _routes: {
           url: types.URLMatch;
@@ -18108,6 +18380,8 @@ declare module 'playwright-core/page' {
       }[];
       _ownedContext: BrowserContext | undefined;
       constructor(delegate: PageDelegate, browserContext: BrowserContextBase);
+      protected _abortPromiseForEvent(event: string): Promise<Error>;
+      protected _computeDeadline(options?: types.TimeoutOptions): number;
       _didClose(): void;
       _didCrash(): void;
       _didDisconnect(): void;
@@ -18153,9 +18427,6 @@ declare module 'playwright-core/page' {
       reload(options?: types.NavigateOptions): Promise<network.Response | null>;
       waitForLoadState(state?: types.LifecycleEvent, options?: types.TimeoutOptions): Promise<void>;
       waitForNavigation(options?: types.WaitForNavigationOptions): Promise<network.Response | null>;
-      waitForEvent(event: string, optionsOrPredicate?: Function | (types.TimeoutOptions & {
-          predicate?: Function;
-      })): Promise<any>;
       waitForRequest(urlOrPredicate: string | RegExp | ((r: network.Request) => boolean), options?: types.TimeoutOptions): Promise<network.Request>;
       waitForResponse(urlOrPredicate: string | RegExp | ((r: network.Response) => boolean), options?: types.TimeoutOptions): Promise<network.Response>;
       goBack(options?: types.NavigateOptions): Promise<network.Response | null>;
@@ -18175,7 +18446,7 @@ declare module 'playwright-core/page' {
       _needsRequestInterception(): boolean;
       route(url: types.URLMatch, handler: network.RouteHandler): Promise<void>;
       _requestStarted(request: network.Request): void;
-      screenshot(options?: types.ScreenshotOptions): Promise<platform.BufferType>;
+      screenshot(options?: types.ScreenshotOptions): Promise<Buffer>;
       title(): Promise<string>;
       close(options?: {
           runBeforeUnload: (boolean | undefined);
@@ -18202,10 +18473,10 @@ declare module 'playwright-core/page' {
       _addWorker(workerId: string, worker: Worker): void;
       _removeWorker(workerId: string): void;
       _clearWorkers(): void;
-      on(event: string | symbol, listener: platform.Listener): this;
-      removeListener(event: string | symbol, listener: platform.Listener): this;
+      on(event: string | symbol, listener: Listener): this;
+      removeListener(event: string | symbol, listener: Listener): this;
   }
-  export class Worker extends platform.EventEmitter {
+  export class Worker extends EventEmitter {
       private _url;
       private _executionContextPromise;
       private _executionContextCallback;
@@ -18228,52 +18499,6 @@ declare module 'playwright-core/page' {
   export {};
 
 }
-declare module 'playwright-core/platform' {
-  /**
-   * Copyright (c) Microsoft Corporation.
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   * http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   */
-  /// <reference types="node" />
-  import * as nodeEvents from 'events';
-  import * as nodeDebug from 'debug';
-  import * as nodeBuffer from 'buffer';
-  import { ConnectionTransport } from 'playwright-core/transport';
-  export const isNode: boolean;
-  export function promisify(nodeFunction: Function): Function;
-  export type Listener = (...args: any[]) => void;
-  export const EventEmitter: typeof nodeEvents.EventEmitter;
-  export type EventEmitterType = nodeEvents.EventEmitter;
-  type DebugType = typeof nodeDebug;
-  export const debug: DebugType;
-  export const Buffer: typeof nodeBuffer.Buffer;
-  export type BufferType = Buffer;
-  export function readFileAsync(file: string, encoding: string): Promise<string>;
-  export function readFileBuffer(file: string): Promise<BufferType>;
-  export function writeFileAsync(file: string, data: any): Promise<any>;
-  export function basename(file: string): string;
-  export function openFdAsync(file: string, flags: string): Promise<number>;
-  export function writeFdAsync(fd: number, buffer: Buffer): Promise<void>;
-  export function closeFdAsync(fd: number): Promise<void>;
-  export function getMimeType(file: string): string;
-  export function pngToJpeg(buffer: Buffer, quality?: number): Buffer;
-  export function fetchUrl(url: string): Promise<string>;
-  export function makeWaitForNextTask(): typeof setImmediate | ((callback: () => void) => void);
-  export function guid(): string;
-  export function connectToWebsocket<T>(url: string, onopen: (transport: ConnectionTransport) => Promise<T>): Promise<T>;
-  export {};
-
-}
 declare module 'playwright-core/screenshotter' {
   /**
    * Copyright 2019 Google Inc. All rights reserved.
@@ -18291,18 +18516,18 @@ declare module 'playwright-core/screenshotter' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
   import * as dom from 'playwright-core/dom';
-  import * as types from 'playwright-core/types';
   import { Page } from 'playwright-core/page';
-  import * as platform from 'playwright-core/platform';
+  import * as types from 'playwright-core/types';
   export class Screenshotter {
       private _queue;
       private _page;
       constructor(page: Page);
       private _originalViewportSize;
       private _fullPageSize;
-      screenshotPage(options?: types.ScreenshotOptions): Promise<platform.BufferType>;
-      screenshotElement(handle: dom.ElementHandle, options?: types.ElementScreenshotOptions): Promise<platform.BufferType>;
+      screenshotPage(options?: types.ScreenshotOptions): Promise<Buffer>;
+      screenshotElement(handle: dom.ElementHandle, options?: types.ElementScreenshotOptions): Promise<Buffer>;
       private _screenshot;
   }
   export const kScreenshotDuringNavigationError = "Cannot take a screenshot while page is navigating";
@@ -18325,17 +18550,36 @@ declare module 'playwright-core/selectors' {
    * limitations under the License.
    */
   import * as dom from 'playwright-core/dom';
+  import * as frames from 'playwright-core/frames';
+  import SelectorEvaluator from 'playwright-core/injected/selectorEvaluator';
+  import * as js from 'playwright-core/javascript';
   export class Selectors {
-      readonly _engines: Map<string, string>;
+      readonly _builtinEngines: Set<string>;
+      readonly _engines: Map<string, {
+          source: string;
+          contentScript: boolean;
+      }>;
       _generation: number;
-      static _instance(): Selectors;
       constructor();
       register(name: string, script: string | Function | {
           path?: string;
           content?: string;
+      }, options?: {
+          contentScript?: boolean;
       }): Promise<void>;
+      private _needsMainContext;
+      _prepareEvaluator(context: dom.FrameExecutionContext): Promise<js.JSHandle<SelectorEvaluator>>;
+      _query(frame: frames.Frame, selector: string, scope?: dom.ElementHandle): Promise<dom.ElementHandle<Element> | null>;
+      _queryArray(frame: frames.Frame, selector: string, scope?: dom.ElementHandle): Promise<js.JSHandle<Element[]>>;
+      _queryAll(frame: frames.Frame, selector: string, scope?: dom.ElementHandle, allowUtilityContext?: boolean): Promise<dom.ElementHandle<Element>[]>;
+      _waitForSelectorTask(selector: string, waitFor: 'attached' | 'detached' | 'visible' | 'hidden', deadline: number): {
+          world: 'main' | 'utility';
+          task: (context: dom.FrameExecutionContext) => Promise<js.JSHandle>;
+      };
       _createSelector(name: string, handle: dom.ElementHandle<Element>): Promise<string | undefined>;
+      private _parseSelector;
   }
+  export const selectors: Selectors;
 
 }
 declare module 'playwright-core/server/browserFetcher' {
@@ -18357,7 +18601,7 @@ declare module 'playwright-core/server/browserFetcher' {
    */
   export type OnProgressCallback = (downloadedBytes: number, totalBytes: number) => void;
   export type BrowserName = ('chromium' | 'webkit' | 'firefox');
-  export type BrowserPlatform = ('win32' | 'win64' | 'mac10.14' | 'mac10.15' | 'linux');
+  export type BrowserPlatform = ('win32' | 'win64' | 'mac10.13' | 'mac10.14' | 'mac10.15' | 'linux');
   export type DownloadOptions = {
       browser: BrowserName;
       revision: string;
@@ -18389,16 +18633,23 @@ declare module 'playwright-core/server/browserServer' {
    */
   /// <reference types="node" />
   import { ChildProcess } from 'child_process';
-  import * as platform from 'playwright-core/platform';
-  export class BrowserServer extends platform.EventEmitter {
+  import { EventEmitter } from 'events';
+  export class WebSocketWrapper {
+      readonly wsEndpoint: string;
+      private _bindings;
+      constructor(wsEndpoint: string, bindings: (Map<any, any> | Set<any>)[]);
+      checkLeaks(): Promise<unknown>;
+  }
+  export class BrowserServer extends EventEmitter {
       private _process;
       private _gracefullyClose;
-      private _browserWSEndpoint;
-      constructor(process: ChildProcess, gracefullyClose: () => Promise<void>, wsEndpoint: string | null);
+      private _webSocketWrapper;
+      constructor(process: ChildProcess, gracefullyClose: () => Promise<void>, webSocketWrapper: WebSocketWrapper | null);
       process(): ChildProcess;
       wsEndpoint(): string;
       kill(): void;
       close(): Promise<void>;
+      _checkLeaks(): Promise<void>;
   }
 
 }
@@ -18418,7 +18669,6 @@ declare module 'playwright-core/server/browserType' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import { ConnectOptions } from 'playwright-core/browser';
   import { BrowserContext } from 'playwright-core/browserContext';
   import { BrowserServer } from 'playwright-core/server/browserServer';
   export type BrowserArgOptions = {
@@ -18426,7 +18676,7 @@ declare module 'playwright-core/server/browserType' {
       args?: string[];
       devtools?: boolean;
   };
-  export type LaunchOptions = BrowserArgOptions & {
+  type LaunchOptionsBase = BrowserArgOptions & {
       executablePath?: string;
       ignoreDefaultArgs?: boolean | string[];
       handleSIGINT?: boolean;
@@ -18442,18 +18692,25 @@ declare module 'playwright-core/server/browserType' {
           [key: string]: string;
       } | undefined;
   };
+  export type ConnectOptions = {
+      wsEndpoint: string;
+      slowMo?: number;
+  };
+  export type LaunchOptions = LaunchOptionsBase & {
+      slowMo?: number;
+  };
+  export type LaunchServerOptions = LaunchOptionsBase & {
+      port?: number;
+  };
   export interface BrowserType<Browser> {
       executablePath(): string;
       name(): string;
-      launch(options?: LaunchOptions & {
-          slowMo?: number;
-      }): Promise<Browser>;
-      launchServer(options?: LaunchOptions & {
-          port?: number;
-      }): Promise<BrowserServer>;
+      launch(options?: LaunchOptions): Promise<Browser>;
+      launchServer(options?: LaunchServerOptions): Promise<BrowserServer>;
       launchPersistentContext(userDataDir: string, options?: LaunchOptions): Promise<BrowserContext>;
       connect(options: ConnectOptions): Promise<Browser>;
   }
+  export {};
 
 }
 declare module 'playwright-core/server/chromium' {
@@ -18474,20 +18731,15 @@ declare module 'playwright-core/server/chromium' {
    * limitations under the License.
    */
   import { CRBrowser } from 'playwright-core/chromium/crBrowser';
-  import { LaunchOptions, BrowserType } from 'playwright-core/server/browserType';
-  import { ConnectOptions } from 'playwright-core/browser';
+  import { LaunchOptions, BrowserType, ConnectOptions, LaunchServerOptions } from 'playwright-core/server/browserType';
   import { BrowserServer } from 'playwright-core/server/browserServer';
   import { BrowserContext } from 'playwright-core/browserContext';
   export class Chromium implements BrowserType<CRBrowser> {
       private _executablePath;
       executablePath(): string;
       name(): string;
-      launch(options?: LaunchOptions & {
-          slowMo?: number;
-      }): Promise<CRBrowser>;
-      launchServer(options?: LaunchOptions & {
-          port?: number;
-      }): Promise<BrowserServer>;
+      launch(options?: LaunchOptions): Promise<CRBrowser>;
+      launchServer(options?: LaunchServerOptions): Promise<BrowserServer>;
       launchPersistentContext(userDataDir: string, options?: LaunchOptions): Promise<BrowserContext>;
       private _launchServer;
       connect(options: ConnectOptions): Promise<CRBrowser>;
@@ -18512,21 +18764,16 @@ declare module 'playwright-core/server/firefox' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import { ConnectOptions } from 'playwright-core/browser';
   import { BrowserContext } from 'playwright-core/browserContext';
   import { FFBrowser } from 'playwright-core/firefox/ffBrowser';
   import { BrowserServer } from 'playwright-core/server/browserServer';
-  import { BrowserType, LaunchOptions } from 'playwright-core/server/browserType';
+  import { BrowserType, LaunchOptions, LaunchServerOptions, ConnectOptions } from 'playwright-core/server/browserType';
   export class Firefox implements BrowserType<FFBrowser> {
       private _executablePath;
       executablePath(): string;
       name(): string;
-      launch(options?: LaunchOptions & {
-          slowMo?: number;
-      }): Promise<FFBrowser>;
-      launchServer(options?: LaunchOptions & {
-          port?: number;
-      }): Promise<BrowserServer>;
+      launch(options?: LaunchOptions): Promise<FFBrowser>;
+      launchServer(options?: LaunchServerOptions): Promise<BrowserServer>;
       launchPersistentContext(userDataDir: string, options?: LaunchOptions): Promise<BrowserContext>;
       private _launchServer;
       connect(options: ConnectOptions): Promise<FFBrowser>;
@@ -18552,17 +18799,16 @@ declare module 'playwright-core/server/pipeTransport' {
    * limitations under the License.
    */
   /// <reference types="node" />
-  import { ConnectionTransport } from 'playwright-core/transport';
+  import { ConnectionTransport, ProtocolRequest, ProtocolResponse } from 'playwright-core/transport';
   export class PipeTransport implements ConnectionTransport {
       private _pipeWrite;
       private _pendingMessage;
       private _eventListeners;
       private _waitForNextTask;
-      private readonly _closeCallback;
-      onmessage?: (message: string) => void;
+      onmessage?: (message: ProtocolResponse) => void;
       onclose?: () => void;
-      constructor(pipeWrite: NodeJS.WritableStream, pipeRead: NodeJS.ReadableStream, closeCallback: () => void);
-      send(message: string): void;
+      constructor(pipeWrite: NodeJS.WritableStream, pipeRead: NodeJS.ReadableStream);
+      send(message: ProtocolRequest): void;
       close(): void;
       _dispatch(buffer: Buffer): void;
   }
@@ -18646,6 +18892,7 @@ declare module 'playwright-core/server/processLauncher' {
   type LaunchResult = {
       launchedProcess: childProcess.ChildProcess;
       gracefullyClose: () => Promise<void>;
+      downloadsPath: string;
   };
   export function launchProcess(options: LaunchProcessOptions): Promise<LaunchResult>;
   export function waitForLine(process: childProcess.ChildProcess, inputStream: stream.Readable, regex: RegExp, timeout: number, timeoutError: TimeoutError): Promise<RegExpMatchArray>;
@@ -18670,20 +18917,16 @@ declare module 'playwright-core/server/webkit' {
    * limitations under the License.
    */
   import { WKBrowser } from 'playwright-core/webkit/wkBrowser';
-  import { LaunchOptions, BrowserArgOptions, BrowserType } from 'playwright-core/server/browserType';
-  import { ConnectOptions, LaunchType } from 'playwright-core/browser';
+  import { LaunchOptions, BrowserArgOptions, BrowserType, LaunchServerOptions, ConnectOptions } from 'playwright-core/server/browserType';
+  import { LaunchType } from 'playwright-core/browser';
   import { BrowserServer } from 'playwright-core/server/browserServer';
   import { BrowserContext } from 'playwright-core/browserContext';
   export class WebKit implements BrowserType<WKBrowser> {
       private _executablePath;
       executablePath(): string;
       name(): string;
-      launch(options?: LaunchOptions & {
-          slowMo?: number;
-      }): Promise<WKBrowser>;
-      launchServer(options?: LaunchOptions & {
-          port?: number;
-      }): Promise<BrowserServer>;
+      launch(options?: LaunchOptions): Promise<WKBrowser>;
+      launchServer(options?: LaunchServerOptions): Promise<BrowserServer>;
       launchPersistentContext(userDataDir: string, options?: LaunchOptions): Promise<BrowserContext>;
       private _launchServer;
       connect(options: ConnectOptions): Promise<WKBrowser>;
@@ -18708,6 +18951,7 @@ declare module 'playwright-core/timeoutSettings' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  import { TimeoutOptions } from 'playwright-core/types';
   export class TimeoutSettings {
       private _parent;
       private _defaultTimeout;
@@ -18716,7 +18960,8 @@ declare module 'playwright-core/timeoutSettings' {
       setDefaultTimeout(timeout: number): void;
       setDefaultNavigationTimeout(timeout: number): void;
       navigationTimeout(): number;
-      timeout(): number;
+      private _timeout;
+      computeDeadline(options?: TimeoutOptions): number;
   }
 
 }
@@ -18737,33 +18982,81 @@ declare module 'playwright-core/transport' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  import * as debug from 'debug';
+  import * as WebSocket from 'ws';
+  export type ProtocolRequest = {
+      id: number;
+      method: string;
+      params: any;
+      sessionId?: string;
+      pageProxyId?: string;
+  };
+  export type ProtocolResponse = {
+      id?: number;
+      method?: string;
+      sessionId?: string;
+      error?: {
+          message: string;
+          data: any;
+      };
+      params?: any;
+      result?: any;
+      pageProxyId?: string;
+  };
   export interface ConnectionTransport {
-      send(s: string): void;
+      send(s: ProtocolRequest): void;
       close(): void;
-      onmessage?: (message: string) => void;
+      onmessage?: (message: ProtocolResponse) => void;
       onclose?: () => void;
   }
-  export class SlowMoTransport {
+  export class SlowMoTransport implements ConnectionTransport {
       private readonly _delay;
       private readonly _delegate;
-      onmessage?: (message: string) => void;
+      onmessage?: (message: ProtocolResponse) => void;
       onclose?: () => void;
       static wrap(transport: ConnectionTransport, delay?: number): ConnectionTransport;
       constructor(transport: ConnectionTransport, delay: number);
       private _onmessage;
       private _onClose;
-      send(s: string): void;
+      send(s: ProtocolRequest): void;
       close(): void;
   }
   export class DeferWriteTransport implements ConnectionTransport {
       private _delegate;
       private _readPromise;
-      onmessage?: (message: string) => void;
+      onmessage?: (message: ProtocolResponse) => void;
       onclose?: () => void;
       constructor(transport: ConnectionTransport);
-      send(s: string): Promise<void>;
+      send(s: ProtocolRequest): Promise<void>;
       close(): void;
   }
+  export class WebSocketTransport implements ConnectionTransport {
+      _ws: WebSocket;
+      onmessage?: (message: ProtocolResponse) => void;
+      onclose?: () => void;
+      static connect<T>(url: string, onopen: (transport: ConnectionTransport) => Promise<T> | T): Promise<T>;
+      constructor(url: string);
+      send(message: ProtocolRequest): void;
+      close(): void;
+  }
+  export class SequenceNumberMixer<V> {
+      static _lastSequenceNumber: number;
+      private _values;
+      generate(value: V): number;
+      take(sequenceNumber: number): V | undefined;
+  }
+  export class InterceptingTransport implements ConnectionTransport {
+      private readonly _delegate;
+      private _interceptor;
+      onmessage?: (message: ProtocolResponse) => void;
+      onclose?: () => void;
+      constructor(transport: ConnectionTransport, interceptor: (message: ProtocolRequest) => ProtocolRequest);
+      private _onmessage;
+      private _onClose;
+      send(s: ProtocolRequest): void;
+      close(): void;
+  }
+  export const debugProtocol: debug.IDebugger;
 
 }
 declare module 'playwright-core/types' {
@@ -18908,6 +19201,10 @@ declare module 'playwright-core/types' {
       resetOnNavigation?: boolean;
       reportAnonymousScripts?: boolean;
   };
+  export type ParsedSelector = {
+      name: string;
+      body: string;
+  }[];
   export {};
 
 }
@@ -18948,39 +19245,6 @@ declare module 'playwright-core/usKeyboardLayout' {
       [key: string]: string | string[];
   };
   export {};
-
-}
-declare module 'playwright-core/web' {
-  /**
-   * Copyright (c) Microsoft Corporation.
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   * http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   */
-  import { CRBrowser as ChromiumBrowser } from 'playwright-core/chromium/crBrowser';
-  import { FFBrowser as FirefoxBrowser } from 'playwright-core/firefox/ffBrowser';
-  import { WKBrowser as WebKitBrowser } from 'playwright-core/webkit/wkBrowser';
-  const connect: {
-      chromium: {
-          connect: (url: string) => Promise<ChromiumBrowser>;
-      };
-      webkit: {
-          connect: (url: string) => Promise<WebKitBrowser>;
-      };
-      firefox: {
-          connect: (url: string) => Promise<FirefoxBrowser>;
-      };
-  };
-  export = connect;
 
 }
 declare module 'playwright-core/webkit/protocol' {
@@ -20321,7 +20585,7 @@ declare module 'playwright-core/webkit/protocol' {
           /**
            * Channels for different types of log messages.
            */
-          type ChannelSource = "xml" | "javascript" | "network" | "console-api" | "storage" | "appcache" | "rendering" | "css" | "security" | "content-blocker" | "media" | "mediasource" | "webrtc" | "other";
+          type ChannelSource = "xml" | "javascript" | "network" | "console-api" | "storage" | "appcache" | "rendering" | "css" | "security" | "content-blocker" | "media" | "mediasource" | "webrtc" | "itp-debug" | "ad-click-attribution" | "other";
           /**
            * Level of logging.
            */
@@ -24573,9 +24837,9 @@ declare module 'playwright-core/webkit/protocol' {
                */
               expires: number;
               /**
-               * Cookie size.
+               * True in case of session cookie.
                */
-              size: number;
+              session: boolean;
               /**
                * True if cookie is http-only.
                */
@@ -24584,10 +24848,6 @@ declare module 'playwright-core/webkit/protocol' {
                * True if cookie is secure.
                */
               secure: boolean;
-              /**
-               * True in case of session cookie.
-               */
-              session: boolean;
               /**
                * Cookie Same-Site policy.
                */
@@ -24914,7 +25174,14 @@ declare module 'playwright-core/webkit/protocol' {
               cookies: Cookie[];
           };
           /**
-           * Deletes browser cookie with given name, domain and path.
+           * Sets a new browser cookie with the given name, domain, and path.
+           */
+          type setCookieParameters = {
+              cookie: Cookie;
+          };
+          type setCookieReturnValue = {};
+          /**
+           * Deletes browser cookie with given name, domain, and path.
            */
           type deleteCookieParameters = {
               /**
@@ -25381,6 +25648,19 @@ declare module 'playwright-core/webkit/protocol' {
                */
               error: string;
           };
+          type downloadCreatedPayload = {
+              uuid: string;
+              url: string;
+              /**
+               * Unique identifier of the page proxy.
+               */
+              pageProxyId: PageProxyID;
+              browserContextId: ContextID;
+          };
+          type downloadFinishedPayload = {
+              uuid: string;
+              error: string;
+          };
           /**
            * Close browser.
            */
@@ -25520,6 +25800,18 @@ declare module 'playwright-core/webkit/protocol' {
               browserContextId?: ContextID;
           };
           type setLanguagesReturnValue = {};
+          /**
+           * Allows to override download behavior.
+           */
+          type setDownloadBehaviorParameters = {
+              behavior?: "allow" | "deny";
+              downloadPath?: string;
+              /**
+               * Browser context id.
+               */
+              browserContextId?: ContextID;
+          };
+          type setDownloadBehaviorReturnValue = {};
       }
       /**
        * General types used for recordings of actions performed in the inspected page.
@@ -26844,6 +27136,8 @@ declare module 'playwright-core/webkit/protocol' {
           "Playwright.pageProxyDestroyed": Playwright.pageProxyDestroyedPayload;
           "Playwright.windowOpen": Playwright.windowOpenPayload;
           "Playwright.provisionalLoadFailed": Playwright.provisionalLoadFailedPayload;
+          "Playwright.downloadCreated": Playwright.downloadCreatedPayload;
+          "Playwright.downloadFinished": Playwright.downloadFinishedPayload;
           "Runtime.executionContextCreated": Runtime.executionContextCreatedPayload;
           "ScriptProfiler.trackingStart": ScriptProfiler.trackingStartPayload;
           "ScriptProfiler.trackingUpdate": ScriptProfiler.trackingUpdatePayload;
@@ -27059,6 +27353,7 @@ declare module 'playwright-core/webkit/protocol' {
           "Page.overrideUserAgent": Page.overrideUserAgentParameters;
           "Page.overrideSetting": Page.overrideSettingParameters;
           "Page.getCookies": Page.getCookiesParameters;
+          "Page.setCookie": Page.setCookieParameters;
           "Page.deleteCookie": Page.deleteCookieParameters;
           "Page.getResourceTree": Page.getResourceTreeParameters;
           "Page.getResourceContent": Page.getResourceContentParameters;
@@ -27093,6 +27388,7 @@ declare module 'playwright-core/webkit/protocol' {
           "Playwright.deleteAllCookies": Playwright.deleteAllCookiesParameters;
           "Playwright.setGeolocationOverride": Playwright.setGeolocationOverrideParameters;
           "Playwright.setLanguages": Playwright.setLanguagesParameters;
+          "Playwright.setDownloadBehavior": Playwright.setDownloadBehaviorParameters;
           "Runtime.parse": Runtime.parseParameters;
           "Runtime.evaluate": Runtime.evaluateParameters;
           "Runtime.awaitPromise": Runtime.awaitPromiseParameters;
@@ -27331,6 +27627,7 @@ declare module 'playwright-core/webkit/protocol' {
           "Page.overrideUserAgent": Page.overrideUserAgentReturnValue;
           "Page.overrideSetting": Page.overrideSettingReturnValue;
           "Page.getCookies": Page.getCookiesReturnValue;
+          "Page.setCookie": Page.setCookieReturnValue;
           "Page.deleteCookie": Page.deleteCookieReturnValue;
           "Page.getResourceTree": Page.getResourceTreeReturnValue;
           "Page.getResourceContent": Page.getResourceContentReturnValue;
@@ -27365,6 +27662,7 @@ declare module 'playwright-core/webkit/protocol' {
           "Playwright.deleteAllCookies": Playwright.deleteAllCookiesReturnValue;
           "Playwright.setGeolocationOverride": Playwright.setGeolocationOverrideReturnValue;
           "Playwright.setLanguages": Playwright.setLanguagesReturnValue;
+          "Playwright.setDownloadBehavior": Playwright.setDownloadBehaviorReturnValue;
           "Runtime.parse": Runtime.parseReturnValue;
           "Runtime.evaluate": Runtime.evaluateReturnValue;
           "Runtime.awaitPromise": Runtime.awaitPromiseReturnValue;
@@ -27465,17 +27763,16 @@ declare module 'playwright-core/webkit/wkBrowser' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import { Browser } from 'playwright-core/browser';
+  import { BrowserBase } from 'playwright-core/browser';
   import { BrowserContext, BrowserContextBase, BrowserContextOptions } from 'playwright-core/browserContext';
   import * as network from 'playwright-core/network';
   import { Page } from 'playwright-core/page';
-  import * as platform from 'playwright-core/platform';
   import { ConnectionTransport } from 'playwright-core/transport';
   import * as types from 'playwright-core/types';
   import { Protocol } from 'playwright-core/webkit/protocol';
   import { PageProxyMessageReceivedPayload, WKSession } from 'playwright-core/webkit/wkConnection';
   import { WKPage } from 'playwright-core/webkit/wkPage';
-  export class WKBrowser extends platform.EventEmitter implements Browser {
+  export class WKBrowser extends BrowserBase {
       private readonly _connection;
       private readonly _attachToDefaultContext;
       readonly _browserSession: WKSession;
@@ -27484,6 +27781,7 @@ declare module 'playwright-core/webkit/wkBrowser' {
       readonly _wkPages: Map<string, WKPage>;
       private readonly _eventListeners;
       private _popupOpeners;
+      private _closeOverride?;
       private _firstPageCallback;
       private readonly _firstPagePromise;
       static connect(transport: ConnectionTransport, slowMo?: number, attachToDefaultContext?: boolean): Promise<WKBrowser>;
@@ -27491,16 +27789,16 @@ declare module 'playwright-core/webkit/wkBrowser' {
       _onDisconnect(): void;
       newContext(options?: BrowserContextOptions): Promise<BrowserContext>;
       contexts(): BrowserContext[];
-      newPage(options?: BrowserContextOptions): Promise<Page>;
       _waitForFirstPageTarget(): Promise<void>;
       _onWindowOpen(payload: Protocol.Playwright.windowOpenPayload): void;
+      _onDownloadCreated(payload: Protocol.Playwright.downloadCreatedPayload): void;
+      _onDownloadFinished(payload: Protocol.Playwright.downloadFinishedPayload): void;
       _onPageProxyCreated(event: Protocol.Playwright.pageProxyCreatedPayload): void;
       _onPageProxyDestroyed(event: Protocol.Playwright.pageProxyDestroyedPayload): void;
       _onPageProxyMessageReceived(event: PageProxyMessageReceivedPayload): void;
       _onProvisionalLoadFailed(event: Protocol.Playwright.provisionalLoadFailedPayload): void;
       isConnected(): boolean;
-      close(): Promise<void>;
-      _setDebugFunction(debugFunction: (message: string) => void): void;
+      _disconnect(): void;
   }
   export class WKBrowserContext extends BrowserContextBase {
       readonly _browser: WKBrowser;
@@ -27547,8 +27845,9 @@ declare module 'playwright-core/webkit/wkConnection' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
-  import * as platform from 'playwright-core/platform';
-  import { ConnectionTransport } from 'playwright-core/transport';
+  /// <reference types="node" />
+  import { EventEmitter } from 'events';
+  import { ConnectionTransport, ProtocolRequest } from 'playwright-core/transport';
   import { Protocol } from 'playwright-core/webkit/protocol';
   export const kBrowserCloseMessageId = -9999;
   export const kPageProxyMessageReceived = "kPageProxyMessageReceived";
@@ -27561,17 +27860,16 @@ declare module 'playwright-core/webkit/wkConnection' {
       private readonly _onDisconnect;
       private _lastId;
       private _closed;
-      _debugProtocol: (message: string) => void;
       readonly browserSession: WKSession;
       constructor(transport: ConnectionTransport, onDisconnect: () => void);
       nextMessageId(): number;
-      rawSend(message: any): void;
+      rawSend(message: ProtocolRequest): void;
       private _dispatchMessage;
       _onClose(): void;
       isClosed(): boolean;
       close(): void;
   }
-  export class WKSession extends platform.EventEmitter {
+  export class WKSession extends EventEmitter {
       connection: WKConnection;
       errorText: string;
       readonly sessionId: string;
@@ -27589,11 +27887,9 @@ declare module 'playwright-core/webkit/wkConnection' {
       dispose(): void;
       dispatchMessage(object: any): void;
   }
-  export function createProtocolError(error: Error, method: string, object: {
-      error: {
-          message: string;
-          data: any;
-      };
+  export function createProtocolError(error: Error, method: string, protocolError: {
+      message: string;
+      data: any;
   }): Error;
   export function rewriteError(error: Error, message: string): Error;
   export function isSwappedOutError(e: Error): boolean;
@@ -27732,6 +28028,7 @@ declare module 'playwright-core/webkit/wkPage' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
   import * as frames from 'playwright-core/frames';
   import * as dom from 'playwright-core/dom';
   import * as network from 'playwright-core/network';
@@ -27741,7 +28038,6 @@ declare module 'playwright-core/webkit/wkPage' {
   import { RawMouseImpl, RawKeyboardImpl } from 'playwright-core/webkit/wkInput';
   import * as types from 'playwright-core/types';
   import * as accessibility from 'playwright-core/accessibility';
-  import * as platform from 'playwright-core/platform';
   import { WKBrowserContext } from 'playwright-core/webkit/wkBrowser';
   export class WKPage implements PageDelegate {
       readonly rawMouse: RawMouseImpl;
@@ -27800,7 +28096,7 @@ declare module 'playwright-core/webkit/wkPage' {
       private static _setEmulateMedia;
       updateExtraHTTPHeaders(): Promise<void>;
       _calculateExtraHTTPHeaders(): network.Headers;
-      setEmulateMedia(mediaType: types.MediaType | null, colorScheme: types.ColorScheme | null): Promise<void>;
+      updateEmulateMedia(): Promise<void>;
       setViewportSize(viewportSize: types.Size): Promise<void>;
       _updateViewport(): Promise<void>;
       updateRequestInterception(): Promise<void>;
@@ -27825,7 +28121,7 @@ declare module 'playwright-core/webkit/wkPage' {
           b: number;
           a: number;
       }): Promise<void>;
-      takeScreenshot(format: string, documentRect: types.Rect | undefined, viewportRect: types.Rect | undefined, quality: number | undefined): Promise<platform.BufferType>;
+      takeScreenshot(format: string, documentRect: types.Rect | undefined, viewportRect: types.Rect | undefined, quality: number | undefined): Promise<Buffer>;
       resetViewport(): Promise<void>;
       getContentFrame(handle: dom.ElementHandle): Promise<frames.Frame | null>;
       getOwnerFrame(handle: dom.ElementHandle): Promise<string | null>;
