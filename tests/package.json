@@ -10,6 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "qawolf": "^0.13.0"
+    "qawolf": "^0.12.0"
   }
 }
