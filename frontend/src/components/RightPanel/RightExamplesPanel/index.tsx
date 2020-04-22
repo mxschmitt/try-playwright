@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { PanelGroup, Panel } from 'rsuite'
 
-import { Examples } from '../../constants'
-import { determineCode } from '../../utils'
-import { CodeContext } from '../CodeContext'
+import { Examples } from '../../../constants'
+import { determineCode } from '../../../utils'
+import { CodeContext } from '../../CodeContext'
+
+import styles from './index.module.css'
 
 const RightExamplesPanel: React.FunctionComponent = () => {
     const [expandedID, setExpandedId] = useState<string>()
@@ -29,7 +31,11 @@ const RightExamplesPanel: React.FunctionComponent = () => {
     return (
         <>
             <PanelGroup accordion bordered onSelect={handleOnSelect}>
-                {Examples.map((example, idx) => <Panel key={example.id} eventKey={example.id} header={example.title} expanded={example.id === expandedID}>
+                {Examples.map((example, idx) => <Panel key={example.id} eventKey={example.id} header={<>
+                    <a className={styles.exampleLink} href={`/?e=${example.id}`} onClick={(e: React.MouseEvent): void => e.preventDefault()}>
+                        {example.title}
+                    </a>
+                </>} expanded={example.id === expandedID}>
                     <p>{example.description}</p>
                 </Panel>
                 )}
