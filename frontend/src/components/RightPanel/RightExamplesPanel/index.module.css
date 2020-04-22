@@ -1,0 +1,4 @@
+.exampleLink, .exampleLink:hover, .exampleLink:focus {
+    color: inherit;
+    text-decoration: inherit;
+}
