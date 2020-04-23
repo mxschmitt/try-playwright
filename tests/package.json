@@ -9,7 +9,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "qawolf": "^0.12.0"
+  "devDependencies": {
+    "jest": "^25.4.0",
+    "playwright-chromium": "^0.14.0",
+    "qawolf": "^0.13.4"
   }
 }
