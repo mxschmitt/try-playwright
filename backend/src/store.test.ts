@@ -18,7 +18,7 @@ describe("Store", () => {
     await unlinkFile(dbPath)
   })
   it("should throw an exception if no record was found", async () => {
-    expect(store.get("foo")).rejects.toThrow(ErrorNoRecordFound);
+    await expect(store.get("foo")).rejects.toThrow(ErrorNoRecordFound);
     expect(await existsFile(dbPath)).toBe(true)
   })
   it("should return the value if an exact match was found", async() => {
