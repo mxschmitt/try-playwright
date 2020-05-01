@@ -11,7 +11,7 @@ const Header: React.FunctionComponent = () => {
       </Navbar.Header>
       <Navbar.Body>
         <Nav pullRight>
-          <Nav.Item href="https://github.com/microsoft/playwright" target="_blank" rel="noopener noreferrer" icon={<Icon icon="info-circle" />}>About Playwright</Nav.Item>
+          <Nav.Item href="https://playwright.dev" target="_blank" rel="noopener noreferrer" icon={<Icon icon="info-circle" />}>Playwright documentation</Nav.Item>
           <Nav.Item href="https://github.com/mxschmitt/try-playwright" icon={<Icon icon="github" />}>
             View Source
           </Nav.Item>
