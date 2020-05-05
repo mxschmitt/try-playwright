@@ -348,8 +348,12 @@ declare module 'playwright-core/chromium/crBrowser' {
       private _tracingRecording;
       private _tracingPath;
       private _tracingClient;
-      static connect(transport: ConnectionTransport, isPersistent: boolean, logger: InnerLogger, slowMo?: number): Promise<CRBrowser>;
-      constructor(connection: CRConnection, logger: InnerLogger, isPersistent: boolean);
+      readonly _isHeadful: boolean;
+      static connect(transport: ConnectionTransport, isPersistent: boolean, logger: InnerLogger, options?: {
+          slowMo?: number;
+          headless?: boolean;
+      }): Promise<CRBrowser>;
+      constructor(connection: CRConnection, logger: InnerLogger, isPersistent: boolean, isHeadful: boolean);
       newContext(options?: BrowserContextOptions): Promise<BrowserContext>;
       contexts(): BrowserContext[];
       _onAttachedToTarget({ targetInfo, sessionId, waitingForDebugger }: Protocol.Target.attachedToTargetPayload): void;
@@ -705,13 +709,13 @@ declare module 'playwright-core/chromium/crPage' {
       readonly rawMouse: RawMouseImpl;
       readonly rawKeyboard: RawKeyboardImpl;
       readonly _targetId: string;
-      private readonly _opener;
+      readonly _opener: CRPage | null;
       private readonly _pdf;
       private readonly _coverage;
       readonly _browserContext: CRBrowserContext;
       private readonly _pagePromise;
       _initializedPage: Page | null;
-      constructor(client: CRSession, targetId: string, browserContext: CRBrowserContext, opener: CRPage | null);
+      constructor(client: CRSession, targetId: string, browserContext: CRBrowserContext, opener: CRPage | null, hasUIWindow: boolean);
       private _forAllFrameSessions;
       private _sessionForFrame;
       private _sessionForHandle;
@@ -750,6 +754,8 @@ declare module 'playwright-core/chromium/crPage' {
       isElementHandle(remoteObject: any): boolean;
       getBoundingBox(handle: dom.ElementHandle): Promise<types.Rect | null>;
       scrollRectIntoViewIfNeeded(handle: dom.ElementHandle, rect?: types.Rect): Promise<void>;
+      setActivityPaused(paused: boolean): Promise<void>;
+      rafCountForStablePosition(): number;
       getContentQuads(handle: dom.ElementHandle): Promise<types.Quad[] | null>;
       layoutViewport(): Promise<{
           width: number;
@@ -777,10 +783,11 @@ declare module 'playwright-core/chromium/crPage' {
       private _firstNonInitialNavigationCommittedPromise;
       private _firstNonInitialNavigationCommittedFulfill;
       private _firstNonInitialNavigationCommittedReject;
+      private _windowId;
       constructor(crPage: CRPage, client: CRSession, targetId: string);
       private _isMainFrame;
       private _addSessionListeners;
-      _initialize(): Promise<void>;
+      _initialize(hasUIWindow: boolean): Promise<void>;
       dispose(): void;
       _navigate(frame: frames.Frame, url: string, referrer: string | undefined): Promise<frames.GotoResult>;
       _onLifecycleEvent(event: Protocol.Page.lifecycleEventPayload): void;
@@ -819,6 +826,7 @@ declare module 'playwright-core/chromium/crPage' {
       _getOwnerFrame(handle: dom.ElementHandle): Promise<string | null>;
       _getBoundingBox(handle: dom.ElementHandle): Promise<types.Rect | null>;
       _scrollRectIntoViewIfNeeded(handle: dom.ElementHandle, rect?: types.Rect): Promise<void>;
+      _setActivityPaused(paused: boolean): Promise<void>;
       _getContentQuads(handle: dom.ElementHandle): Promise<types.Quad[] | null>;
       _adoptElementHandle<T extends Node>(handle: dom.ElementHandle<T>, to: dom.FrameExecutionContext): Promise<dom.ElementHandle<T>>;
       _adoptBackendNodeId(backendNodeId: Protocol.DOM.BackendNodeId, to: dom.FrameExecutionContext): Promise<dom.ElementHandle>;
@@ -1533,6 +1541,12 @@ declare module 'playwright-core/chromium/protocol' {
               requestId: Network.RequestId;
               url?: string;
           }
+          /**
+           * Information about the frame affected by an inspector issue.
+           */
+          interface AffectedFrame {
+              frameId: Page.FrameId;
+          }
           type SameSiteCookieExclusionReason = "ExcludeSameSiteUnspecifiedTreatedAsLax" | "ExcludeSameSiteNoneInsecure";
           type SameSiteCookieWarningReason = "WarnSameSiteUnspecifiedCrossSiteContext" | "WarnSameSiteNoneInsecure" | "WarnSameSiteUnspecifiedLaxAllowUnsafe" | "WarnSameSiteCrossSchemeSecureUrlMethodUnsafe" | "WarnSameSiteCrossSchemeSecureUrlLax" | "WarnSameSiteCrossSchemeSecureUrlStrict" | "WarnSameSiteCrossSchemeInsecureUrlMethodUnsafe" | "WarnSameSiteCrossSchemeInsecureUrlLax" | "WarnSameSiteCrossSchemeInsecureUrlStrict";
           type SameSiteCookieOperation = "SetCookie" | "ReadCookie";
@@ -1554,12 +1568,44 @@ declare module 'playwright-core/chromium/protocol' {
               cookieUrl?: string;
               request?: AffectedRequest;
           }
+          type MixedContentResolutionStatus = "MixedContentBlocked" | "MixedContentAutomaticallyUpgraded" | "MixedContentWarning";
+          type MixedContentResourceType = "Audio" | "Beacon" | "CSPReport" | "Download" | "EventSource" | "Favicon" | "Font" | "Form" | "Frame" | "Image" | "Import" | "Manifest" | "Ping" | "PluginData" | "PluginResource" | "Prefetch" | "Resource" | "Script" | "ServiceWorker" | "SharedWorker" | "Stylesheet" | "Track" | "Video" | "Worker" | "XMLHttpRequest" | "XSLT";
+          interface MixedContentIssueDetails {
+              /**
+               * The type of resource causing the mixed content issue (css, js, iframe,
+        form,...). Marked as optional because it is mapped to from
+        blink::mojom::RequestContextType, which will be replaced
+        by network::mojom::RequestDestination
+               */
+              resourceType?: MixedContentResourceType;
+              /**
+               * The way the mixed content issue is being resolved.
+               */
+              resolutionStatus: MixedContentResolutionStatus;
+              /**
+               * The unsafe http url causing the mixed content issue.
+               */
+              insecureURL: string;
+              /**
+               * The url responsible for the call to an unsafe url.
+               */
+              mainResourceURL: string;
+              /**
+               * The mixed content request.
+        Does not always exist (e.g. for unsafe form submission urls).
+               */
+              request?: AffectedRequest;
+              /**
+               * Optional because not every mixed content issue is necessarily linked to a frame.
+               */
+              frame?: AffectedFrame;
+          }
           /**
            * A unique identifier for the type of issue. Each type may use one of the
       optional fields in InspectorIssueDetails to convey more specific
       information about the kind of issue.
            */
-          type InspectorIssueCode = "SameSiteCookieIssue";
+          type InspectorIssueCode = "SameSiteCookieIssue" | "MixedContentIssue";
           /**
            * This struct holds a list of optional fields with additional information
       specific to the kind of issue. When adding a new issue code, please also
@@ -1567,6 +1613,7 @@ declare module 'playwright-core/chromium/protocol' {
            */
           interface InspectorIssueDetails {
               sameSiteCookieIssueDetails?: SameSiteCookieIssueDetails;
+              mixedContentIssueDetails?: MixedContentIssueDetails;
           }
           /**
            * An inspector issue reported from the back-end.
@@ -8550,6 +8597,23 @@ declare module 'playwright-core/chromium/protocol' {
                */
               cssGridColor?: DOM.RGBA;
           }
+          /**
+           * Configuration for dual screen hinge
+           */
+          interface HingeConfig {
+              /**
+               * A rectangle represent hinge
+               */
+              rect: DOM.Rect;
+              /**
+               * The content box highlight fill color (default: a dark color).
+               */
+              contentColor?: DOM.RGBA;
+              /**
+               * The content box highlight outline color (default: transparent).
+               */
+              outlineColor?: DOM.RGBA;
+          }
           type InspectMode = "searchForNode" | "searchForUAShadowDOM" | "captureAreaScreenshot" | "showDistances" | "none";
           /**
            * Fired when the node should be inspected. This happens after call to `setInspectMode` or when
@@ -8816,6 +8880,16 @@ declare module 'playwright-core/chromium/protocol' {
               show: boolean;
           };
           type setShowViewportSizeOnResizeReturnValue = {};
+          /**
+           * Add a dual screen device hinge
+           */
+          type setShowHingeParameters = {
+              /**
+               * hinge data, null means hideHinge
+               */
+              hingeConfig?: HingeConfig;
+          };
+          type setShowHingeReturnValue = {};
       }
       /**
        * Actions and events related to the inspected page belong to the page domain.
@@ -9159,6 +9233,7 @@ declare module 'playwright-core/chromium/protocol' {
               fixed?: number;
           }
           type ClientNavigationReason = "formSubmissionGet" | "formSubmissionPost" | "httpHeaderRefresh" | "scriptInitiated" | "metaTagRefresh" | "pageBlockInterstitial" | "reload" | "anchorClick";
+          type ClientNavigationDisposition = "currentTab" | "newTab" | "newWindow" | "download";
           interface InstallabilityErrorArgument {
               /**
                * Argument name (e.g. name:'minimum-icon-size-in-pixels').
@@ -9268,6 +9343,10 @@ declare module 'playwright-core/chromium/protocol' {
                * The destination URL for the requested navigation.
                */
               url: string;
+              /**
+               * The disposition for the navigation.
+               */
+              disposition: ClientNavigationDisposition;
           };
           /**
            * Fired when frame schedules a potential navigation.
@@ -12358,25 +12437,51 @@ declare module 'playwright-core/chromium/protocol' {
           type PlayerId = string;
           type Timestamp = number;
           /**
-           * Player Property type
+           * Have one type per entry in MediaLogRecord::Type
+      Corresponds to kMessage
+           */
+          interface PlayerMessage {
+              /**
+               * Keep in sync with MediaLogMessageLevel
+        We are currently keeping the message level 'error' separate from the
+        PlayerError type because right now they represent different things,
+        this one being a DVLOG(ERROR) style log message that gets printed
+        based on what log level is selected in the UI, and the other is a
+        representation of a media::PipelineStatus object. Soon however we're
+        going to be moving away from using PipelineStatus for errors and
+        introducing a new error type which should hopefully let us integrate
+        the error log level into the PlayerError type.
+               */
+              level: "error" | "warning" | "info" | "debug";
+              message: string;
+          }
+          /**
+           * Corresponds to kMediaPropertyChange
            */
           interface PlayerProperty {
               name: string;
-              value?: string;
+              value: string;
           }
           /**
-           * Break out events into different types
+           * Corresponds to kMediaEventTriggered
            */
-          type PlayerEventType = "errorEvent" | "triggeredEvent" | "messageEvent";
           interface PlayerEvent {
-              type: PlayerEventType;
-              /**
-               * Events are timestamped relative to the start of the player creation
-        not relative to the start of playback.
-               */
               timestamp: Timestamp;
-              name: string;
               value: string;
+          }
+          /**
+           * Corresponds to kMediaError
+           */
+          interface PlayerError {
+              type: "pipeline_error" | "media_error";
+              /**
+               * When this switches to using media::Status instead of PipelineStatus
+        we can remove "errorCode" and replace it with the fields from
+        a Status instance. This also seems like a duplicate of the error
+        level enum - there is a todo bug to have that level removed and
+        use this instead. (crbug.com/1068454)
+               */
+              errorCode: string;
           }
           /**
            * This can be called multiple times, and can be used to set / override /
@@ -12393,6 +12498,20 @@ declare module 'playwright-core/chromium/protocol' {
           type playerEventsAddedPayload = {
               playerId: PlayerId;
               events: PlayerEvent[];
+          };
+          /**
+           * Send a list of any messages that need to be delivered.
+           */
+          type playerMessagesLoggedPayload = {
+              playerId: PlayerId;
+              messages: PlayerMessage[];
+          };
+          /**
+           * Send a list of any errors that need to be delivered.
+           */
+          type playerErrorsRaisedPayload = {
+              playerId: PlayerId;
+              errors: PlayerError[];
           };
           /**
            * Called whenever a player is created, or when a new agent joins and recieves
@@ -13849,7 +13968,7 @@ declare module 'playwright-core/chromium/protocol' {
               /**
                * Object subtype hint. Specified for `object` or `wasm` type values only.
                */
-              subtype?: "array" | "null" | "node" | "regexp" | "date" | "map" | "set" | "weakmap" | "weakset" | "iterator" | "generator" | "error" | "proxy" | "promise" | "typedarray" | "arraybuffer" | "dataview" | "i32" | "i64" | "f32" | "f64" | "v128";
+              subtype?: "array" | "null" | "node" | "regexp" | "date" | "map" | "set" | "weakmap" | "weakset" | "iterator" | "generator" | "error" | "proxy" | "promise" | "typedarray" | "arraybuffer" | "dataview" | "i32" | "i64" | "f32" | "f64" | "v128" | "anyref";
               /**
                * Object class (constructor) name. Specified for `object` type values only.
                */
@@ -14877,6 +14996,8 @@ declare module 'playwright-core/chromium/protocol' {
           "WebAudio.nodeParamDisconnected": WebAudio.nodeParamDisconnectedPayload;
           "Media.playerPropertiesChanged": Media.playerPropertiesChangedPayload;
           "Media.playerEventsAdded": Media.playerEventsAddedPayload;
+          "Media.playerMessagesLogged": Media.playerMessagesLoggedPayload;
+          "Media.playerErrorsRaised": Media.playerErrorsRaisedPayload;
           "Media.playersCreated": Media.playersCreatedPayload;
           "Console.messageAdded": Console.messageAddedPayload;
           "Debugger.breakpointResolved": Debugger.breakpointResolvedPayload;
@@ -15163,6 +15284,7 @@ declare module 'playwright-core/chromium/protocol' {
           "Overlay.setShowScrollBottleneckRects": Overlay.setShowScrollBottleneckRectsParameters;
           "Overlay.setShowHitTestBorders": Overlay.setShowHitTestBordersParameters;
           "Overlay.setShowViewportSizeOnResize": Overlay.setShowViewportSizeOnResizeParameters;
+          "Overlay.setShowHinge": Overlay.setShowHingeParameters;
           "Page.addScriptToEvaluateOnLoad": Page.addScriptToEvaluateOnLoadParameters;
           "Page.addScriptToEvaluateOnNewDocument": Page.addScriptToEvaluateOnNewDocumentParameters;
           "Page.bringToFront": Page.bringToFrontParameters;
@@ -15642,6 +15764,7 @@ declare module 'playwright-core/chromium/protocol' {
           "Overlay.setShowScrollBottleneckRects": Overlay.setShowScrollBottleneckRectsReturnValue;
           "Overlay.setShowHitTestBorders": Overlay.setShowHitTestBordersReturnValue;
           "Overlay.setShowViewportSizeOnResize": Overlay.setShowViewportSizeOnResizeReturnValue;
+          "Overlay.setShowHinge": Overlay.setShowHingeReturnValue;
           "Page.addScriptToEvaluateOnLoad": Page.addScriptToEvaluateOnLoadReturnValue;
           "Page.addScriptToEvaluateOnNewDocument": Page.addScriptToEvaluateOnNewDocumentReturnValue;
           "Page.bringToFront": Page.bringToFrontReturnValue;
@@ -15999,6 +16122,10 @@ declare module 'playwright-core/dom' {
       readonly _page: Page;
       constructor(context: FrameExecutionContext, remoteObject: any);
       asElement(): ElementHandle<T> | null;
+      _evaluateInMain<R, Arg>(pageFunction: types.FuncOn<{
+          injected: Injected;
+          node: T;
+      }, Arg, R>, arg: Arg): Promise<R>;
       _evaluateInUtility<R, Arg>(pageFunction: types.FuncOn<{
           injected: Injected;
           node: T;
@@ -16009,11 +16136,13 @@ declare module 'playwright-core/dom' {
       textContent(): Promise<string | null>;
       innerText(): Promise<string | null>;
       innerHTML(): Promise<string | null>;
+      dispatchEvent(type: string, eventInit?: Object): Promise<void>;
       _scrollRectIntoViewIfNeeded(rect?: types.Rect): Promise<void>;
       scrollIntoViewIfNeeded(): Promise<void>;
       private _clickablePoint;
       private _offsetPoint;
-      _performPointerAction(action: (point: types.Point) => Promise<void>, options?: PointerActionOptions & types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
+      _retryPointerAction(actionName: string, action: (point: types.Point) => Promise<void>, options?: PointerActionOptions & types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
+      _performPointerAction(actionName: string, action: (point: types.Point) => Promise<void>, deadline: number, options?: PointerActionOptions & types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<'done' | 'retry'>;
       hover(options?: PointerActionOptions & types.PointerActionWaitOptions): Promise<void>;
       click(options?: ClickOptions & types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
       dblclick(options?: MultiClickOptions & types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
@@ -16040,7 +16169,7 @@ declare module 'playwright-core/dom' {
       $$eval<R, Arg>(selector: string, pageFunction: types.FuncOn<Element[], Arg, R>, arg: Arg): Promise<R>;
       $$eval<R>(selector: string, pageFunction: types.FuncOn<Element[], void, R>, arg?: any): Promise<R>;
       _waitForDisplayedAtStablePosition(deadline: number): Promise<void>;
-      _waitForHitTargetAt(point: types.Point, deadline: number): Promise<void>;
+      _checkHitTargetAt(point: types.Point): Promise<boolean>;
   }
   export function toFileTransferPayload(files: types.FilePayload[]): types.FileTransferPayload[];
 
@@ -16543,9 +16672,9 @@ declare module 'playwright-core/firefox/ffPage' {
       readonly _networkManager: FFNetworkManager;
       readonly _browserContext: FFBrowserContext;
       private _pagePromise;
-      private _pageCallback;
+      _pageCallback: (pageOrError: Page | Error) => void;
       _initializedPage: Page | null;
-      private readonly _opener;
+      readonly _opener: FFPage | null;
       private readonly _contextIdToContext;
       private _eventListeners;
       private _workers;
@@ -16600,6 +16729,8 @@ declare module 'playwright-core/firefox/ffPage' {
       isElementHandle(remoteObject: any): boolean;
       getBoundingBox(handle: dom.ElementHandle): Promise<types.Rect | null>;
       scrollRectIntoViewIfNeeded(handle: dom.ElementHandle, rect?: types.Rect): Promise<void>;
+      setActivityPaused(paused: boolean): Promise<void>;
+      rafCountForStablePosition(): number;
       getContentQuads(handle: dom.ElementHandle): Promise<types.Quad[] | null>;
       layoutViewport(): Promise<{
           width: number;
@@ -17634,7 +17765,6 @@ declare module 'playwright-core/frames' {
    */
   import { ConsoleMessage } from 'playwright-core/console';
   import * as dom from 'playwright-core/dom';
-  import * as js from 'playwright-core/javascript';
   import * as network from 'playwright-core/network';
   import { Page } from 'playwright-core/page';
   import * as types from 'playwright-core/types';
@@ -17713,6 +17843,7 @@ declare module 'playwright-core/frames' {
       evaluate<R>(pageFunction: types.Func1<void, R>, arg?: any): Promise<R>;
       $(selector: string): Promise<dom.ElementHandle<Element> | null>;
       waitForSelector(selector: string, options?: types.WaitForElementOptions): Promise<dom.ElementHandle<Element> | null>;
+      dispatchEvent(selector: string, type: string, eventInit?: Object, options?: types.TimeoutOptions): Promise<void>;
       $eval<R, Arg>(selector: string, pageFunction: types.FuncOn<Element, Arg, R>, arg: Arg): Promise<R>;
       $eval<R>(selector: string, pageFunction: types.FuncOn<Element, void, R>, arg?: any): Promise<R>;
       $$eval<R, Arg>(selector: string, pageFunction: types.FuncOn<Element[], Arg, R>, arg: Arg): Promise<R>;
@@ -17753,7 +17884,7 @@ declare module 'playwright-core/frames' {
       } & types.NavigatingActionWaitOptions): Promise<void>;
       check(selector: string, options?: types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
       uncheck(selector: string, options?: types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
-      waitFor(selectorOrFunctionOrTimeout: (string | number | Function), options?: types.WaitForFunctionOptions & types.WaitForElementOptions, arg?: any): Promise<js.JSHandle | null>;
+      waitForTimeout(timeout: number): Promise<void>;
       waitForFunction<R, Arg>(pageFunction: types.Func1<Arg, R>, arg: Arg, options?: types.WaitForFunctionOptions): Promise<types.SmartHandle<R>>;
       waitForFunction<R>(pageFunction: types.Func1<void, R>, arg?: any, options?: types.WaitForFunctionOptions): Promise<types.SmartHandle<R>>;
       title(): Promise<string>;
@@ -17867,6 +17998,9 @@ declare module 'playwright-core/helper' {
       static optionsWithUpdatedTimeout<T extends types.TimeoutOptions>(options: T | undefined, deadline: number): T;
   }
   export function assert(value: any, message?: string): asserts value;
+  export function assertMaxArguments(count: number, max: number): asserts count;
+  export function getFromENV(name: string): string | undefined;
+  export function logPolitely(toBeLogged: string): void;
   export const helper: typeof Helper;
   export {};
 
@@ -17888,7 +18022,7 @@ declare module 'playwright-core/hints' {
    * limitations under the License.
    */
   import { Page } from 'playwright-core/page';
-  export function waitForTimeWasUsed(page: Page): void;
+  export function waitForTimeoutWasUsed(page: Page): void;
 
 }
 declare module 'playwright-core/injected/attributeSelectorEngine' {
@@ -17965,10 +18099,9 @@ declare module 'playwright-core/injected/injected' {
   };
   export class Injected {
       isVisible(element: Element): boolean;
-      private _pollMutation;
       private _pollRaf;
       private _pollInterval;
-      poll<T>(polling: 'raf' | 'mutation' | number, timeout: number, predicate: Predicate<T>): Promise<T | undefined>;
+      poll<T>(polling: 'raf' | number, timeout: number, predicate: Predicate<T>): Promise<T | undefined>;
       getElementBorderWidth(node: Node): {
           left: number;
           top: number;
@@ -17979,8 +18112,9 @@ declare module 'playwright-core/injected/injected' {
       focusNode(node: Node): InjectedResult;
       isCheckboxChecked(node: Node): boolean;
       setInputFiles(node: Node, payloads: types.FileTransferPayload[]): Promise<"Node is not of type HTMLElement" | "Not an <input> element" | "Not an input[type=file] element" | undefined>;
-      waitForDisplayedAtStablePosition(node: Node, timeout: number): Promise<InjectedResult>;
-      waitForHitTargetAt(node: Node, timeout: number, point: types.Point): Promise<InjectedResult>;
+      waitForDisplayedAtStablePosition(node: Node, rafCount: number, timeout: number): Promise<InjectedResult>;
+      checkHitTargetAt(node: Node, point: types.Point): InjectedResult<boolean>;
+      dispatchEvent(node: Node, type: string, eventInit: Object): void;
       private _parentElementOrShadowHost;
       private _deepElementFromPoint;
   }
@@ -18184,6 +18318,78 @@ declare module 'playwright-core/input' {
       click(x: number, y: number, options?: MouseClickOptions): Promise<void>;
       dblclick(x: number, y: number, options?: MouseMultiClickOptions): Promise<void>;
   }
+
+}
+declare module 'playwright-core/install/browserFetcher' {
+  /**
+   * Copyright 2017 Google Inc. All rights reserved.
+   * Modifications copyright (c) Microsoft Corporation.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *     http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  import { BrowserName, BrowserPlatform, BrowserDescriptor } from 'playwright-core/install/browserPaths';
+  export type OnProgressCallback = (downloadedBytes: number, totalBytes: number) => void;
+  export function downloadBrowserWithProgressBar(browserPath: string, browser: BrowserDescriptor): Promise<boolean>;
+  export function canDownload(browserName: BrowserName, browserRevision: string, platform: BrowserPlatform): Promise<boolean>;
+
+}
+declare module 'playwright-core/install/browserPaths' {
+  /**
+   * Copyright 2017 Google Inc. All rights reserved.
+   * Modifications copyright (c) Microsoft Corporation.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *     http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  export type BrowserName = 'chromium' | 'webkit' | 'firefox';
+  export type BrowserPlatform = 'win32' | 'win64' | 'mac10.13' | 'mac10.14' | 'mac10.15' | 'linux';
+  export type BrowserDescriptor = {
+      name: BrowserName;
+      revision: string;
+  };
+  export const hostPlatform: BrowserPlatform;
+  export function executablePath(browserPath: string, browser: BrowserDescriptor): string | undefined;
+  export function browsersPath(packagePath: string): string;
+  export function browserDirectory(browsersPath: string, browser: BrowserDescriptor): string;
+  export function isBrowserDirectory(browserPath: string): boolean;
+
+}
+declare module 'playwright-core/install/installer' {
+  /**
+   * Copyright Microsoft Corporation. All rights reserved.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *     http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  export function installBrowsersWithProgressBar(packagePath: string): Promise<false | undefined>;
 
 }
 declare module 'playwright-core/javascript' {
@@ -18536,6 +18742,8 @@ declare module 'playwright-core/page' {
       getBoundingBox(handle: dom.ElementHandle): Promise<types.Rect | null>;
       getFrameElement(frame: frames.Frame): Promise<dom.ElementHandle>;
       scrollRectIntoViewIfNeeded(handle: dom.ElementHandle, rect?: types.Rect): Promise<void>;
+      setActivityPaused(paused: boolean): Promise<void>;
+      rafCountForStablePosition(): number;
       getAccessibilityTree(needle?: dom.ElementHandle): Promise<{
           tree: accessibility.AXNode;
           needle: accessibility.AXNode | null;
@@ -18595,6 +18803,7 @@ declare module 'playwright-core/page' {
       setDefaultTimeout(timeout: number): void;
       $(selector: string): Promise<dom.ElementHandle<Element> | null>;
       waitForSelector(selector: string, options?: types.WaitForElementOptions): Promise<dom.ElementHandle<Element> | null>;
+      dispatchEvent(selector: string, type: string, eventInit?: Object, options?: types.TimeoutOptions): Promise<void>;
       evaluateHandle<R, Arg>(pageFunction: types.Func1<Arg, R>, arg: Arg): Promise<types.SmartHandle<R>>;
       evaluateHandle<R>(pageFunction: types.Func1<void, R>, arg?: any): Promise<types.SmartHandle<R>>;
       $eval<R, Arg>(selector: string, pageFunction: types.FuncOn<Element, Arg, R>, arg: Arg): Promise<R>;
@@ -18665,7 +18874,7 @@ declare module 'playwright-core/page' {
       } & types.NavigatingActionWaitOptions): Promise<void>;
       check(selector: string, options?: types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
       uncheck(selector: string, options?: types.PointerActionWaitOptions & types.NavigatingActionWaitOptions): Promise<void>;
-      waitFor(selectorOrFunctionOrTimeout: (string | number | Function), options?: types.WaitForFunctionOptions & types.WaitForElementOptions, arg?: any): Promise<js.JSHandle | null>;
+      waitForTimeout(timeout: number): Promise<void>;
       waitForFunction<R, Arg>(pageFunction: types.Func1<Arg, R>, arg: Arg, options?: types.WaitForFunctionOptions): Promise<types.SmartHandle<R>>;
       waitForFunction<R>(pageFunction: types.Func1<void, R>, arg?: any, options?: types.WaitForFunctionOptions): Promise<types.SmartHandle<R>>;
       workers(): Worker[];
@@ -18774,47 +18983,15 @@ declare module 'playwright-core/selectors' {
       _query(frame: frames.Frame, selector: string, scope?: dom.ElementHandle): Promise<dom.ElementHandle<Element> | null>;
       _queryArray(frame: frames.Frame, selector: string, scope?: dom.ElementHandle): Promise<js.JSHandle<Element[]>>;
       _queryAll(frame: frames.Frame, selector: string, scope?: dom.ElementHandle, allowUtilityContext?: boolean): Promise<dom.ElementHandle<Element>[]>;
-      _waitForSelectorTask(selector: string, waitFor: 'attached' | 'detached' | 'visible' | 'hidden', deadline: number): {
+      _waitForSelectorTask(selector: string, state: 'attached' | 'detached' | 'visible' | 'hidden', deadline: number): {
           world: 'main' | 'utility';
           task: (context: dom.FrameExecutionContext) => Promise<js.JSHandle>;
       };
+      _dispatchEventTask(selector: string, type: string, eventInit: Object, deadline: number): (context: dom.FrameExecutionContext) => Promise<js.JSHandle>;
       _createSelector(name: string, handle: dom.ElementHandle<Element>): Promise<string | undefined>;
       private _parseSelector;
   }
   export const selectors: Selectors;
-
-}
-declare module 'playwright-core/server/browserFetcher' {
-  /**
-   * Copyright 2017 Google Inc. All rights reserved.
-   * Modifications copyright (c) Microsoft Corporation.
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   *     http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   */
-  export type OnProgressCallback = (downloadedBytes: number, totalBytes: number) => void;
-  export type BrowserName = ('chromium' | 'webkit' | 'firefox');
-  export type BrowserPlatform = ('win32' | 'win64' | 'mac10.13' | 'mac10.14' | 'mac10.15' | 'linux');
-  export type DownloadOptions = {
-      browser: BrowserName;
-      revision: string;
-      downloadPath: string;
-      platform?: BrowserPlatform;
-      host?: string;
-      progress?: OnProgressCallback;
-  };
-  export function downloadBrowser(options: DownloadOptions): Promise<void>;
-  export function executablePath(options: DownloadOptions): string;
-  export function canDownload(options: DownloadOptions): Promise<boolean>;
 
 }
 declare module 'playwright-core/server/browserServer' {
@@ -18873,6 +19050,7 @@ declare module 'playwright-core/server/browserType' {
    */
   import { BrowserContext } from 'playwright-core/browserContext';
   import { BrowserServer } from 'playwright-core/server/browserServer';
+  import * as browserPaths from 'playwright-core/install/browserPaths';
   import { Logger } from 'playwright-core/logger';
   export type BrowserArgOptions = {
       headless?: boolean;
@@ -18888,8 +19066,8 @@ declare module 'playwright-core/server/browserType' {
       timeout?: number;
       logger?: Logger;
       env?: {
-          [key: string]: string;
-      } | undefined;
+          [key: string]: string | number | boolean;
+      };
   };
   export type ConnectOptions = {
       wsEndpoint: string;
@@ -18909,6 +19087,18 @@ declare module 'playwright-core/server/browserType' {
       launchServer(options?: LaunchServerOptions): Promise<BrowserServer>;
       launchPersistentContext(userDataDir: string, options?: LaunchOptions): Promise<BrowserContext>;
       connect(options: ConnectOptions): Promise<Browser>;
+  }
+  export abstract class AbstractBrowserType<Browser> implements BrowserType<Browser> {
+      private _name;
+      readonly _browserPath: string;
+      private _executablePath;
+      constructor(packagePath: string, browser: browserPaths.BrowserDescriptor);
+      executablePath(): string;
+      name(): string;
+      abstract launch(options?: LaunchOptions): Promise<Browser>;
+      abstract launchServer(options?: LaunchServerOptions): Promise<BrowserServer>;
+      abstract launchPersistentContext(userDataDir: string, options?: LaunchOptions): Promise<BrowserContext>;
+      abstract connect(options: ConnectOptions): Promise<Browser>;
   }
   export {};
 
@@ -18931,13 +19121,12 @@ declare module 'playwright-core/server/chromium' {
    * limitations under the License.
    */
   import { CRBrowser } from 'playwright-core/chromium/crBrowser';
-  import { LaunchOptions, BrowserType, ConnectOptions, LaunchServerOptions } from 'playwright-core/server/browserType';
+  import { LaunchOptions, ConnectOptions, LaunchServerOptions, AbstractBrowserType } from 'playwright-core/server/browserType';
   import { BrowserServer } from 'playwright-core/server/browserServer';
   import { BrowserContext } from 'playwright-core/browserContext';
-  export class Chromium implements BrowserType<CRBrowser> {
-      private _executablePath;
-      executablePath(): string;
-      name(): string;
+  import { BrowserDescriptor } from 'playwright-core/install/browserPaths';
+  export class Chromium extends AbstractBrowserType<CRBrowser> {
+      constructor(packagePath: string, browser: BrowserDescriptor);
       launch(options?: LaunchOptions): Promise<CRBrowser>;
       launchServer(options?: LaunchServerOptions): Promise<BrowserServer>;
       launchPersistentContext(userDataDir: string, options?: LaunchOptions): Promise<BrowserContext>;
@@ -18967,17 +19156,17 @@ declare module 'playwright-core/server/firefox' {
   import { BrowserContext } from 'playwright-core/browserContext';
   import { FFBrowser } from 'playwright-core/firefox/ffBrowser';
   import { BrowserServer } from 'playwright-core/server/browserServer';
-  import { BrowserType, LaunchOptions, LaunchServerOptions, ConnectOptions } from 'playwright-core/server/browserType';
-  export class Firefox implements BrowserType<FFBrowser> {
-      private _executablePath;
-      executablePath(): string;
-      name(): string;
+  import { LaunchOptions, LaunchServerOptions, ConnectOptions, AbstractBrowserType } from 'playwright-core/server/browserType';
+  import { BrowserDescriptor } from 'playwright-core/install/browserPaths';
+  export class Firefox extends AbstractBrowserType<FFBrowser> {
+      constructor(packagePath: string, browser: BrowserDescriptor);
       launch(options?: LaunchOptions): Promise<FFBrowser>;
       launchServer(options?: LaunchServerOptions): Promise<BrowserServer>;
       launchPersistentContext(userDataDir: string, options?: LaunchOptions): Promise<BrowserContext>;
       private _launchServer;
       connect(options: ConnectOptions): Promise<FFBrowser>;
       private _defaultArgs;
+      _createTemporaryProfile(): Promise<string>;
   }
 
 }
@@ -19037,9 +19226,7 @@ declare module 'playwright-core/server/playwright' {
   import { Chromium } from 'playwright-core/server/chromium';
   import { WebKit } from 'playwright-core/server/webkit';
   import { Firefox } from 'playwright-core/server/firefox';
-  type PlaywrightOptions = {
-      browsers: Array<('firefox' | 'webkit' | 'chromium')>;
-  };
+  import * as browserPaths from 'playwright-core/install/browserPaths';
   export class Playwright {
       readonly selectors: api.Selectors;
       readonly devices: types.Devices;
@@ -19049,9 +19236,8 @@ declare module 'playwright-core/server/playwright' {
       readonly chromium: (Chromium | undefined);
       readonly firefox: (Firefox | undefined);
       readonly webkit: (WebKit | undefined);
-      constructor(options: PlaywrightOptions);
+      constructor(packagePath: string, browsers: browserPaths.BrowserDescriptor[]);
   }
-  export {};
 
 }
 declare module 'playwright-core/server/processLauncher' {
@@ -19080,7 +19266,7 @@ declare module 'playwright-core/server/processLauncher' {
       executablePath: string;
       args: string[];
       env?: {
-          [key: string]: string | undefined;
+          [key: string]: string | number | boolean | undefined;
       };
       handleSIGINT?: boolean;
       handleSIGTERM?: boolean;
@@ -19119,14 +19305,13 @@ declare module 'playwright-core/server/webkit' {
    * limitations under the License.
    */
   import { WKBrowser } from 'playwright-core/webkit/wkBrowser';
-  import { LaunchOptions, BrowserArgOptions, BrowserType, LaunchServerOptions, ConnectOptions } from 'playwright-core/server/browserType';
+  import { LaunchOptions, BrowserArgOptions, LaunchServerOptions, ConnectOptions, AbstractBrowserType } from 'playwright-core/server/browserType';
   import { LaunchType } from 'playwright-core/browser';
   import { BrowserServer } from 'playwright-core/server/browserServer';
   import { BrowserContext } from 'playwright-core/browserContext';
-  export class WebKit implements BrowserType<WKBrowser> {
-      private _executablePath;
-      executablePath(): string;
-      name(): string;
+  import { BrowserDescriptor } from 'playwright-core/install/browserPaths';
+  export class WebKit extends AbstractBrowserType<WKBrowser> {
+      constructor(packagePath: string, browser: BrowserDescriptor);
       launch(options?: LaunchOptions): Promise<WKBrowser>;
       launchServer(options?: LaunchServerOptions): Promise<BrowserServer>;
       launchPersistentContext(userDataDir: string, options?: LaunchOptions): Promise<BrowserContext>;
@@ -19304,9 +19489,9 @@ declare module 'playwright-core/types' {
       timeout?: number;
   };
   export type WaitForElementOptions = TimeoutOptions & {
-      waitFor?: 'attached' | 'detached' | 'visible' | 'hidden';
+      state?: 'attached' | 'detached' | 'visible' | 'hidden';
   };
-  export type Polling = 'raf' | 'mutation' | number;
+  export type Polling = 'raf' | number;
   export type WaitForFunctionOptions = TimeoutOptions & {
       polling?: Polling;
   };
@@ -19414,9 +19599,12 @@ declare module 'playwright-core/types' {
       reportAnonymousScripts?: boolean;
   };
   export type ParsedSelector = {
-      name: string;
-      body: string;
-  }[];
+      parts: {
+          name: string;
+          body: string;
+      }[];
+      capture?: number;
+  };
   export {};
 
 }
@@ -25717,6 +25905,13 @@ declare module 'playwright-core/webkit/protocol' {
               angle?: number;
           };
           type setOrientationOverrideReturnValue = {};
+          /**
+           * Pauses page activity (active objects, animations).
+           */
+          type setActivityPausedParameters = {
+              paused: boolean;
+          };
+          type setActivityPausedReturnValue = {};
       }
       module Playwright {
           /**
@@ -25879,6 +26074,14 @@ declare module 'playwright-core/webkit/protocol' {
                */
               pageProxyId: PageProxyID;
               browserContextId: ContextID;
+              /**
+               * Unique identifier of the originating frame.
+               */
+              frameId: Network.FrameId;
+          };
+          type downloadFilenameSuggestedPayload = {
+              uuid: string;
+              suggestedFilename: string;
           };
           type downloadFinishedPayload = {
               uuid: string;
@@ -27361,6 +27564,7 @@ declare module 'playwright-core/webkit/protocol' {
           "Playwright.pageProxyDestroyed": Playwright.pageProxyDestroyedPayload;
           "Playwright.provisionalLoadFailed": Playwright.provisionalLoadFailedPayload;
           "Playwright.downloadCreated": Playwright.downloadCreatedPayload;
+          "Playwright.downloadFilenameSuggested": Playwright.downloadFilenameSuggestedPayload;
           "Playwright.downloadFinished": Playwright.downloadFinishedPayload;
           "Runtime.executionContextCreated": Runtime.executionContextCreatedPayload;
           "ScriptProfiler.trackingStart": ScriptProfiler.trackingStartPayload;
@@ -27604,6 +27808,7 @@ declare module 'playwright-core/webkit/protocol' {
           "Page.crash": Page.crashParameters;
           "Page.setScreenSizeOverride": Page.setScreenSizeOverrideParameters;
           "Page.setOrientationOverride": Page.setOrientationOverrideParameters;
+          "Page.setActivityPaused": Page.setActivityPausedParameters;
           "Playwright.close": Playwright.closeParameters;
           "Playwright.createContext": Playwright.createContextParameters;
           "Playwright.deleteContext": Playwright.deleteContextParameters;
@@ -27881,6 +28086,7 @@ declare module 'playwright-core/webkit/protocol' {
           "Page.crash": Page.crashReturnValue;
           "Page.setScreenSizeOverride": Page.setScreenSizeOverrideReturnValue;
           "Page.setOrientationOverride": Page.setOrientationOverrideReturnValue;
+          "Page.setActivityPaused": Page.setActivityPausedReturnValue;
           "Playwright.close": Playwright.closeReturnValue;
           "Playwright.createContext": Playwright.createContextReturnValue;
           "Playwright.deleteContext": Playwright.deleteContextReturnValue;
@@ -28280,7 +28486,7 @@ declare module 'playwright-core/webkit/wkPage' {
       private readonly _pagePromise;
       private _pagePromiseCallback;
       private readonly _pageProxySession;
-      private readonly _opener;
+      readonly _opener: WKPage | null;
       private readonly _requestIdToRequest;
       private readonly _workers;
       private readonly _contextIdToContext;
@@ -28292,7 +28498,8 @@ declare module 'playwright-core/webkit/wkPage' {
       _initializedPage: Page | null;
       private _firstNonInitialNavigationCommittedPromise;
       private _firstNonInitialNavigationCommittedFulfill;
-      private _firstNonInitialNavigationCommittedReject;
+      _firstNonInitialNavigationCommittedReject: (e: Error) => void;
+      private _lastConsoleMessage;
       constructor(browserContext: WKBrowserContext, pageProxySession: WKSession, opener: WKPage | null);
       private _initializePageProxySession;
       private _setSession;
@@ -28324,6 +28531,7 @@ declare module 'playwright-core/webkit/wkPage' {
       private _onExecutionContextCreated;
       navigateFrame(frame: frames.Frame, url: string, referrer: string | undefined): Promise<frames.GotoResult>;
       private _onConsoleMessage;
+      _onConsoleRepeatCountUpdated(event: Protocol.Console.messageRepeatCountUpdatedPayload): void;
       _onDialog(event: Protocol.Dialog.javascriptDialogOpeningPayload): void;
       private _onFileChooserOpened;
       private static _setEmulateMedia;
@@ -28361,6 +28569,8 @@ declare module 'playwright-core/webkit/wkPage' {
       isElementHandle(remoteObject: any): boolean;
       getBoundingBox(handle: dom.ElementHandle): Promise<types.Rect | null>;
       scrollRectIntoViewIfNeeded(handle: dom.ElementHandle, rect?: types.Rect): Promise<void>;
+      setActivityPaused(paused: boolean): Promise<void>;
+      rafCountForStablePosition(): number;
       getContentQuads(handle: dom.ElementHandle): Promise<types.Quad[] | null>;
       layoutViewport(): Promise<{
           width: number;
@@ -28496,7 +28706,7 @@ interface RequireTypes {
     "playwright": CustomPlaywright;
     "playwright-core": CustomPlaywright;
     "playwright-video": {
-        saveVideo: (page: import('playwright-core/page').Page, path: string) => Promise<{ stop: (() => Promise<void>)}>
+        saveVideo: (page: import('playwright-core/page').Page, path: string) => Promise<{ stop: (() => Promise<void>) }>
     };
 }
 
