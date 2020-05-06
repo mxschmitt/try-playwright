@@ -27058,6 +27058,32 @@ declare module 'playwright-core/webkit/protocol' {
               basicBlocks: BasicBlock[];
           };
       }
+      module Screencast {
+          /**
+           * Event describing captured frame. The client is expcted to send frameAck in response.
+           */
+          type framePayload = {
+              /**
+               * Base64-encoded image.
+               */
+              data: string;
+          };
+          /**
+           * Starts screencast.
+           */
+          type startParameters = {};
+          type startReturnValue = {};
+          /**
+           * Stops screencast.
+           */
+          type stopParameters = {};
+          type stopReturnValue = {};
+          /**
+           * Sent by the client when a frame has been received.
+           */
+          type frameAckParameters = {};
+          type frameAckReturnValue = {};
+      }
       /**
        * Profiler domain exposes JavaScript evaluation timing and profiling.
        */
@@ -27567,6 +27593,7 @@ declare module 'playwright-core/webkit/protocol' {
           "Playwright.downloadFilenameSuggested": Playwright.downloadFilenameSuggestedPayload;
           "Playwright.downloadFinished": Playwright.downloadFinishedPayload;
           "Runtime.executionContextCreated": Runtime.executionContextCreatedPayload;
+          "Screencast.frame": Screencast.framePayload;
           "ScriptProfiler.trackingStart": ScriptProfiler.trackingStartPayload;
           "ScriptProfiler.trackingUpdate": ScriptProfiler.trackingUpdatePayload;
           "ScriptProfiler.trackingComplete": ScriptProfiler.trackingCompletePayload;
@@ -27841,6 +27868,9 @@ declare module 'playwright-core/webkit/protocol' {
           "Runtime.enableControlFlowProfiler": Runtime.enableControlFlowProfilerParameters;
           "Runtime.disableControlFlowProfiler": Runtime.disableControlFlowProfilerParameters;
           "Runtime.getBasicBlocks": Runtime.getBasicBlocksParameters;
+          "Screencast.start": Screencast.startParameters;
+          "Screencast.stop": Screencast.stopParameters;
+          "Screencast.frameAck": Screencast.frameAckParameters;
           "ScriptProfiler.startTracking": ScriptProfiler.startTrackingParameters;
           "ScriptProfiler.stopTracking": ScriptProfiler.stopTrackingParameters;
           "ServiceWorker.getInitializationInfo": ServiceWorker.getInitializationInfoParameters;
@@ -28119,6 +28149,9 @@ declare module 'playwright-core/webkit/protocol' {
           "Runtime.enableControlFlowProfiler": Runtime.enableControlFlowProfilerReturnValue;
           "Runtime.disableControlFlowProfiler": Runtime.disableControlFlowProfilerReturnValue;
           "Runtime.getBasicBlocks": Runtime.getBasicBlocksReturnValue;
+          "Screencast.start": Screencast.startReturnValue;
+          "Screencast.stop": Screencast.stopReturnValue;
+          "Screencast.frameAck": Screencast.frameAckReturnValue;
           "ScriptProfiler.startTracking": ScriptProfiler.startTrackingReturnValue;
           "ScriptProfiler.stopTracking": ScriptProfiler.stopTrackingReturnValue;
           "ServiceWorker.getInitializationInfo": ServiceWorker.getInitializationInfoReturnValue;
