@@ -19,7 +19,7 @@ const TODO_NAME = "Bake a cake";
   });
   const context = await browser.newContext();
   const page = await context.newPage();
-  const caputure = await saveVideo(page, 'video.mp4');
+  const capture = await saveVideo(page, 'video.mp4');
 
   await page.goto("http://todomvc.com/examples/react/");
 
@@ -60,6 +60,6 @@ const TODO_NAME = "Bake a cake";
   await page.click('"Clear completed"');
   expect(await getCountOfTodos(), 0)
 
-  await caputure.stop()
+  await capture.stop()
   await browser.close();
 })();
