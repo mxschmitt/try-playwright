@@ -16002,7 +16002,9 @@ declare module 'playwright-core/console' {
    * See the License for the specific language governing permissions and
    * limitations under the License.
    */
+  /// <reference types="node" />
   import * as js from 'playwright-core/javascript';
+  import * as util from 'util';
   export type ConsoleMessageLocation = {
       url?: string;
       lineNumber?: number;
@@ -16018,6 +16020,7 @@ declare module 'playwright-core/console' {
       text(): string;
       args(): js.JSHandle[];
       location(): ConsoleMessageLocation;
+      [util.inspect.custom](): string;
   }
 
 }
@@ -17998,6 +18001,9 @@ declare module 'playwright-core/helper' {
       static optionsWithUpdatedTimeout<T extends types.TimeoutOptions>(options: T | undefined, deadline: number): T;
   }
   export function assert(value: any, message?: string): asserts value;
+  export function setUnderTest(): void;
+  export function isUnderTest(): boolean;
+  export function debugAssert(value: any, message?: string): asserts value;
   export function assertMaxArguments(count: number, max: number): asserts count;
   export function getFromENV(name: string): string | undefined;
   export function logPolitely(toBeLogged: string): void;
@@ -19090,7 +19096,6 @@ declare module 'playwright-core/server/browserType' {
   }
   export abstract class AbstractBrowserType<Browser> implements BrowserType<Browser> {
       private _name;
-      readonly _browserPath: string;
       private _executablePath;
       constructor(packagePath: string, browser: browserPaths.BrowserDescriptor);
       executablePath(): string;
@@ -19166,7 +19171,6 @@ declare module 'playwright-core/server/firefox' {
       private _launchServer;
       connect(options: ConnectOptions): Promise<FFBrowser>;
       private _defaultArgs;
-      _createTemporaryProfile(): Promise<string>;
   }
 
 }
@@ -25095,9 +25099,9 @@ declare module 'playwright-core/webkit/protocol' {
        */
       module Page {
           /**
-           * List of settings able to be overridden by WebInspector. Keep this in sync with FOR_EACH_INSPECTOR_OVERRIDE_SETTING.
+           * List of settings able to be overridden by WebInspector.
            */
-          type Setting = "AuthorAndUserStylesEnabled" | "ICECandidateFilteringEnabled" | "ImagesEnabled" | "MediaCaptureRequiresSecureConnection" | "MockCaptureDevicesEnabled" | "NeedsSiteSpecificQuirks" | "ScriptEnabled" | "ShowDebugBorders" | "ShowRepaintCounter" | "WebRTCEncryptionEnabled" | "WebSecurityEnabled";
+          type Setting = "AdClickAttributionDebugModeEnabled" | "AuthorAndUserStylesEnabled" | "ICECandidateFilteringEnabled" | "ITPDebugModeEnabled" | "ImagesEnabled" | "MediaCaptureRequiresSecureConnection" | "MockCaptureDevicesEnabled" | "NeedsSiteSpecificQuirks" | "ScriptEnabled" | "ShowDebugBorders" | "ShowRepaintCounter" | "WebRTCEncryptionEnabled" | "WebSecurityEnabled";
           /**
            * Resource type as it was perceived by the rendering engine.
            */
@@ -27059,6 +27063,7 @@ declare module 'playwright-core/webkit/protocol' {
           };
       }
       module Screencast {
+          type ImageFormat = "jpeg" | "png";
           /**
            * Event describing captured frame. The client is expcted to send frameAck in response.
            */
@@ -27071,7 +27076,16 @@ declare module 'playwright-core/webkit/protocol' {
           /**
            * Starts screencast.
            */
-          type startParameters = {};
+          type startParameters = {
+              /**
+               * Frame data format.
+               */
+              format: ImageFormat;
+              /**
+               * For JPEG quality from range [0..100]. Ignored for PNG.
+               */
+              quality?: number;
+          };
           type startReturnValue = {};
           /**
            * Stops screencast.
@@ -27436,6 +27450,7 @@ declare module 'playwright-core/webkit/protocol' {
           type workerCreatedPayload = {
               workerId: string;
               url: string;
+              name: string;
               /**
                * Id of the frame this worker belongs to.
                */

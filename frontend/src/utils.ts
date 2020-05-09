@@ -1,12 +1,4 @@
-import lzString from "lz-string";
 import { Examples } from "./constants";
-
-export const decodeCode = (code: string | null): string => {
-  if (!code) {
-    return ""
-  }
-  return lzString.decompressFromEncodedURIComponent(code) || ""
-}
 
 export const runCode = async (code: string): Promise<APIResponse> => {
   const resp = await fetch("/api/v1/run", {
@@ -50,11 +42,7 @@ const fetchSharedCode = async (code: string): Promise<string | null> => {
 export const determineCode = async (setCode: ((code: string) => void)): Promise<void> => {
   const urlParams = new URLSearchParams(window.location.search);
   const localStorageCode = window.localStorage.getItem("code")
-  // TODO: remove (if: code) after a couple of months. Was kept for backwards compatibility
-  if (urlParams.has("code")) {
-    const newCode = decodeCode(urlParams.get("code"))
-    return setCode(newCode)
-  } else if (urlParams.has("s")) {
+  if (urlParams.has("s")) {
     const key = urlParams.get("s")
     if (key) {
       const sharedCode = await fetchSharedCode(key)
