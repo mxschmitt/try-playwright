@@ -14,6 +14,7 @@ module.exports = {
     'eslint:recommended',
     'plugin:@typescript-eslint/eslint-recommended',
     'plugin:@typescript-eslint/recommended',
+    "plugin:jest-playwright/recommended"
   ],
   rules: {
     "@typescript-eslint/ban-ts-comment": 0
