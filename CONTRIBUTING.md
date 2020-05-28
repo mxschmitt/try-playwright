@@ -16,6 +16,4 @@ For running everything locally with auto-reload functionality the following setu
 
 ## Generate / Update autocompletion
 
-- Execute the `npx npm-dts generate` command in the `playwright` repository
-- Replace the last `declare module` with the custom appendix / modification in the bottom of the file
-- Remove the modules which starts with `playwright-core/generated` to save bandwidth
+- Execute the `update_pw.sh` script and adjust in it the Playwright version
