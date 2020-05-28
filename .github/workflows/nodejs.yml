@@ -18,7 +18,6 @@ jobs:
         node-version: 14.x
     - name: Install dependencies
       run: npm install
-      working-directory: tests
     - name: Generate self-signed certificate
       run: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
     - name: Build Docker images
@@ -27,7 +26,6 @@ jobs:
       run: docker-compose up -d
     - name: Run e2e tests
       run: npm run test
-      working-directory: tests
   build:
     runs-on: ubuntu-latest
     steps:

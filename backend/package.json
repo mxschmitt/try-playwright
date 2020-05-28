@@ -1,5 +1,5 @@
 {
-  "name": "try-playwright",
+  "name": "try-playwright-backend",
   "version": "1.0.0",
   "description": "Try Playwright tests in your browser without installing the entire suite.",
   "main": "index.js",
