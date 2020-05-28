@@ -4,13 +4,13 @@
   "private": true,
   "dependencies": {
     "@sentry/browser": "5.15.5",
-    "@testing-library/jest-dom": "5.7.0",
+    "@testing-library/jest-dom": "5.8.0",
     "@testing-library/react": "10.0.4",
-    "@testing-library/user-event": "10.1.2",
-    "@types/jest": "25.2.1",
-    "@types/node": "13.13.5",
-    "@types/react": "16.9.34",
-    "@types/react-dom": "16.9.7",
+    "@testing-library/user-event": "10.4.0",
+    "@types/jest": "25.2.3",
+    "@types/node": "14.0.5",
+    "@types/react": "16.9.35",
+    "@types/react-dom": "16.9.8",
     "clipboard-polyfill": "2.8.6",
     "monaco-editor": "0.20.0",
     "monaco-editor-webpack-plugin": "1.9.0",
@@ -18,12 +18,12 @@
     "react-dom": "16.13.1",
     "react-monaco-editor": "0.36.0",
     "react-scripts": "3.4.1",
-    "rsuite": "4.5.0",
-    "typescript": "3.8.3"
+    "rsuite": "4.7.1",
+    "typescript": "3.9.3"
   },
   "scripts": {
-    "start": "react-app-rewired start",
-    "build": "react-app-rewired build",
+    "start": "SKIP_PREFLIGHT_CHECK=true react-app-rewired start",
+    "build": "SKIP_PREFLIGHT_CHECK=true react-app-rewired build",
     "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },

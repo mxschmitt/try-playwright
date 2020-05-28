@@ -1,3 +1,4 @@
+// @ts-check
 const playwright = require("playwright");
 const { saveVideo } = require('playwright-video');
 

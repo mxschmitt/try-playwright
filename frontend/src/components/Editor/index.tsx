@@ -53,9 +53,9 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
                 }
             }
         });
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(staticTypes)
-        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-            diagnosticCodesToIgnore: [80005]
+        monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
+        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+            diagnosticCodesToIgnore: [80001, 7044]
         })
         editor.focus()
     }
@@ -64,7 +64,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         <div className={styles.monacoEditorWrapper}>
             <MonacoEditor
                 onChange={onChange}
-                language="typescript"
+                language="javascript"
                 theme={darkMode ? "custom-dark" : "vs"}
                 value={code}
                 options={MONACO_OPTIONS}
