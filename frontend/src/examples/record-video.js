@@ -1,3 +1,4 @@
+// @ts-check
 const { chromium } = require("playwright");
 const { saveVideo } = require("playwright-video");
 

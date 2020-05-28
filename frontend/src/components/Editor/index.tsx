@@ -53,13 +53,9 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
                 }
             }
         });
-        monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-            checkJs: true,
-            noLib: true
-        })
         monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
         monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-            diagnosticCodesToIgnore: [80001]
+            diagnosticCodesToIgnore: [80001, 7044]
         })
         editor.focus()
     }
