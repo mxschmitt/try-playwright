@@ -7,8 +7,6 @@ function update_dependencies {
     cd ..
 }
 
-EMPTY_SOURCE_EXPORT="export const source = \"\""
-
 read -r -d '' CUSTOM_SUFFIX << EOM
     export const webkit: BrowserType<WebKitBrowser>;
     export const chromium: BrowserType<ChromiumBrowser>;
