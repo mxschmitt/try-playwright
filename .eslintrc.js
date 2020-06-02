@@ -17,6 +17,7 @@ module.exports = {
     "plugin:jest-playwright/recommended"
   ],
   rules: {
-    "@typescript-eslint/ban-ts-comment": 0
+    "@typescript-eslint/ban-ts-comment": 0,
+    "jsx-a11y/accessible-emoji": 0
   }
 };
