@@ -24,8 +24,8 @@ set -e
 function update_playwright_types {
     TYPES_FILE="frontend/src/components/Editor/types.txt"
     echo "declare module 'playwright' {" > $TYPES_FILE
-    curl https://cdn.jsdelivr.net/npm/playwright@next/types/protocol.d.ts >> $TYPES_FILE
-    curl https://cdn.jsdelivr.net/npm/playwright@next/types/types.d.ts | tail -n +21 >> $TYPES_FILE
+    cat backend/node_modules/playwright/types/protocol.d.ts >> $TYPES_FILE
+    cat backend/node_modules/playwright/types/types.d.ts | tail -n +21 >> $TYPES_FILE
     echo "$CUSTOM_SUFFIX" >> $TYPES_FILE
 }
 
