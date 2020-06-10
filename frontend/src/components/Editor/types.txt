@@ -652,7 +652,7 @@ associated with some application cache.
       frameId: Page.FrameId;
     }
     export type SameSiteCookieExclusionReason = "ExcludeSameSiteUnspecifiedTreatedAsLax"|"ExcludeSameSiteNoneInsecure";
-    export type SameSiteCookieWarningReason = "WarnSameSiteUnspecifiedCrossSiteContext"|"WarnSameSiteNoneInsecure"|"WarnSameSiteUnspecifiedLaxAllowUnsafe"|"WarnSameSiteCrossSchemeSecureUrlMethodUnsafe"|"WarnSameSiteCrossSchemeSecureUrlLax"|"WarnSameSiteCrossSchemeSecureUrlStrict"|"WarnSameSiteCrossSchemeInsecureUrlMethodUnsafe"|"WarnSameSiteCrossSchemeInsecureUrlLax"|"WarnSameSiteCrossSchemeInsecureUrlStrict";
+    export type SameSiteCookieWarningReason = "WarnSameSiteUnspecifiedCrossSiteContext"|"WarnSameSiteNoneInsecure"|"WarnSameSiteUnspecifiedLaxAllowUnsafe"|"WarnSameSiteStrictLaxDowngradeStrict"|"WarnSameSiteStrictCrossDowngradeStrict"|"WarnSameSiteStrictCrossDowngradeLax"|"WarnSameSiteLaxCrossDowngradeStrict"|"WarnSameSiteLaxCrossDowngradeLax";
     export type SameSiteCookieOperation = "SetCookie"|"ReadCookie";
     /**
      * This information is currently necessary, as the front-end has a difficult
@@ -705,11 +705,26 @@ Does not always exist (e.g. for unsafe form submission urls).
       frame?: AffectedFrame;
     }
     /**
+     * Enum indicating the reason a response has been blocked. These reasons are
+refinements of the net error BLOCKED_BY_RESPONSE.
+     */
+    export type BlockedByResponseReason = "CoepFrameResourceNeedsCoepHeader"|"CoopSandboxedIFrameCannotNavigateToCoopPage"|"CorpNotSameOrigin"|"CorpNotSameOriginAfterDefaultedToSameOriginByCoep"|"CorpNotSameSite";
+    /**
+     * Details for a request that has been blocked with the BLOCKED_BY_RESPONSE
+code. Currently only used for COEP/COOP, but may be extended to include
+some CSP errors in the future.
+     */
+    export interface BlockedByResponseIssueDetails {
+      request: AffectedRequest;
+      frame?: AffectedFrame;
+      reason: BlockedByResponseReason;
+    }
+    /**
      * A unique identifier for the type of issue. Each type may use one of the
 optional fields in InspectorIssueDetails to convey more specific
 information about the kind of issue.
      */
-    export type InspectorIssueCode = "SameSiteCookieIssue"|"MixedContentIssue";
+    export type InspectorIssueCode = "SameSiteCookieIssue"|"MixedContentIssue"|"BlockedByResponseIssue";
     /**
      * This struct holds a list of optional fields with additional information
 specific to the kind of issue. When adding a new issue code, please also
@@ -718,6 +733,7 @@ add a new optional field to this type.
     export interface InspectorIssueDetails {
       sameSiteCookieIssueDetails?: SameSiteCookieIssueDetails;
       mixedContentIssueDetails?: MixedContentIssueDetails;
+      blockedByResponseIssueDetails?: BlockedByResponseIssueDetails;
     }
     /**
      * An inspector issue reported from the back-end.
@@ -6345,6 +6361,14 @@ milliseconds relatively to this requestTime.
        */
       workerReady: number;
       /**
+       * Started fetch event.
+       */
+      workerFetchStart: number;
+      /**
+       * Settled fetch event respondWith promise.
+       */
+      workerRespondWithSettled: number;
+      /**
        * Started sending request.
        */
       sendStart: number;
@@ -6517,6 +6541,10 @@ milliseconds relatively to this requestTime.
      */
     export type BlockedReason = "other"|"csp"|"mixed-content"|"origin"|"inspector"|"subresource-filter"|"content-type"|"collapsed-by-client"|"coep-frame-resource-needs-coep-header"|"coop-sandboxed-iframe-cannot-navigate-to-coop-page"|"corp-not-same-origin"|"corp-not-same-origin-after-defaulted-to-same-origin-by-coep"|"corp-not-same-site";
     /**
+     * Source of serviceworker response.
+     */
+    export type ServiceWorkerResponseSource = "cache-storage"|"http-cache"|"fallback-code"|"network";
+    /**
      * HTTP response data.
      */
     export interface Response {
@@ -6588,6 +6616,18 @@ milliseconds relatively to this requestTime.
        * Timing information for the given request.
        */
       timing?: ResourceTiming;
+      /**
+       * Response source of response from ServiceWorker.
+       */
+      serviceWorkerResponseSource?: ServiceWorkerResponseSource;
+      /**
+       * The time at which the returned response was generated.
+       */
+      responseTime?: TimeSinceEpoch;
+      /**
+       * Cache Storage Cache Name.
+       */
+      cacheStorageCacheName?: string;
       /**
        * Protocol used to fetch this request.
        */
@@ -10966,6 +11006,14 @@ one.
        * If specified, disposes this context when debugging session disconnects.
        */
       disposeOnDetach?: boolean;
+      /**
+       * Proxy server, similar to the one passed to --proxy-server
+       */
+      proxyServer?: string;
+      /**
+       * Proxy bypass list, similar to the one passed to --proxy-bypass-list
+       */
+      proxyBypassList?: string;
     }
     export type createBrowserContextReturnValue = {
       /**
@@ -15767,6 +15815,10 @@ type Unboxed<Arg> =
   Arg extends ElementHandle<infer T> ? T :
   Arg extends JSHandle<infer T> ? T :
   Arg extends NoHandles<Arg> ? Arg :
+  Arg extends [infer A0] ? [Unboxed<A0>] :
+  Arg extends [infer A0, infer A1] ? [Unboxed<A0>, Unboxed<A1>] :
+  Arg extends [infer A0, infer A1, infer A2] ? [Unboxed<A0>, Unboxed<A1>, Unboxed<A2>] :
+  Arg extends [infer A0, infer A1, infer A2, infer A3] ? [Unboxed<A0>, Unboxed<A1>, Unboxed<A2>, Unboxed<A3>] :
   Arg extends Array<infer T> ? Array<Unboxed<T>> :
   Arg extends object ? { [Key in keyof Arg]: Unboxed<Arg[Key]> } :
   Arg;
@@ -17055,7 +17107,7 @@ export interface Page {
    * ```
    * Page routes take precedence over browser context routes (set up with browserContext.route(url, handler)) when request matches both handlers.
    * 
-   * **NOTE** Enabling rouing disables http cache.
+   * **NOTE** Enabling routing disables http cache.
    * @param url A glob pattern, regex pattern or predicate receiving URL to match while routing.
    * @param handler handler function to route the request.
    * @returns .
@@ -21588,6 +21640,21 @@ interface BrowserTypeLaunchServerOptions {
   ignoreDefaultArgs?: boolean|Array<string>;
 
   /**
+   * Network proxy settings.
+   */
+  proxy?: BrowserTypeLaunchServerOptionsProxy;
+
+  /**
+   * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
+   */
+  downloadsPath?: string;
+
+  /**
+   * Firefox user preferences. Learn more about the Firefox user preferences at `about:config`.
+   */
+  firefoxUserPrefs?: Object;
+
+  /**
    * Close the browser process on Ctrl-C. Defaults to `true`.
    */
   handleSIGINT?: boolean;
@@ -21623,6 +21690,28 @@ interface BrowserTypeLaunchServerOptions {
   devtools?: boolean;
 }
 
+interface BrowserTypeLaunchServerOptionsProxy {
+  /**
+   * Proxy to be used for all requests. HTTP and SOCKS proxies are supported, for example `http://myproxy.com:3128` or `socks5://myproxy.com:3128`. Short form `myproxy.com:3128` is considered an HTTP proxy.
+   */
+  server: string;
+
+  /**
+   * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+   */
+  bypass?: string;
+
+  /**
+   * Optional username to use if HTTP proxy requires authentication.
+   */
+  username?: string;
+
+  /**
+   * Optional password to use if HTTP proxy requires authentication.
+   */
+  password?: string;
+}
+
 interface BrowserTypeLaunchPersistentContextOptions {
   /**
    * Whether to run browser in headless mode. More details for Chromium and Firefox. Defaults to `true` unless the `devtools` option is `true`.
@@ -21643,6 +21732,21 @@ interface BrowserTypeLaunchPersistentContextOptions {
    * If `true`, then do not use any of the default arguments. If an array is given, then filter out the given default arguments. Dangerous option; use with care. Defaults to `false`.
    */
   ignoreDefaultArgs?: boolean|Array<string>;
+
+  /**
+   * Network proxy settings.
+   */
+  proxy?: BrowserTypeLaunchPersistentContextOptionsProxy;
+
+  /**
+   * Whether to automatically download all the attachments. Defaults to `false` where all the downloads are canceled.
+   */
+  acceptDownloads?: boolean;
+
+  /**
+   * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
+   */
+  downloadsPath?: string;
 
   /**
    * Close the browser process on Ctrl-C. Defaults to `true`.
@@ -21797,6 +21901,28 @@ interface BrowserTypeLaunchPersistentContextOptionsViewport {
   height: number;
 }
 
+interface BrowserTypeLaunchPersistentContextOptionsProxy {
+  /**
+   * Proxy to be used for all requests. HTTP and SOCKS proxies are supported, for example `http://myproxy.com:3128` or `socks5://myproxy.com:3128`. Short form `myproxy.com:3128` is considered an HTTP proxy.
+   */
+  server: string;
+
+  /**
+   * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+   */
+  bypass?: string;
+
+  /**
+   * Optional username to use if HTTP proxy requires authentication.
+   */
+  username?: string;
+
+  /**
+   * Optional password to use if HTTP proxy requires authentication.
+   */
+  password?: string;
+}
+
 export interface LaunchOptions {
   /**
    * Whether to run browser in headless mode. More details for Chromium and Firefox. Defaults to `true` unless the `devtools` option is `true`.
@@ -21817,6 +21943,21 @@ export interface LaunchOptions {
    * If `true`, Playwright does not pass its own configurations args and only uses the ones from `args`. If an array is given, then filters out the given default arguments. Dangerous option; use with care. Defaults to `false`.
    */
   ignoreDefaultArgs?: boolean|Array<string>;
+
+  /**
+   * Network proxy settings.
+   */
+  proxy?: BrowserTypeLaunchOptionsProxy;
+
+  /**
+   * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
+   */
+  downloadsPath?: string;
+
+  /**
+   * Firefox user preferences. Learn more about the Firefox user preferences at `about:config`.
+   */
+  firefoxUserPrefs?: Object;
 
   /**
    * Close the browser process on Ctrl-C. Defaults to `true`.
@@ -21857,6 +21998,28 @@ export interface LaunchOptions {
    * Slows down Playwright operations by the specified amount of milliseconds. Useful so that you can see what is going on.
    */
   slowMo?: number;
+}
+
+interface BrowserTypeLaunchOptionsProxy {
+  /**
+   * Proxy to be used for all requests. HTTP and SOCKS proxies are supported, for example `http://myproxy.com:3128` or `socks5://myproxy.com:3128`. Short form `myproxy.com:3128` is considered an HTTP proxy.
+   */
+  server: string;
+
+  /**
+   * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+   */
+  bypass?: string;
+
+  /**
+   * Optional username to use if HTTP proxy requires authentication.
+   */
+  username?: string;
+
+  /**
+   * Optional password to use if HTTP proxy requires authentication.
+   */
+  password?: string;
 }
 
 interface BrowserTypeConnectOptions {

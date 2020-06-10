@@ -14,20 +14,20 @@
   },
   "homepage": "https://github.com/mxschmitt/try-playwright#readme",
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "3.0.2",
-    "@typescript-eslint/parser": "3.0.2",
-    "eslint": "^7.1.0",
+    "@typescript-eslint/eslint-plugin": "3.2.0",
+    "@typescript-eslint/parser": "3.2.0",
+    "eslint": "^7.2.0",
     "eslint-config-react-app": "5.2.1",
     "eslint-plugin-flowtype": "5.1.3",
-    "eslint-plugin-import": "2.20.2",
+    "eslint-plugin-import": "2.21.2",
     "eslint-plugin-jest-playwright": "^0.1.1",
     "eslint-plugin-jsx-a11y": "6.2.3",
     "eslint-plugin-react": "7.20.0",
     "eslint-plugin-react-hooks": "4.0.4",
     "jest": "^26.0.1",
-    "jest-playwright-preset": "^0.2.2",
-    "playwright": "^1.0.2",
-    "typescript": "3.9.3"
+    "jest-playwright-preset": "^0.2.3",
+    "playwright": "^1.1.0",
+    "typescript": "3.9.5"
   },
   "dependencies": {}
 }
