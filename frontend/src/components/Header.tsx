@@ -6,7 +6,10 @@ const Header: React.FunctionComponent = () => {
     <Navbar appearance="inverse">
       <Navbar.Header>
         <Nav>
-          <Nav.Item href="https://playwright.tech"><strong>Playwright Community 🎭</strong></Nav.Item>
+          <Nav.Item href="https://playwright.tech">
+            <strong>Playwright Community</strong>{' '}
+            <span role="img" aria-label="Playwright">🎭</span>
+          </Nav.Item>
         </Nav>
       </Navbar.Header>
       <Navbar.Body>
