@@ -1,14 +1,14 @@
 import path from 'path'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import playwright, { LaunchOptions } from 'playwright-core'
-import { Browser, WebKitBrowser, ChromiumBrowser, FirefoxBrowser, Page as PageType } from 'playwright-core'
+import playwright, { LaunchOptions } from 'playwright'
+import type { Browser, WebKitBrowser, ChromiumBrowser, FirefoxBrowser, Page as PageType } from 'playwright'
 // @ts-ignore
-import { Playwright } from 'playwright-core/lib/server/playwright'
+import { Playwright } from 'playwright/lib/server/playwright'
 // @ts-ignore
-import { CRPage } from 'playwright-core/lib/chromium/crPage';
+import { CRPage } from 'playwright/lib/chromium/crPage';
 // @ts-ignore
-import { Page } from 'playwright-core/lib/api';
+import { Page } from 'playwright/lib/api';
 // @ts-ignore
 import playwrightBrowsers from 'playwright/browsers.json';
 

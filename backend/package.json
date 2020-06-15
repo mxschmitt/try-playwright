@@ -12,7 +12,6 @@
     "express": "^4.17.1",
     "mime-types": "^2.1.27",
     "playwright": "^1.1.0",
-    "playwright-core": "^1.1.0",
     "playwright-video": "^2.1.0",
     "sqlite": "^4.0.10",
     "sqlite3": "^4.2.0",

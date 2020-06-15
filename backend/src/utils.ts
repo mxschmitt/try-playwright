@@ -9,7 +9,7 @@ import { getPlaywright, getPlaywrightVideo, registerFileListener } from "./playw
 const packageJson = require("../package.json")
 
 const FILE_DELETION_TIME = 60 * 1000
-const PLAYWRIGHT_VERSION = packageJson.dependencies["playwright-core"]
+const PLAYWRIGHT_VERSION = packageJson.dependencies["playwright"]
 
 const limiter = new Bottleneck({
   maxConcurrent: 5
@@ -55,6 +55,9 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
           return getPlaywrightVideo(browserId)
         case "playwright":
         case "playwright-core":
+        case "playwright-chromium":
+        case "playwright-firefox":
+        case "playwright-webkit":
           return getPlaywright(browserId)
         default:
           throw new Error(`Package ${packageName} not recognized`)
