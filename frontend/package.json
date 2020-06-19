@@ -4,12 +4,12 @@
   "private": true,
   "dependencies": {
     "@sentry/browser": "5.17.0",
-    "@testing-library/jest-dom": "5.9.0",
-    "@testing-library/react": "10.2.1",
-    "@testing-library/user-event": "11.4.0",
+    "@testing-library/jest-dom": "5.10.1",
+    "@testing-library/react": "10.3.0",
+    "@testing-library/user-event": "12.0.2",
     "@types/jest": "26.0.0",
     "@types/node": "14.0.13",
-    "@types/react": "16.9.35",
+    "@types/react": "16.9.38",
     "@types/react-dom": "16.9.8",
     "clipboard-polyfill": "2.8.6",
     "monaco-editor": "0.20.0",
@@ -18,7 +18,7 @@
     "react-dom": "16.13.1",
     "react-monaco-editor": "0.36.0",
     "react-scripts": "3.4.1",
-    "rsuite": "4.7.3",
+    "rsuite": "4.7.5",
     "typescript": "3.9.5"
   },
   "scripts": {
