@@ -1,4 +1,4 @@
-FROM arjun27/playwright-bionic:0.2.0
+FROM mcr.microsoft.com/playwright:bionic
 
 WORKDIR /backend
 

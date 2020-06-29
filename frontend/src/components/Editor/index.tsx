@@ -20,7 +20,8 @@ const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
     overviewRulerLanes: 0,
     scrollbar: {
         vertical: "hidden"
-    }
+    },
+    wordWrap: "on"
 }
 
 interface EditorProps {
