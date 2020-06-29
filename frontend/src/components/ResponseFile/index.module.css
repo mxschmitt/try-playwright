@@ -5,7 +5,7 @@
 .pdfFile {
     display: block;
     width: 100%;
-    min-height: 500;
+    min-height: 600px;
 }
 
 .video {
