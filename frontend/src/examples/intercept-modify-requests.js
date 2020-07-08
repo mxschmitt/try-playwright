@@ -4,7 +4,7 @@ const playwright = require("playwright");
 const IMAGE_URL = "https://via.placeholder.com/300x70/e74c3c/2c3e50/?text=Yey%20Playwright!";
 
 (async () => {
-  const browser = await playwright.webkit.launch();
+  const browser = await playwright.chromium.launch();
   const context = await browser.newContext();
   const page = await context.newPage();
   // Open the exact same page on which we are right now
