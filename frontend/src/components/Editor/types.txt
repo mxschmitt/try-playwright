@@ -1,107 +1,3 @@
-// This needs to be global to avoid TS2403 in case lib.dom.d.ts is present in the same build
-interface Console {
-    Console: NodeJS.ConsoleConstructor;
-    /**
-     * A simple assertion test that verifies whether `value` is truthy.
-     * If it is not, an `AssertionError` is thrown.
-     * If provided, the error `message` is formatted using `util.format()` and used as the error message.
-     */
-    assert(value: any, message?: string, ...optionalParams: any[]): void;
-    /**
-     * When `stdout` is a TTY, calling `console.clear()` will attempt to clear the TTY.
-     * When `stdout` is not a TTY, this method does nothing.
-     */
-    clear(): void;
-    /**
-     * Maintains an internal counter specific to `label` and outputs to `stdout` the number of times `console.count()` has been called with the given `label`.
-     */
-    count(label?: string): void;
-    /**
-     * Resets the internal counter specific to `label`.
-     */
-    countReset(label?: string): void;
-    /**
-     * The `console.debug()` function is an alias for {@link console.log()}.
-     */
-    debug(message?: any, ...optionalParams: any[]): void;
-    /**
-     * Uses {@link util.inspect()} on `obj` and prints the resulting string to `stdout`.
-     * This function bypasses any custom `inspect()` function defined on `obj`.
-     */
-    dir(obj: any, options?: NodeJS.InspectOptions): void;
-    /**
-     * This method calls {@link console.log()} passing it the arguments received. Please note that this method does not produce any XML formatting
-     */
-    dirxml(...data: any[]): void;
-    /**
-     * Prints to `stderr` with newline.
-     */
-    error(message?: any, ...optionalParams: any[]): void;
-    /**
-     * Increases indentation of subsequent lines by two spaces.
-     * If one or more `label`s are provided, those are printed first without the additional indentation.
-     */
-    group(...label: any[]): void;
-    /**
-     * The `console.groupCollapsed()` function is an alias for {@link console.group()}.
-     */
-    groupCollapsed(...label: any[]): void;
-    /**
-     * Decreases indentation of subsequent lines by two spaces.
-     */
-    groupEnd(): void;
-    /**
-     * The {@link console.info()} function is an alias for {@link console.log()}.
-     */
-    info(message?: any, ...optionalParams: any[]): void;
-    /**
-     * Prints to `stdout` with newline.
-     */
-    log(message?: any, ...optionalParams: any[]): void;
-    /**
-     * This method does not display anything unless used in the inspector.
-     *  Prints to `stdout` the array `array` formatted as a table.
-     */
-    table(tabularData: any, properties?: string[]): void;
-    /**
-     * Starts a timer that can be used to compute the duration of an operation. Timers are identified by a unique `label`.
-     */
-    time(label?: string): void;
-    /**
-     * Stops a timer that was previously started by calling {@link console.time()} and prints the result to `stdout`.
-     */
-    timeEnd(label?: string): void;
-    /**
-     * For a timer that was previously started by calling {@link console.time()}, prints the elapsed time and other `data` arguments to `stdout`.
-     */
-    timeLog(label?: string, ...data: any[]): void;
-    /**
-     * Prints to `stderr` the string 'Trace :', followed by the {@link util.format()} formatted message and stack trace to the current position in the code.
-     */
-    trace(message?: any, ...optionalParams: any[]): void;
-    /**
-     * The {@link console.warn()} function is an alias for {@link console.error()}.
-     */
-    warn(message?: any, ...optionalParams: any[]): void;
-
-    // --- Inspector mode only ---
-    /**
-     * This method does not display anything unless used in the inspector.
-     *  Starts a JavaScript CPU profile with an optional label.
-     */
-    profile(label?: string): void;
-    /**
-     * This method does not display anything unless used in the inspector.
-     *  Stops the current JavaScript CPU profiling session if one has been started and prints the report to the Profiles panel of the inspector.
-     */
-    profileEnd(label?: string): void;
-    /**
-     * This method does not display anything unless used in the inspector.
-     *  Adds an event with the label `label` to the Timeline panel of the inspector.
-     */
-    timeStamp(label?: string): void;
-}
-
 // Declare "static" methods in Error
 interface ErrorConstructor {
     /** Create .stack property on a target object */
@@ -140,9 +36,6 @@ interface NodeRequire extends NodeJS.Require {}
 interface RequireResolve extends NodeJS.RequireResolve {}
 interface NodeModule extends NodeJS.Module {}
 
-declare var process: NodeJS.Process;
-declare var console: Console;
-
 declare var __filename: string;
 declare var __dirname: string;
 
@@ -168,243 +61,6 @@ declare var module: NodeModule;
 
 // Same as module.exports
 declare var exports: any;
-
-// Buffer class
-type BufferEncoding = "ascii" | "utf8" | "utf-8" | "utf16le" | "ucs2" | "ucs-2" | "base64" | "latin1" | "binary" | "hex";
-
-/**
- * Raw data is stored in instances of the Buffer class.
- * A Buffer is similar to an array of integers but corresponds to a raw memory allocation outside the V8 heap.  A Buffer cannot be resized.
- * Valid string encodings: 'ascii'|'utf8'|'utf16le'|'ucs2'(alias of 'utf16le')|'base64'|'binary'(deprecated)|'hex'
- */
-declare class Buffer extends Uint8Array {
-    /**
-     * Allocates a new buffer containing the given {str}.
-     *
-     * @param str String to store in buffer.
-     * @param encoding encoding to use, optional.  Default is 'utf8'
-     * @deprecated since v10.0.0 - Use `Buffer.from(string[, encoding])` instead.
-     */
-    constructor(str: string, encoding?: BufferEncoding);
-    /**
-     * Allocates a new buffer of {size} octets.
-     *
-     * @param size count of octets to allocate.
-     * @deprecated since v10.0.0 - Use `Buffer.alloc()` instead (also see `Buffer.allocUnsafe()`).
-     */
-    constructor(size: number);
-    /**
-     * Allocates a new buffer containing the given {array} of octets.
-     *
-     * @param array The octets to store.
-     * @deprecated since v10.0.0 - Use `Buffer.from(array)` instead.
-     */
-    constructor(array: Uint8Array);
-    /**
-     * Produces a Buffer backed by the same allocated memory as
-     * the given {ArrayBuffer}/{SharedArrayBuffer}.
-     *
-     *
-     * @param arrayBuffer The ArrayBuffer with which to share memory.
-     * @deprecated since v10.0.0 - Use `Buffer.from(arrayBuffer[, byteOffset[, length]])` instead.
-     */
-    constructor(arrayBuffer: ArrayBuffer | SharedArrayBuffer);
-    /**
-     * Allocates a new buffer containing the given {array} of octets.
-     *
-     * @param array The octets to store.
-     * @deprecated since v10.0.0 - Use `Buffer.from(array)` instead.
-     */
-    constructor(array: any[]);
-    /**
-     * Copies the passed {buffer} data onto a new {Buffer} instance.
-     *
-     * @param buffer The buffer to copy.
-     * @deprecated since v10.0.0 - Use `Buffer.from(buffer)` instead.
-     */
-    constructor(buffer: Buffer);
-    /**
-     * When passed a reference to the .buffer property of a TypedArray instance,
-     * the newly created Buffer will share the same allocated memory as the TypedArray.
-     * The optional {byteOffset} and {length} arguments specify a memory range
-     * within the {arrayBuffer} that will be shared by the Buffer.
-     *
-     * @param arrayBuffer The .buffer property of any TypedArray or a new ArrayBuffer()
-     */
-    static from(arrayBuffer: ArrayBuffer | SharedArrayBuffer, byteOffset?: number, length?: number): Buffer;
-    /**
-     * Creates a new Buffer using the passed {data}
-     * @param data data to create a new Buffer
-     */
-    static from(data: number[]): Buffer;
-    static from(data: Uint8Array): Buffer;
-    /**
-     * Creates a new buffer containing the coerced value of an object
-     * A `TypeError` will be thrown if {obj} has not mentioned methods or is not of other type appropriate for `Buffer.from()` variants.
-     * @param obj An object supporting `Symbol.toPrimitive` or `valueOf()`.
-     */
-    static from(obj: { valueOf(): string | object } | { [Symbol.toPrimitive](hint: 'string'): string }, byteOffset?: number, length?: number): Buffer;
-    /**
-     * Creates a new Buffer containing the given JavaScript string {str}.
-     * If provided, the {encoding} parameter identifies the character encoding.
-     * If not provided, {encoding} defaults to 'utf8'.
-     */
-    static from(str: string, encoding?: BufferEncoding): Buffer;
-    /**
-     * Creates a new Buffer using the passed {data}
-     * @param values to create a new Buffer
-     */
-    static of(...items: number[]): Buffer;
-    /**
-     * Returns true if {obj} is a Buffer
-     *
-     * @param obj object to test.
-     */
-    static isBuffer(obj: any): obj is Buffer;
-    /**
-     * Returns true if {encoding} is a valid encoding argument.
-     * Valid string encodings in Node 0.12: 'ascii'|'utf8'|'utf16le'|'ucs2'(alias of 'utf16le')|'base64'|'binary'(deprecated)|'hex'
-     *
-     * @param encoding string to test.
-     */
-    static isEncoding(encoding: string): encoding is BufferEncoding;
-    /**
-     * Gives the actual byte length of a string. encoding defaults to 'utf8'.
-     * This is not the same as String.prototype.length since that returns the number of characters in a string.
-     *
-     * @param string string to test.
-     * @param encoding encoding used to evaluate (defaults to 'utf8')
-     */
-    static byteLength(
-        string: string | NodeJS.ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
-        encoding?: BufferEncoding
-    ): number;
-    /**
-     * Returns a buffer which is the result of concatenating all the buffers in the list together.
-     *
-     * If the list has no items, or if the totalLength is 0, then it returns a zero-length buffer.
-     * If the list has exactly one item, then the first item of the list is returned.
-     * If the list has more than one item, then a new Buffer is created.
-     *
-     * @param list An array of Buffer objects to concatenate
-     * @param totalLength Total length of the buffers when concatenated.
-     *   If totalLength is not provided, it is read from the buffers in the list. However, this adds an additional loop to the function, so it is faster to provide the length explicitly.
-     */
-    static concat(list: Uint8Array[], totalLength?: number): Buffer;
-    /**
-     * The same as buf1.compare(buf2).
-     */
-    static compare(buf1: Uint8Array, buf2: Uint8Array): number;
-    /**
-     * Allocates a new buffer of {size} octets.
-     *
-     * @param size count of octets to allocate.
-     * @param fill if specified, buffer will be initialized by calling buf.fill(fill).
-     *    If parameter is omitted, buffer will be filled with zeros.
-     * @param encoding encoding used for call to buf.fill while initalizing
-     */
-    static alloc(size: number, fill?: string | Buffer | number, encoding?: BufferEncoding): Buffer;
-    /**
-     * Allocates a new buffer of {size} octets, leaving memory not initialized, so the contents
-     * of the newly created Buffer are unknown and may contain sensitive data.
-     *
-     * @param size count of octets to allocate
-     */
-    static allocUnsafe(size: number): Buffer;
-    /**
-     * Allocates a new non-pooled buffer of {size} octets, leaving memory not initialized, so the contents
-     * of the newly created Buffer are unknown and may contain sensitive data.
-     *
-     * @param size count of octets to allocate
-     */
-    static allocUnsafeSlow(size: number): Buffer;
-    /**
-     * This is the number of bytes used to determine the size of pre-allocated, internal Buffer instances used for pooling. This value may be modified.
-     */
-    static poolSize: number;
-
-    write(string: string, encoding?: BufferEncoding): number;
-    write(string: string, offset: number, encoding?: BufferEncoding): number;
-    write(string: string, offset: number, length: number, encoding?: BufferEncoding): number;
-    toString(encoding?: BufferEncoding, start?: number, end?: number): string;
-    toJSON(): { type: 'Buffer'; data: number[] };
-    equals(otherBuffer: Uint8Array): boolean;
-    compare(
-        otherBuffer: Uint8Array,
-        targetStart?: number,
-        targetEnd?: number,
-        sourceStart?: number,
-        sourceEnd?: number
-    ): number;
-    copy(targetBuffer: Uint8Array, targetStart?: number, sourceStart?: number, sourceEnd?: number): number;
-    /**
-     * Returns a new `Buffer` that references **the same memory as the original**, but offset and cropped by the start and end indices.
-     *
-     * This method is incompatible with `Uint8Array#slice()`, which returns a copy of the original memory.
-     *
-     * @param begin Where the new `Buffer` will start. Default: `0`.
-     * @param end Where the new `Buffer` will end (not inclusive). Default: `buf.length`.
-     */
-    slice(begin?: number, end?: number): Buffer;
-    /**
-     * Returns a new `Buffer` that references **the same memory as the original**, but offset and cropped by the start and end indices.
-     *
-     * This method is compatible with `Uint8Array#subarray()`.
-     *
-     * @param begin Where the new `Buffer` will start. Default: `0`.
-     * @param end Where the new `Buffer` will end (not inclusive). Default: `buf.length`.
-     */
-    subarray(begin?: number, end?: number): Buffer;
-    writeUIntLE(value: number, offset: number, byteLength: number): number;
-    writeUIntBE(value: number, offset: number, byteLength: number): number;
-    writeIntLE(value: number, offset: number, byteLength: number): number;
-    writeIntBE(value: number, offset: number, byteLength: number): number;
-    readUIntLE(offset: number, byteLength: number): number;
-    readUIntBE(offset: number, byteLength: number): number;
-    readIntLE(offset: number, byteLength: number): number;
-    readIntBE(offset: number, byteLength: number): number;
-    readUInt8(offset?: number): number;
-    readUInt16LE(offset?: number): number;
-    readUInt16BE(offset?: number): number;
-    readUInt32LE(offset?: number): number;
-    readUInt32BE(offset?: number): number;
-    readInt8(offset?: number): number;
-    readInt16LE(offset?: number): number;
-    readInt16BE(offset?: number): number;
-    readInt32LE(offset?: number): number;
-    readInt32BE(offset?: number): number;
-    readFloatLE(offset?: number): number;
-    readFloatBE(offset?: number): number;
-    readDoubleLE(offset?: number): number;
-    readDoubleBE(offset?: number): number;
-    reverse(): this;
-    swap16(): Buffer;
-    swap32(): Buffer;
-    swap64(): Buffer;
-    writeUInt8(value: number, offset?: number): number;
-    writeUInt16LE(value: number, offset?: number): number;
-    writeUInt16BE(value: number, offset?: number): number;
-    writeUInt32LE(value: number, offset?: number): number;
-    writeUInt32BE(value: number, offset?: number): number;
-    writeInt8(value: number, offset?: number): number;
-    writeInt16LE(value: number, offset?: number): number;
-    writeInt16BE(value: number, offset?: number): number;
-    writeInt32LE(value: number, offset?: number): number;
-    writeInt32BE(value: number, offset?: number): number;
-    writeFloatLE(value: number, offset?: number): number;
-    writeFloatBE(value: number, offset?: number): number;
-    writeDoubleLE(value: number, offset?: number): number;
-    writeDoubleBE(value: number, offset?: number): number;
-
-    fill(value: string | Uint8Array | number, offset?: number, end?: number, encoding?: BufferEncoding): this;
-
-    indexOf(value: string | number | Uint8Array, byteOffset?: number, encoding?: BufferEncoding): number;
-    lastIndexOf(value: string | number | Uint8Array, byteOffset?: number, encoding?: BufferEncoding): number;
-    entries(): IterableIterator<[number, number]>;
-    includes(value: string | number | Buffer, byteOffset?: number, encoding?: BufferEncoding): boolean;
-    keys(): IterableIterator<number>;
-    values(): IterableIterator<number>;
-}
 
 /*----------------------------------------------*
 *                                               *
@@ -451,20 +107,6 @@ declare namespace NodeJS {
          */
         compact?: boolean | number;
         sorted?: boolean | ((a: string, b: string) => number);
-    }
-
-    interface ConsoleConstructorOptions {
-        stdout: WritableStream;
-        stderr?: WritableStream;
-        ignoreErrors?: boolean;
-        colorMode?: boolean | 'auto';
-        inspectOptions?: InspectOptions;
-    }
-
-    interface ConsoleConstructor {
-        prototype: Console;
-        new(stdout: WritableStream, stderr?: WritableStream, ignoreErrors?: boolean): Console;
-        new(options: ConsoleConstructorOptions): Console;
     }
 
     interface CallSite {
@@ -549,25 +191,6 @@ declare namespace NodeJS {
         stack?: string;
     }
 
-    interface EventEmitter {
-        addListener(event: string | symbol, listener: (...args: any[]) => void): this;
-        on(event: string | symbol, listener: (...args: any[]) => void): this;
-        once(event: string | symbol, listener: (...args: any[]) => void): this;
-        removeListener(event: string | symbol, listener: (...args: any[]) => void): this;
-        off(event: string | symbol, listener: (...args: any[]) => void): this;
-        removeAllListeners(event?: string | symbol): this;
-        setMaxListeners(n: number): this;
-        getMaxListeners(): number;
-        listeners(event: string | symbol): Function[];
-        rawListeners(event: string | symbol): Function[];
-        emit(event: string | symbol, ...args: any[]): boolean;
-        listenerCount(type: string | symbol): number;
-        // Added in Node 6...
-        prependListener(event: string | symbol, listener: (...args: any[]) => void): this;
-        prependOnceListener(event: string | symbol, listener: (...args: any[]) => void): this;
-        eventNames(): Array<string | symbol>;
-    }
-
     interface ReadableStream extends EventEmitter {
         readable: boolean;
         read(size?: number): string | Buffer;
@@ -592,390 +215,6 @@ declare namespace NodeJS {
     }
 
     interface ReadWriteStream extends ReadableStream, WritableStream { }
-
-    interface Domain extends EventEmitter {
-        run<T>(fn: (...args: any[]) => T, ...args: any[]): T;
-        add(emitter: EventEmitter | Timer): void;
-        remove(emitter: EventEmitter | Timer): void;
-        bind<T extends Function>(cb: T): T;
-        intercept<T extends Function>(cb: T): T;
-
-        addListener(event: string, listener: (...args: any[]) => void): this;
-        on(event: string, listener: (...args: any[]) => void): this;
-        once(event: string, listener: (...args: any[]) => void): this;
-        removeListener(event: string, listener: (...args: any[]) => void): this;
-        removeAllListeners(event?: string): this;
-    }
-
-    interface MemoryUsage {
-        rss: number;
-        heapTotal: number;
-        heapUsed: number;
-        external: number;
-        arrayBuffers: number;
-    }
-
-    interface CpuUsage {
-        user: number;
-        system: number;
-    }
-
-    interface ProcessRelease {
-        name: string;
-        sourceUrl?: string;
-        headersUrl?: string;
-        libUrl?: string;
-        lts?: string;
-    }
-
-    interface ProcessVersions {
-        http_parser: string;
-        node: string;
-        v8: string;
-        ares: string;
-        uv: string;
-        zlib: string;
-        modules: string;
-        openssl: string;
-    }
-
-    type Platform = 'aix'
-        | 'android'
-        | 'darwin'
-        | 'freebsd'
-        | 'linux'
-        | 'openbsd'
-        | 'sunos'
-        | 'win32'
-        | 'cygwin'
-        | 'netbsd';
-
-    type Signals =
-        "SIGABRT" | "SIGALRM" | "SIGBUS" | "SIGCHLD" | "SIGCONT" | "SIGFPE" | "SIGHUP" | "SIGILL" | "SIGINT" | "SIGIO" |
-        "SIGIOT" | "SIGKILL" | "SIGPIPE" | "SIGPOLL" | "SIGPROF" | "SIGPWR" | "SIGQUIT" | "SIGSEGV" | "SIGSTKFLT" |
-        "SIGSTOP" | "SIGSYS" | "SIGTERM" | "SIGTRAP" | "SIGTSTP" | "SIGTTIN" | "SIGTTOU" | "SIGUNUSED" | "SIGURG" |
-        "SIGUSR1" | "SIGUSR2" | "SIGVTALRM" | "SIGWINCH" | "SIGXCPU" | "SIGXFSZ" | "SIGBREAK" | "SIGLOST" | "SIGINFO";
-
-    type MultipleResolveType = 'resolve' | 'reject';
-
-    type BeforeExitListener = (code: number) => void;
-    type DisconnectListener = () => void;
-    type ExitListener = (code: number) => void;
-    type RejectionHandledListener = (promise: Promise<any>) => void;
-    type UncaughtExceptionListener = (error: Error) => void;
-    type UnhandledRejectionListener = (reason: {} | null | undefined, promise: Promise<any>) => void;
-    type WarningListener = (warning: Error) => void;
-    type MessageListener = (message: any, sendHandle: any) => void;
-    type SignalsListener = (signal: Signals) => void;
-    type NewListenerListener = (type: string | symbol, listener: (...args: any[]) => void) => void;
-    type RemoveListenerListener = (type: string | symbol, listener: (...args: any[]) => void) => void;
-    type MultipleResolveListener = (type: MultipleResolveType, promise: Promise<any>, value: any) => void;
-
-    interface Socket extends ReadWriteStream {
-        isTTY?: true;
-    }
-
-    // Alias for compatibility
-    interface ProcessEnv extends Dict<string> {}
-
-    interface HRTime {
-        (time?: [number, number]): [number, number];
-    }
-
-    interface ProcessReport {
-        /**
-         * Directory where the report is written.
-         * working directory of the Node.js process.
-         * @default '' indicating that reports are written to the current
-         */
-        directory: string;
-
-        /**
-         * Filename where the report is written.
-         * The default value is the empty string.
-         * @default '' the output filename will be comprised of a timestamp,
-         * PID, and sequence number.
-         */
-        filename: string;
-
-        /**
-         * Returns a JSON-formatted diagnostic report for the running process.
-         * The report's JavaScript stack trace is taken from err, if present.
-         */
-        getReport(err?: Error): string;
-
-        /**
-         * If true, a diagnostic report is generated on fatal errors,
-         * such as out of memory errors or failed C++ assertions.
-         * @default false
-         */
-        reportOnFatalError: boolean;
-
-        /**
-         * If true, a diagnostic report is generated when the process
-         * receives the signal specified by process.report.signal.
-         * @defaul false
-         */
-        reportOnSignal: boolean;
-
-        /**
-         * If true, a diagnostic report is generated on uncaught exception.
-         * @default false
-         */
-        reportOnUncaughtException: boolean;
-
-        /**
-         * The signal used to trigger the creation of a diagnostic report.
-         * @default 'SIGUSR2'
-         */
-        signal: Signals;
-
-        /**
-         * Writes a diagnostic report to a file. If filename is not provided, the default filename
-         * includes the date, time, PID, and a sequence number.
-         * The report's JavaScript stack trace is taken from err, if present.
-         *
-         * @param fileName Name of the file where the report is written.
-         * This should be a relative path, that will be appended to the directory specified in
-         * `process.report.directory`, or the current working directory of the Node.js process,
-         * if unspecified.
-         * @param error A custom error used for reporting the JavaScript stack.
-         * @return Filename of the generated report.
-         */
-        writeReport(fileName?: string): string;
-        writeReport(error?: Error): string;
-        writeReport(fileName?: string, err?: Error): string;
-    }
-
-    interface ResourceUsage {
-        fsRead: number;
-        fsWrite: number;
-        involuntaryContextSwitches: number;
-        ipcReceived: number;
-        ipcSent: number;
-        majorPageFault: number;
-        maxRSS: number;
-        minorPageFault: number;
-        sharedMemorySize: number;
-        signalsCount: number;
-        swappedOut: number;
-        systemCPUTime: number;
-        unsharedDataSize: number;
-        unsharedStackSize: number;
-        userCPUTime: number;
-        voluntaryContextSwitches: number;
-    }
-
-    interface Process extends EventEmitter {
-        /**
-         * Can also be a tty.WriteStream, not typed due to limitation.s
-         */
-        stdout: WriteStream;
-        /**
-         * Can also be a tty.WriteStream, not typed due to limitation.s
-         */
-        stderr: WriteStream;
-        stdin: ReadStream;
-        openStdin(): Socket;
-        argv: string[];
-        argv0: string;
-        execArgv: string[];
-        execPath: string;
-        abort(): void;
-        chdir(directory: string): void;
-        cwd(): string;
-        debugPort: number;
-        emitWarning(warning: string | Error, name?: string, ctor?: Function): void;
-        env: ProcessEnv;
-        exit(code?: number): never;
-        exitCode?: number;
-        getgid(): number;
-        setgid(id: number | string): void;
-        getuid(): number;
-        setuid(id: number | string): void;
-        geteuid(): number;
-        seteuid(id: number | string): void;
-        getegid(): number;
-        setegid(id: number | string): void;
-        getgroups(): number[];
-        setgroups(groups: Array<string | number>): void;
-        setUncaughtExceptionCaptureCallback(cb: ((err: Error) => void) | null): void;
-        hasUncaughtExceptionCaptureCallback(): boolean;
-        version: string;
-        versions: ProcessVersions;
-        config: {
-            target_defaults: {
-                cflags: any[];
-                default_configuration: string;
-                defines: string[];
-                include_dirs: string[];
-                libraries: string[];
-            };
-            variables: {
-                clang: number;
-                host_arch: string;
-                node_install_npm: boolean;
-                node_install_waf: boolean;
-                node_prefix: string;
-                node_shared_openssl: boolean;
-                node_shared_v8: boolean;
-                node_shared_zlib: boolean;
-                node_use_dtrace: boolean;
-                node_use_etw: boolean;
-                node_use_openssl: boolean;
-                target_arch: string;
-                v8_no_strict_aliasing: number;
-                v8_use_snapshot: boolean;
-                visibility: string;
-            };
-        };
-        kill(pid: number, signal?: string | number): true;
-        pid: number;
-        ppid: number;
-        title: string;
-        arch: string;
-        platform: Platform;
-        memoryUsage(): MemoryUsage;
-        cpuUsage(previousValue?: CpuUsage): CpuUsage;
-        nextTick(callback: Function, ...args: any[]): void;
-        release: ProcessRelease;
-        features: {
-            inspector: boolean;
-            debug: boolean;
-            uv: boolean;
-            ipv6: boolean;
-            tls_alpn: boolean;
-            tls_sni: boolean;
-            tls_ocsp: boolean;
-            tls: boolean;
-        };
-        /**
-         * Can only be set if not in worker thread.
-         */
-        umask(mask: number): number;
-        uptime(): number;
-        hrtime: HRTime;
-        domain: Domain;
-
-        // Worker
-        send?(message: any, sendHandle?: any, options?: { swallowErrors?: boolean}, callback?: (error: Error | null) => void): boolean;
-        disconnect(): void;
-        connected: boolean;
-
-        /**
-         * The `process.allowedNodeEnvironmentFlags` property is a special,
-         * read-only `Set` of flags allowable within the [`NODE_OPTIONS`][]
-         * environment variable.
-         */
-        allowedNodeEnvironmentFlags: ReadonlySet<string>;
-
-        /**
-         * Only available with `--experimental-report`
-         */
-        report?: ProcessReport;
-
-        resourceUsage(): ResourceUsage;
-
-        /* EventEmitter */
-        addListener(event: "beforeExit", listener: BeforeExitListener): this;
-        addListener(event: "disconnect", listener: DisconnectListener): this;
-        addListener(event: "exit", listener: ExitListener): this;
-        addListener(event: "rejectionHandled", listener: RejectionHandledListener): this;
-        addListener(event: "uncaughtException", listener: UncaughtExceptionListener): this;
-        addListener(event: "uncaughtExceptionMonitor", listener: UncaughtExceptionListener): this;
-        addListener(event: "unhandledRejection", listener: UnhandledRejectionListener): this;
-        addListener(event: "warning", listener: WarningListener): this;
-        addListener(event: "message", listener: MessageListener): this;
-        addListener(event: Signals, listener: SignalsListener): this;
-        addListener(event: "newListener", listener: NewListenerListener): this;
-        addListener(event: "removeListener", listener: RemoveListenerListener): this;
-        addListener(event: "multipleResolves", listener: MultipleResolveListener): this;
-
-        emit(event: "beforeExit", code: number): boolean;
-        emit(event: "disconnect"): boolean;
-        emit(event: "exit", code: number): boolean;
-        emit(event: "rejectionHandled", promise: Promise<any>): boolean;
-        emit(event: "uncaughtException", error: Error): boolean;
-        emit(event: "uncaughtExceptionMonitor", error: Error): boolean;
-        emit(event: "unhandledRejection", reason: any, promise: Promise<any>): boolean;
-        emit(event: "warning", warning: Error): boolean;
-        emit(event: "message", message: any, sendHandle: any): this;
-        emit(event: Signals, signal: Signals): boolean;
-        emit(event: "newListener", eventName: string | symbol, listener: (...args: any[]) => void): this;
-        emit(event: "removeListener", eventName: string, listener: (...args: any[]) => void): this;
-        emit(event: "multipleResolves", listener: MultipleResolveListener): this;
-
-        on(event: "beforeExit", listener: BeforeExitListener): this;
-        on(event: "disconnect", listener: DisconnectListener): this;
-        on(event: "exit", listener: ExitListener): this;
-        on(event: "rejectionHandled", listener: RejectionHandledListener): this;
-        on(event: "uncaughtException", listener: UncaughtExceptionListener): this;
-        on(event: "uncaughtExceptionMonitor", listener: UncaughtExceptionListener): this;
-        on(event: "unhandledRejection", listener: UnhandledRejectionListener): this;
-        on(event: "warning", listener: WarningListener): this;
-        on(event: "message", listener: MessageListener): this;
-        on(event: Signals, listener: SignalsListener): this;
-        on(event: "newListener", listener: NewListenerListener): this;
-        on(event: "removeListener", listener: RemoveListenerListener): this;
-        on(event: "multipleResolves", listener: MultipleResolveListener): this;
-        on(event: string | symbol, listener: (...args: any[]) => void): this;
-
-        once(event: "beforeExit", listener: BeforeExitListener): this;
-        once(event: "disconnect", listener: DisconnectListener): this;
-        once(event: "exit", listener: ExitListener): this;
-        once(event: "rejectionHandled", listener: RejectionHandledListener): this;
-        once(event: "uncaughtException", listener: UncaughtExceptionListener): this;
-        once(event: "uncaughtExceptionMonitor", listener: UncaughtExceptionListener): this;
-        once(event: "unhandledRejection", listener: UnhandledRejectionListener): this;
-        once(event: "warning", listener: WarningListener): this;
-        once(event: "message", listener: MessageListener): this;
-        once(event: Signals, listener: SignalsListener): this;
-        once(event: "newListener", listener: NewListenerListener): this;
-        once(event: "removeListener", listener: RemoveListenerListener): this;
-        once(event: "multipleResolves", listener: MultipleResolveListener): this;
-
-        prependListener(event: "beforeExit", listener: BeforeExitListener): this;
-        prependListener(event: "disconnect", listener: DisconnectListener): this;
-        prependListener(event: "exit", listener: ExitListener): this;
-        prependListener(event: "rejectionHandled", listener: RejectionHandledListener): this;
-        prependListener(event: "uncaughtException", listener: UncaughtExceptionListener): this;
-        prependListener(event: "uncaughtExceptionMonitor", listener: UncaughtExceptionListener): this;
-        prependListener(event: "unhandledRejection", listener: UnhandledRejectionListener): this;
-        prependListener(event: "warning", listener: WarningListener): this;
-        prependListener(event: "message", listener: MessageListener): this;
-        prependListener(event: Signals, listener: SignalsListener): this;
-        prependListener(event: "newListener", listener: NewListenerListener): this;
-        prependListener(event: "removeListener", listener: RemoveListenerListener): this;
-        prependListener(event: "multipleResolves", listener: MultipleResolveListener): this;
-
-        prependOnceListener(event: "beforeExit", listener: BeforeExitListener): this;
-        prependOnceListener(event: "disconnect", listener: DisconnectListener): this;
-        prependOnceListener(event: "exit", listener: ExitListener): this;
-        prependOnceListener(event: "rejectionHandled", listener: RejectionHandledListener): this;
-        prependOnceListener(event: "uncaughtException", listener: UncaughtExceptionListener): this;
-        prependOnceListener(event: "uncaughtExceptionMonitor", listener: UncaughtExceptionListener): this;
-        prependOnceListener(event: "unhandledRejection", listener: UnhandledRejectionListener): this;
-        prependOnceListener(event: "warning", listener: WarningListener): this;
-        prependOnceListener(event: "message", listener: MessageListener): this;
-        prependOnceListener(event: Signals, listener: SignalsListener): this;
-        prependOnceListener(event: "newListener", listener: NewListenerListener): this;
-        prependOnceListener(event: "removeListener", listener: RemoveListenerListener): this;
-        prependOnceListener(event: "multipleResolves", listener: MultipleResolveListener): this;
-
-        listeners(event: "beforeExit"): BeforeExitListener[];
-        listeners(event: "disconnect"): DisconnectListener[];
-        listeners(event: "exit"): ExitListener[];
-        listeners(event: "rejectionHandled"): RejectionHandledListener[];
-        listeners(event: "uncaughtException"): UncaughtExceptionListener[];
-        listeners(event: "uncaughtExceptionMonitor"): UncaughtExceptionListener[];
-        listeners(event: "unhandledRejection"): UnhandledRejectionListener[];
-        listeners(event: "warning"): WarningListener[];
-        listeners(event: "message"): MessageListener[];
-        listeners(event: Signals): SignalsListener[];
-        listeners(event: "newListener"): NewListenerListener[];
-        listeners(event: "removeListener"): RemoveListenerListener[];
-        listeners(event: "multipleResolves"): MultipleResolveListener[];
-    }
 
     interface Global {
         Array: typeof Array;
@@ -1019,7 +258,6 @@ declare namespace NodeJS {
         clearImmediate: (immediateId: Immediate) => void;
         clearInterval: (intervalId: Timeout) => void;
         clearTimeout: (timeoutId: Timeout) => void;
-        console: typeof console;
         decodeURI: typeof decodeURI;
         decodeURIComponent: typeof decodeURIComponent;
         encodeURI: typeof encodeURI;
@@ -1031,7 +269,6 @@ declare namespace NodeJS {
         isNaN: typeof isNaN;
         parseFloat: typeof parseFloat;
         parseInt: typeof parseInt;
-        process: Process;
         setImmediate: (callback: (...args: any[]) => void, ...args: any[]) => Immediate;
         setInterval: (callback: (...args: any[]) => void, ms: number, ...args: any[]) => Timeout;
         setTimeout: (callback: (...args: any[]) => void, ms: number, ...args: any[]) => Timeout;
@@ -1096,6 +333,12 @@ declare namespace NodeJS {
         loaded: boolean;
         parent: Module | null;
         children: Module[];
+        /**
+         * @since 11.14.0
+         *
+         * The directory name of the module. This is usually the same as the path.dirname() of the module.id.
+         */
+        path: string;
         paths: string[];
     }
 
@@ -1828,12 +1071,28 @@ some CSP errors in the future.
       frame?: AffectedFrame;
       reason: BlockedByResponseReason;
     }
+    export type HeavyAdResolutionStatus = "HeavyAdBlocked"|"HeavyAdWarning";
+    export type HeavyAdReason = "NetworkTotalLimit"|"CpuTotalLimit"|"CpuPeakLimit";
+    export interface HeavyAdIssueDetails {
+      /**
+       * The resolution status, either blocking the content or warning.
+       */
+      resolution: HeavyAdResolutionStatus;
+      /**
+       * The reason the ad was blocked, total network or cpu or peak cpu.
+       */
+      reason: HeavyAdReason;
+      /**
+       * The frame that was blocked.
+       */
+      frame: AffectedFrame;
+    }
     /**
      * A unique identifier for the type of issue. Each type may use one of the
 optional fields in InspectorIssueDetails to convey more specific
 information about the kind of issue.
      */
-    export type InspectorIssueCode = "SameSiteCookieIssue"|"MixedContentIssue"|"BlockedByResponseIssue";
+    export type InspectorIssueCode = "SameSiteCookieIssue"|"MixedContentIssue"|"BlockedByResponseIssue"|"HeavyAdIssue";
     /**
      * This struct holds a list of optional fields with additional information
 specific to the kind of issue. When adding a new issue code, please also
@@ -1843,6 +1102,7 @@ add a new optional field to this type.
       sameSiteCookieIssueDetails?: SameSiteCookieIssueDetails;
       mixedContentIssueDetails?: MixedContentIssueDetails;
       blockedByResponseIssueDetails?: BlockedByResponseIssueDetails;
+      heavyAdIssueDetails?: HeavyAdIssueDetails;
     }
     /**
      * An inspector issue reported from the back-end.
@@ -2476,6 +1736,13 @@ inspector" rules), "regular" for regular stylesheets.
 document.written STYLE tags.
        */
       isInline: boolean;
+      /**
+       * Whether this stylesheet is mutable. Inline stylesheets become mutable
+after they have been modified via CSSOM API.
+<link> element's stylesheets are never mutable. Constructed stylesheets
+(new CSSStyleSheet()) are mutable immediately after creation.
+       */
+      isMutable: boolean;
       /**
        * Line offset of the stylesheet within the resource (zero based).
        */
@@ -6513,6 +5780,12 @@ modifiers, keyboard layout, etc (e.g., 'AltGr') (default: "").
 0).
        */
       location?: number;
+      /**
+       * Editing commands to send with the key event (e.g., 'selectAll') (default: []).
+These are related to but not equal the command names used in `document.execCommand` and NSStandardKeyBindingResponding.
+See https://source.chromium.org/chromium/chromium/src/+/master:third_party/blink/renderer/core/editing/commands/editor_command_names.h for valid command names.
+       */
+      commands?: string[];
     }
     export type dispatchKeyEventReturnValue = {
     }
@@ -9091,6 +8364,14 @@ continueInterceptedRequest call.
        */
       showGridExtensionLines?: boolean;
       /**
+       * Show Positive line number labels (default: false).
+       */
+      showPositiveLineNumbers?: boolean;
+      /**
+       * Show Negative line number labels (default: false).
+       */
+      showNegativeLineNumbers?: boolean;
+      /**
        * The grid container border highlight color (default: transparent).
        */
       gridBorderColor?: DOM.RGBA;
@@ -9139,6 +8420,10 @@ continueInterceptedRequest call.
        * Whether the rulers should be shown (default: false).
        */
       showRulers?: boolean;
+      /**
+       * Whether the a11y info should be shown (default: true).
+       */
+      showAccessibilityInfo?: boolean;
       /**
        * Whether the extension lines from node to the rulers should be shown (default: false).
        */
@@ -9265,9 +8550,13 @@ user manually inspects an element.
        */
       includeStyle?: boolean;
       /**
-       * The color format to get config with (default: hex)
+       * The color format to get config with (default: hex).
        */
       colorFormat?: ColorFormat;
+      /**
+       * Whether to show accessibility info (default: true).
+       */
+      showAccessibilityInfo?: boolean;
     }
     export type getHighlightObjectForTestReturnValue = {
       /**
@@ -14874,7 +14163,7 @@ other objects in their object group.
       /**
        * Object subtype hint. Specified for `object` or `wasm` type values only.
        */
-      subtype?: "array"|"null"|"node"|"regexp"|"date"|"map"|"set"|"weakmap"|"weakset"|"iterator"|"generator"|"error"|"proxy"|"promise"|"typedarray"|"arraybuffer"|"dataview"|"i32"|"i64"|"f32"|"f64"|"v128"|"anyref";
+      subtype?: "array"|"null"|"node"|"regexp"|"date"|"map"|"set"|"weakmap"|"weakset"|"iterator"|"generator"|"error"|"proxy"|"promise"|"typedarray"|"arraybuffer"|"dataview"|"i32"|"i64"|"f32"|"f64"|"v128"|"externref";
       /**
        * Object class (constructor) name. Specified for `object` type values only.
        */
@@ -15519,6 +14808,13 @@ Note that `let` variables can only be re-declared if they originate from
 `replMode` themselves.
        */
       replMode?: boolean;
+      /**
+       * The Content Security Policy (CSP) for the target might block 'unsafe-eval'
+which includes eval(), Function(), setTimeout() and setInterval()
+when called with non-callable arguments. This flag bypasses CSP for this
+evaluation and allows unsafe-eval. Defaults to true.
+       */
+      allowUnsafeEvalBlockedByCSP?: boolean;
     }
     export type evaluateReturnValue = {
       /**
@@ -17153,7 +16449,28 @@ export interface Page {
   on(event: 'console', listener: (consoleMessage : ConsoleMessage) => void): this;
 
   /**
-   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory.
+   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory. When the page crashes, ongoing and subsequent operations will throw.
+   * The most common way to deal with crashes is to catch an exception:
+   * ```js
+   * try {
+   *   // Crash might happen during a click.
+   *   await page.click('button');
+   *   // Or while waiting for an event.
+   *   await page.waitForEvent('popup');
+   * } catch (e) {
+   *   // When the page crashes, exception message contains 'crash'.
+   * }
+   * ```
+   * However, when manually listening to events, it might be useful to avoid stalling when the page crashes. In this case, handling `crash` event helps:
+   * ```js
+   * await new Promise((resolve, reject) => {
+   *   page.on('requestfinished', async request => {
+   *     if (await someProcessing(request))
+   *       resolve(request);
+   *   });
+   *   page.on('crash', error => reject(error));
+   * });
+   * ```
    */
   on(event: 'crash', listener: () => void): this;
 
@@ -17272,7 +16589,28 @@ export interface Page {
   once(event: 'console', listener: (consoleMessage : ConsoleMessage) => void): this;
 
   /**
-   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory.
+   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory. When the page crashes, ongoing and subsequent operations will throw.
+   * The most common way to deal with crashes is to catch an exception:
+   * ```js
+   * try {
+   *   // Crash might happen during a click.
+   *   await page.click('button');
+   *   // Or while waiting for an event.
+   *   await page.waitForEvent('popup');
+   * } catch (e) {
+   *   // When the page crashes, exception message contains 'crash'.
+   * }
+   * ```
+   * However, when manually listening to events, it might be useful to avoid stalling when the page crashes. In this case, handling `crash` event helps:
+   * ```js
+   * await new Promise((resolve, reject) => {
+   *   page.on('requestfinished', async request => {
+   *     if (await someProcessing(request))
+   *       resolve(request);
+   *   });
+   *   page.on('crash', error => reject(error));
+   * });
+   * ```
    */
   once(event: 'crash', listener: () => void): this;
 
@@ -17391,7 +16729,28 @@ export interface Page {
   addListener(event: 'console', listener: (consoleMessage : ConsoleMessage) => void): this;
 
   /**
-   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory.
+   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory. When the page crashes, ongoing and subsequent operations will throw.
+   * The most common way to deal with crashes is to catch an exception:
+   * ```js
+   * try {
+   *   // Crash might happen during a click.
+   *   await page.click('button');
+   *   // Or while waiting for an event.
+   *   await page.waitForEvent('popup');
+   * } catch (e) {
+   *   // When the page crashes, exception message contains 'crash'.
+   * }
+   * ```
+   * However, when manually listening to events, it might be useful to avoid stalling when the page crashes. In this case, handling `crash` event helps:
+   * ```js
+   * await new Promise((resolve, reject) => {
+   *   page.on('requestfinished', async request => {
+   *     if (await someProcessing(request))
+   *       resolve(request);
+   *   });
+   *   page.on('crash', error => reject(error));
+   * });
+   * ```
    */
   addListener(event: 'crash', listener: () => void): this;
 
@@ -17510,7 +16869,28 @@ export interface Page {
   removeListener(event: 'console', listener: (consoleMessage : ConsoleMessage) => void): this;
 
   /**
-   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory.
+   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory. When the page crashes, ongoing and subsequent operations will throw.
+   * The most common way to deal with crashes is to catch an exception:
+   * ```js
+   * try {
+   *   // Crash might happen during a click.
+   *   await page.click('button');
+   *   // Or while waiting for an event.
+   *   await page.waitForEvent('popup');
+   * } catch (e) {
+   *   // When the page crashes, exception message contains 'crash'.
+   * }
+   * ```
+   * However, when manually listening to events, it might be useful to avoid stalling when the page crashes. In this case, handling `crash` event helps:
+   * ```js
+   * await new Promise((resolve, reject) => {
+   *   page.on('requestfinished', async request => {
+   *     if (await someProcessing(request))
+   *       resolve(request);
+   *   });
+   *   page.on('crash', error => reject(error));
+   * });
+   * ```
    */
   removeListener(event: 'crash', listener: () => void): this;
 
@@ -17629,7 +17009,28 @@ export interface Page {
   off(event: 'console', listener: (consoleMessage : ConsoleMessage) => void): this;
 
   /**
-   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory.
+   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory. When the page crashes, ongoing and subsequent operations will throw.
+   * The most common way to deal with crashes is to catch an exception:
+   * ```js
+   * try {
+   *   // Crash might happen during a click.
+   *   await page.click('button');
+   *   // Or while waiting for an event.
+   *   await page.waitForEvent('popup');
+   * } catch (e) {
+   *   // When the page crashes, exception message contains 'crash'.
+   * }
+   * ```
+   * However, when manually listening to events, it might be useful to avoid stalling when the page crashes. In this case, handling `crash` event helps:
+   * ```js
+   * await new Promise((resolve, reject) => {
+   *   page.on('requestfinished', async request => {
+   *     if (await someProcessing(request))
+   *       resolve(request);
+   *   });
+   *   page.on('crash', error => reject(error));
+   * });
+   * ```
    */
   off(event: 'crash', listener: () => void): this;
 
@@ -17986,14 +17387,14 @@ export interface Page {
   exposeFunction(name: string, playwrightFunction: Function): Promise<void>;
 
   /**
-   * This method focuses the element and triggers an `input` event after filling.
-   * If there's no text `<input>`, `<textarea>` or `[contenteditable]` element matching `selector`, the method throws an error. Note that you can pass an empty string to clear the input field.
+   * This method waits for an element matching `selector`, waits for actionability checks, focuses the element, fills it and triggers an `input` event after filling.
+   * If the element matching `selector` is not an `<input>`, `<textarea>` or `[contenteditable]` element, this method throws an error.
+   * Note that you can pass an empty string to clear the input field.
    * To send fine-grained keyboard events, use `page.type`.
    * Shortcut for page.mainFrame().fill()
    * @param selector A selector to query page for. See working with selectors for more details.
    * @param value Value to fill for the `<input>`, `<textarea>` or `[contenteditable]` element.
    * @param options 
-   * @returns Promise which resolves when the element matching `selector` is successfully filled. The promise will be rejected if there is no element matching `selector`.
    */
   fill(selector: string, value: string, options?: PageFillOptions): Promise<void>;
 
@@ -18250,7 +17651,7 @@ export interface Page {
    * @param options 
    * @returns An array of option values that have been successfully selected.
    */
-  selectOption(selector: string, values: string|ElementHandle|Array<string>|PageSelectOptionValues|Array<ElementHandle>|Array<Object>, options?: PageSelectOptionOptions): Promise<Array<string>>;
+  selectOption(selector: string, values: null|string|ElementHandle|Array<string>|PageSelectOptionValues|Array<ElementHandle>|Array<Object>, options?: PageSelectOptionOptions): Promise<Array<string>>;
 
   /**
    * @param html HTML markup to assign to the page.
@@ -18385,7 +17786,28 @@ export interface Page {
   waitForEvent(event: 'console', optionsOrPredicate?: { predicate?: (consoleMessage : ConsoleMessage) => boolean, timeout?: number }): Promise<ConsoleMessage>;
 
   /**
-   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory.
+   * Emitted when the page crashes. Browser pages might crash if they try to allocate too much memory. When the page crashes, ongoing and subsequent operations will throw.
+   * The most common way to deal with crashes is to catch an exception:
+   * ```js
+   * try {
+   *   // Crash might happen during a click.
+   *   await page.click('button');
+   *   // Or while waiting for an event.
+   *   await page.waitForEvent('popup');
+   * } catch (e) {
+   *   // When the page crashes, exception message contains 'crash'.
+   * }
+   * ```
+   * However, when manually listening to events, it might be useful to avoid stalling when the page crashes. In this case, handling `crash` event helps:
+   * ```js
+   * await new Promise((resolve, reject) => {
+   *   page.on('requestfinished', async request => {
+   *     if (await someProcessing(request))
+   *       resolve(request);
+   *   });
+   *   page.on('crash', error => reject(error));
+   * });
+   * ```
    */
   waitForEvent(event: 'crash', optionsOrPredicate?: { predicate?: () => boolean, timeout?: number }): Promise<void>;
 
@@ -18842,13 +18264,13 @@ export interface Frame {
   dispatchEvent(selector: string, type: string, eventInit?: Object, options?: FrameDispatchEventOptions): Promise<void>;
 
   /**
-   * This method focuses the element and triggers an `input` event after filling.
-   * If there's no text `<input>`, `<textarea>` or `[contenteditable]` element matching `selector`, the method throws an error.
+   * This method waits for an element matching `selector`, waits for actionability checks, focuses the element, fills it and triggers an `input` event after filling.
+   * If the element matching `selector` is not an `<input>`, `<textarea>` or `[contenteditable]` element, this method throws an error.
+   * Note that you can pass an empty string to clear the input field.
    * To send fine-grained keyboard events, use `frame.type`.
    * @param selector A selector to query page for. See working with selectors for more details.
    * @param value Value to fill for the `<input>`, `<textarea>` or `[contenteditable]` element.
    * @param options 
-   * @returns Promise which resolves when the element matching `selector` is successfully filled. The promise will be rejected if there is no element matching `selector`.
    */
   fill(selector: string, value: string, options?: FrameFillOptions): Promise<void>;
 
@@ -18974,7 +18396,7 @@ export interface Frame {
    * @param options 
    * @returns An array of option values that have been successfully selected.
    */
-  selectOption(selector: string, values: string|ElementHandle|Array<string>|FrameSelectOptionValues|Array<ElementHandle>|Array<Object>, options?: FrameSelectOptionOptions): Promise<Array<string>>;
+  selectOption(selector: string, values: null|string|ElementHandle|Array<string>|FrameSelectOptionValues|Array<ElementHandle>|Array<Object>, options?: FrameSelectOptionOptions): Promise<Array<string>>;
 
   /**
    * @param html HTML markup to assign to the page.
@@ -19339,11 +18761,11 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   dispatchEvent(type: string, eventInit?: Object): Promise<void>;
 
   /**
-   * This method focuses the element and triggers an `input` event after filling.
-   * If element is not a text `<input>`, `<textarea>` or `[contenteditable]` element, the method throws an error.
+   * This method waits for actionability checks, focuses the element, fills it and triggers an `input` event after filling.
+   * If the element is not an `<input>`, `<textarea>` or `[contenteditable]` element, this method throws an error.
+   * Note that you can pass an empty string to clear the input field.
    * @param value Value to set for the `<input>`, `<textarea>` or `[contenteditable]` element.
    * @param options 
-   * @returns Promise which resolves when the element is successfully filled.
    */
   fill(value: string, options?: ElementHandleFillOptions): Promise<void>;
 
@@ -19395,20 +18817,18 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   press(key: string, options?: ElementHandlePressOptions): Promise<void>;
 
   /**
-   * This method scrolls element into view if needed before taking a screenshot. If the element is detached from DOM, the method throws an error.
+   * This method waits for the actionability checks, then scrolls element into view before taking a screenshot. If the element is detached from DOM, the method throws an error.
    * @param options Screenshot options.
    * @returns Promise which resolves to buffer with the captured screenshot.
    */
   screenshot(options?: ElementHandleScreenshotOptions): Promise<Buffer>;
 
   /**
-   * This method tries to scroll element into view, unless it is completely visible as defined by IntersectionObserver's `ratio`.
+   * This method waits for actionability checks, then tries to scroll element into view, unless it is completely visible as defined by IntersectionObserver's `ratio`.
    * Throws when `elementHandle` does not point to an element connected to a Document or a ShadowRoot.
-   * 
-   * **NOTE** If javascript is disabled, element is scrolled into view even when already completely visible.
-   * @returns Resolves after the element has been scrolled into view.
+   * @param options 
    */
-  scrollIntoViewIfNeeded(): Promise<void>;
+  scrollIntoViewIfNeeded(options?: ElementHandleScrollIntoViewIfNeededOptions): Promise<void>;
 
   /**
    * Triggers a `change` and `input` event once all the provided options have been selected.
@@ -19430,13 +18850,13 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    * @param options 
    * @returns An array of option values that have been successfully selected.
    */
-  selectOption(values: string|ElementHandle|Array<string>|ElementHandleSelectOptionValues|Array<ElementHandle>|Array<Object>, options?: ElementHandleSelectOptionOptions): Promise<Array<string>>;
+  selectOption(values: null|string|ElementHandle|Array<string>|ElementHandleSelectOptionValues|Array<ElementHandle>|Array<Object>, options?: ElementHandleSelectOptionOptions): Promise<Array<string>>;
 
   /**
-   * This method focuses the element and selects all its text content.
-   * @returns Promise which resolves when the element is successfully selected.
+   * This method waits for actionability checks, then focuses the element and selects all its text content.
+   * @param options 
    */
-  selectText(): Promise<void>;
+  selectText(options?: ElementHandleSelectTextOptions): Promise<void>;
 
   /**
    * This method expects `elementHandle` to point to an input element.
@@ -19664,7 +19084,7 @@ class TimeoutError extends Error {}
 }
 
 export const selectors: Selectors;
-export const devices: {[name: string]: DeviceDescriptor} & DeviceDescriptor[];
+export const devices: Devices & DeviceDescriptor[];
 
 // This is required to not export everything by default. See https://github.com/Microsoft/TypeScript/issues/19545#issuecomment-340490459
 export {};
@@ -20069,7 +19489,7 @@ export interface BrowserContext extends EventEmitter {
   setExtraHTTPHeaders(headers: { [key: string]: string; }): Promise<void>;
 
   /**
-   * Sets the contexts's geolocation. Passing `null` or `undefined` emulates position unavailable.
+   * Sets the context's geolocation. Passing `null` or `undefined` emulates position unavailable.
    * ```js
    * await browserContext.setGeolocation({latitude: 59.95, longitude: 30.31667});
    * ```
@@ -21018,7 +20438,7 @@ export interface ChromiumBrowserContext extends BrowserContext {
  * Coverage gathers information about parts of JavaScript and CSS that were used by the page.
  * An example of using JavaScript coverage to produce Istambul report for page load:
  * ```js
- * const { chromium } = require('.');
+ * const { chromium } = require('playwright');
  * const v8toIstanbul = require('v8-to-istanbul');
  * 
  * (async() => {
@@ -23155,11 +22575,7 @@ interface BrowserTypeConnectOptions {
 
 interface ElementHandleUncheckOptions {
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -23220,6 +22636,13 @@ interface ElementHandleSetInputFilesFiles {
   buffer: Buffer;
 }
 
+interface ElementHandleSelectTextOptions {
+  /**
+   * Maximum time in milliseconds, defaults to 30 seconds, pass `0` to disable timeout. The default value can be changed by using the browserContext.setDefaultTimeout(timeout) or page.setDefaultTimeout(timeout) methods.
+   */
+  timeout?: number;
+}
+
 interface ElementHandleSelectOptionOptions {
   /**
    * Actions that initiate navigations are waiting for these navigations to happen and for pages to start loading. You can opt out of waiting via setting this flag. You would only need this option in the exceptional cases such as navigating to inaccessible pages. Defaults to `false`.
@@ -23249,6 +22672,13 @@ interface ElementHandleSelectOptionValues {
   index?: number;
 }
 
+interface ElementHandleScrollIntoViewIfNeededOptions {
+  /**
+   * Maximum time in milliseconds, defaults to 30 seconds, pass `0` to disable timeout. The default value can be changed by using the browserContext.setDefaultTimeout(timeout) or page.setDefaultTimeout(timeout) methods.
+   */
+  timeout?: number;
+}
+
 interface ElementHandleScreenshotOptions {
   /**
    * The file path to save the image to. The screenshot type will be inferred from file extension. If `path` is a relative path, then it is resolved relative to current working directory. If no path is provided, the image won't be saved to the disk.
@@ -23269,6 +22699,11 @@ interface ElementHandleScreenshotOptions {
    * Hides default white background and allows capturing screenshots with transparency. Not applicable to `jpeg` images. Defaults to `false`.
    */
   omitBackground?: boolean;
+
+  /**
+   * Maximum time in milliseconds, defaults to 30 seconds, pass `0` to disable timeout. The default value can be changed by using the browserContext.setDefaultTimeout(timeout) or page.setDefaultTimeout(timeout) methods.
+   */
+  timeout?: number;
 }
 
 interface ElementHandlePressOptions {
@@ -23300,11 +22735,7 @@ interface ElementHandleHoverOptions {
   modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
 
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -23354,11 +22785,7 @@ interface ElementHandleDblclickOptions {
   modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
 
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -23406,11 +22833,7 @@ interface ElementHandleClickOptions {
   modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
 
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -23433,11 +22856,7 @@ interface ElementHandleClickOptionsPosition {
 
 interface ElementHandleCheckOptions {
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -23531,11 +22950,7 @@ interface FrameWaitForFunctionOptions {
 
 interface FrameUncheckOptions {
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -23690,11 +23105,7 @@ interface FrameHoverOptions {
   modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
 
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -23785,11 +23196,7 @@ interface FrameDblclickOptions {
   modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
 
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -23837,11 +23244,7 @@ interface FrameClickOptions {
   modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
 
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -23864,11 +23267,7 @@ interface FrameClickOptionsPosition {
 
 interface FrameCheckOptions {
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -24005,11 +23404,7 @@ interface PageViewportSize {
 
 interface PageUncheckOptions {
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -24163,6 +23558,11 @@ interface PageScreenshotOptions {
    * Hides default white background and allows capturing screenshots with transparency. Not applicable to `jpeg` images. Defaults to `false`.
    */
   omitBackground?: boolean;
+
+  /**
+   * Maximum time in milliseconds, defaults to 30 seconds, pass `0` to disable timeout. The default value can be changed by using the browserContext.setDefaultTimeout(timeout) or page.setDefaultTimeout(timeout) methods.
+   */
+  timeout?: number;
 }
 
 interface PageScreenshotOptionsClip {
@@ -24339,11 +23739,7 @@ interface PageHoverOptions {
   modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
 
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -24488,11 +23884,7 @@ interface PageDblclickOptions {
   modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
 
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -24549,11 +23941,7 @@ interface PageClickOptions {
   modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
 
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -24576,11 +23964,7 @@ interface PageClickOptionsPosition {
 
 interface PageCheckOptions {
   /**
-   * Whether to bypass the actionability checks. By default actions wait until the element is:
-   *  - displayed: has non-empty bounding box and no `visibility:hidden` (note that elements of zero size or with `display:none` are considered not displayed),
-   *  - is not moving (for example, css transition has finished),
-   *  - receives pointer events at the action point (for example, element is not covered by other elements).
-   *  - Even if the action is forced, it will wait for the element matching selector to be in the DOM. Defaults to `false`.
+   * Whether to bypass the actionability checks. Defaults to `false`.
    */
   force?: boolean;
 
@@ -24646,6 +24030,85 @@ interface PageAddInitScriptScript {
   content?: string;
 }
 
+type Devices = {
+  "Blackberry PlayBook": DeviceDescriptor;
+  "Blackberry PlayBook landscape": DeviceDescriptor;
+  "BlackBerry Z30": DeviceDescriptor;
+  "BlackBerry Z30 landscape": DeviceDescriptor;
+  "Galaxy Note 3": DeviceDescriptor;
+  "Galaxy Note 3 landscape": DeviceDescriptor;
+  "Galaxy Note II": DeviceDescriptor;
+  "Galaxy Note II landscape": DeviceDescriptor;
+  "Galaxy S III": DeviceDescriptor;
+  "Galaxy S III landscape": DeviceDescriptor;
+  "Galaxy S5": DeviceDescriptor;
+  "Galaxy S5 landscape": DeviceDescriptor;
+  "iPad (gen 6)": DeviceDescriptor;
+  "iPad (gen 6) landscape": DeviceDescriptor;
+  "iPad (gen 7)": DeviceDescriptor;
+  "iPad (gen 7) landscape": DeviceDescriptor;
+  "iPad Mini": DeviceDescriptor;
+  "iPad Mini landscape": DeviceDescriptor;
+  "iPad Pro 11": DeviceDescriptor;
+  "iPad Pro 11 landscape": DeviceDescriptor;
+  "iPhone 6": DeviceDescriptor;
+  "iPhone 6 landscape": DeviceDescriptor;
+  "iPhone 6 Plus": DeviceDescriptor;
+  "iPhone 6 Plus landscape": DeviceDescriptor;
+  "iPhone 7": DeviceDescriptor;
+  "iPhone 7 landscape": DeviceDescriptor;
+  "iPhone 7 Plus": DeviceDescriptor;
+  "iPhone 7 Plus landscape": DeviceDescriptor;
+  "iPhone 8": DeviceDescriptor;
+  "iPhone 8 landscape": DeviceDescriptor;
+  "iPhone 8 Plus": DeviceDescriptor;
+  "iPhone 8 Plus landscape": DeviceDescriptor;
+  "iPhone SE": DeviceDescriptor;
+  "iPhone SE landscape": DeviceDescriptor;
+  "iPhone X": DeviceDescriptor;
+  "iPhone X landscape": DeviceDescriptor;
+  "iPhone XR": DeviceDescriptor;
+  "iPhone XR landscape": DeviceDescriptor;
+  "iPhone 11": DeviceDescriptor;
+  "iPhone 11 landscape": DeviceDescriptor;
+  "iPhone 11 Pro": DeviceDescriptor;
+  "iPhone 11 Pro landscape": DeviceDescriptor;
+  "iPhone 11 Pro Max": DeviceDescriptor;
+  "iPhone 11 Pro Max landscape": DeviceDescriptor;
+  "JioPhone 2": DeviceDescriptor;
+  "JioPhone 2 landscape": DeviceDescriptor;
+  "Kindle Fire HDX": DeviceDescriptor;
+  "Kindle Fire HDX landscape": DeviceDescriptor;
+  "LG Optimus L70": DeviceDescriptor;
+  "LG Optimus L70 landscape": DeviceDescriptor;
+  "Microsoft Lumia 550": DeviceDescriptor;
+  "Microsoft Lumia 550 landscape": DeviceDescriptor;
+  "Microsoft Lumia 950": DeviceDescriptor;
+  "Microsoft Lumia 950 landscape": DeviceDescriptor;
+  "Nexus 10": DeviceDescriptor;
+  "Nexus 10 landscape": DeviceDescriptor;
+  "Nexus 4": DeviceDescriptor;
+  "Nexus 4 landscape": DeviceDescriptor;
+  "Nexus 5": DeviceDescriptor;
+  "Nexus 5 landscape": DeviceDescriptor;
+  "Nexus 5X": DeviceDescriptor;
+  "Nexus 5X landscape": DeviceDescriptor;
+  "Nexus 6": DeviceDescriptor;
+  "Nexus 6 landscape": DeviceDescriptor;
+  "Nexus 6P": DeviceDescriptor;
+  "Nexus 6P landscape": DeviceDescriptor;
+  "Nexus 7": DeviceDescriptor;
+  "Nexus 7 landscape": DeviceDescriptor;
+  "Nokia Lumia 520": DeviceDescriptor;
+  "Nokia Lumia 520 landscape": DeviceDescriptor;
+  "Nokia N9": DeviceDescriptor;
+  "Nokia N9 landscape": DeviceDescriptor;
+  "Pixel 2": DeviceDescriptor;
+  "Pixel 2 landscape": DeviceDescriptor;
+  "Pixel 2 XL": DeviceDescriptor;
+  "Pixel 2 XL landscape": DeviceDescriptor;
+  [key: string]: DeviceDescriptor;
+}
 export const webkit: BrowserType<WebKitBrowser>;
     export const chromium: BrowserType<ChromiumBrowser>;
     export const firefox: BrowserType<FirefoxBrowser>;
