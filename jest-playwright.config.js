@@ -1,5 +1,5 @@
 module.exports = {
-  context: {
+  contextOptions: {
     ignoreHTTPSErrors: true,
     viewport: {
       width: 1920,

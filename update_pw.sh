@@ -30,8 +30,8 @@ function update_playwright_types {
     echo "$CUSTOM_SUFFIX" >> $TYPES_FILE
 }
 
-update_playwright_types
 
 update_dependencies frontend
+update_playwright_types
 update_dependencies backend
 update_dependencies .
