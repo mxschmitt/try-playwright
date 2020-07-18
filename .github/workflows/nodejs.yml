@@ -17,7 +17,7 @@ jobs:
       with:
         node-version: 14.x
     - name: Install dependencies
-      run: npm install
+      run: npm ci
     - name: Generate self-signed certificate
       run: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
     - name: Build Docker images
@@ -35,20 +35,20 @@ jobs:
       with:
         node-version: 12.x
     - name: Install root dependencies
-      run: npm install
+      run: npm ci
     - name: Lint project
       run: npm run lint
       env:
         CI: "true"
     - name: Install frontend dependencies
       working-directory: frontend
-      run: npm install
+      run: npm ci
     - name: Build frontend
       working-directory: frontend
       run: npm run build
     - name: Install backend dependencies
       working-directory: backend
-      run: npm install
+      run: npm ci
     - name: Run backend tests
       working-directory: backend
       run: npm run test

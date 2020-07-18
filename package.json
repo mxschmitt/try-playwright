@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "lint": "eslint --ext ts,tsx,js,jsx .",
-    "test": "jest",
-    "postinstall": "patch-package"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -27,8 +26,7 @@
     "eslint-plugin-react-hooks": "4.0.6",
     "jest": "^26.1.0",
     "jest-playwright-preset": "^1.2.1",
-    "patch-package": "^6.2.2",
-    "playwright": "^1.2.0",
+    "playwright": "^1.2.1",
     "typescript": "3.9.6"
   },
   "dependencies": {}
