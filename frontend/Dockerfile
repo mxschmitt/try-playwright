@@ -4,7 +4,7 @@ WORKDIR /frontend
 
 COPY frontend/package.json /frontend
 COPY frontend/package-lock.json /frontend
-RUN npm install
+RUN npm ci
 
 COPY frontend/config-overrides.js frontend/tsconfig.json /frontend/
 COPY frontend/public /frontend/public

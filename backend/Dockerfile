@@ -6,7 +6,7 @@ USER root
 
 COPY backend/package.json /backend
 COPY backend/package-lock.json /backend
-RUN npm install
+RUN npm ci
 
 COPY backend/ /backend
 COPY types/ /types
