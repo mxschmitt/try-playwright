@@ -32,6 +32,6 @@ function update_playwright_types {
 
 
 update_dependencies frontend
-update_playwright_types
 update_dependencies backend
+update_playwright_types
 update_dependencies .
