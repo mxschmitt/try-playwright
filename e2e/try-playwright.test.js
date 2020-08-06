@@ -1,9 +1,10 @@
 const ROOT_URL = process.env.ROOT_TEST_URL || "https://localhost"
 
+jest.setTimeout(35 * 1000)
+
 beforeAll(async () => {
   await page.goto(ROOT_URL);
 });
-
 
 const executeExample = async (page, nth, switchToExamples=true) => {
   if (switchToExamples) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useContext } from 'react'
 import { IconButton, Icon, Notification } from 'rsuite'
-import clipboard from 'clipboard-polyfill'
+import * as clipboard from 'clipboard-polyfill'
 import { CodeContext } from '../CodeContext'
 import { Examples } from '../../constants'
 import styles from './index.module.css'

@@ -36,6 +36,9 @@ interface NodeRequire extends NodeJS.Require {}
 interface RequireResolve extends NodeJS.RequireResolve {}
 interface NodeModule extends NodeJS.Module {}
 
+declare var process: NodeJS.Process;
+declare var console: Console;
+
 declare var __filename: string;
 declare var __dirname: string;
 
@@ -61,6 +64,243 @@ declare var module: NodeModule;
 
 // Same as module.exports
 declare var exports: any;
+
+// Buffer class
+type BufferEncoding = "ascii" | "utf8" | "utf-8" | "utf16le" | "ucs2" | "ucs-2" | "base64" | "latin1" | "binary" | "hex";
+
+/**
+ * Raw data is stored in instances of the Buffer class.
+ * A Buffer is similar to an array of integers but corresponds to a raw memory allocation outside the V8 heap.  A Buffer cannot be resized.
+ * Valid string encodings: 'ascii'|'utf8'|'utf16le'|'ucs2'(alias of 'utf16le')|'base64'|'binary'(deprecated)|'hex'
+ */
+declare class Buffer extends Uint8Array {
+    /**
+     * Allocates a new buffer containing the given {str}.
+     *
+     * @param str String to store in buffer.
+     * @param encoding encoding to use, optional.  Default is 'utf8'
+     * @deprecated since v10.0.0 - Use `Buffer.from(string[, encoding])` instead.
+     */
+    constructor(str: string, encoding?: BufferEncoding);
+    /**
+     * Allocates a new buffer of {size} octets.
+     *
+     * @param size count of octets to allocate.
+     * @deprecated since v10.0.0 - Use `Buffer.alloc()` instead (also see `Buffer.allocUnsafe()`).
+     */
+    constructor(size: number);
+    /**
+     * Allocates a new buffer containing the given {array} of octets.
+     *
+     * @param array The octets to store.
+     * @deprecated since v10.0.0 - Use `Buffer.from(array)` instead.
+     */
+    constructor(array: Uint8Array);
+    /**
+     * Produces a Buffer backed by the same allocated memory as
+     * the given {ArrayBuffer}/{SharedArrayBuffer}.
+     *
+     *
+     * @param arrayBuffer The ArrayBuffer with which to share memory.
+     * @deprecated since v10.0.0 - Use `Buffer.from(arrayBuffer[, byteOffset[, length]])` instead.
+     */
+    constructor(arrayBuffer: ArrayBuffer | SharedArrayBuffer);
+    /**
+     * Allocates a new buffer containing the given {array} of octets.
+     *
+     * @param array The octets to store.
+     * @deprecated since v10.0.0 - Use `Buffer.from(array)` instead.
+     */
+    constructor(array: any[]);
+    /**
+     * Copies the passed {buffer} data onto a new {Buffer} instance.
+     *
+     * @param buffer The buffer to copy.
+     * @deprecated since v10.0.0 - Use `Buffer.from(buffer)` instead.
+     */
+    constructor(buffer: Buffer);
+    /**
+     * When passed a reference to the .buffer property of a TypedArray instance,
+     * the newly created Buffer will share the same allocated memory as the TypedArray.
+     * The optional {byteOffset} and {length} arguments specify a memory range
+     * within the {arrayBuffer} that will be shared by the Buffer.
+     *
+     * @param arrayBuffer The .buffer property of any TypedArray or a new ArrayBuffer()
+     */
+    static from(arrayBuffer: ArrayBuffer | SharedArrayBuffer, byteOffset?: number, length?: number): Buffer;
+    /**
+     * Creates a new Buffer using the passed {data}
+     * @param data data to create a new Buffer
+     */
+    static from(data: number[]): Buffer;
+    static from(data: Uint8Array): Buffer;
+    /**
+     * Creates a new buffer containing the coerced value of an object
+     * A `TypeError` will be thrown if {obj} has not mentioned methods or is not of other type appropriate for `Buffer.from()` variants.
+     * @param obj An object supporting `Symbol.toPrimitive` or `valueOf()`.
+     */
+    static from(obj: { valueOf(): string | object } | { [Symbol.toPrimitive](hint: 'string'): string }, byteOffset?: number, length?: number): Buffer;
+    /**
+     * Creates a new Buffer containing the given JavaScript string {str}.
+     * If provided, the {encoding} parameter identifies the character encoding.
+     * If not provided, {encoding} defaults to 'utf8'.
+     */
+    static from(str: string, encoding?: BufferEncoding): Buffer;
+    /**
+     * Creates a new Buffer using the passed {data}
+     * @param values to create a new Buffer
+     */
+    static of(...items: number[]): Buffer;
+    /**
+     * Returns true if {obj} is a Buffer
+     *
+     * @param obj object to test.
+     */
+    static isBuffer(obj: any): obj is Buffer;
+    /**
+     * Returns true if {encoding} is a valid encoding argument.
+     * Valid string encodings in Node 0.12: 'ascii'|'utf8'|'utf16le'|'ucs2'(alias of 'utf16le')|'base64'|'binary'(deprecated)|'hex'
+     *
+     * @param encoding string to test.
+     */
+    static isEncoding(encoding: string): encoding is BufferEncoding;
+    /**
+     * Gives the actual byte length of a string. encoding defaults to 'utf8'.
+     * This is not the same as String.prototype.length since that returns the number of characters in a string.
+     *
+     * @param string string to test.
+     * @param encoding encoding used to evaluate (defaults to 'utf8')
+     */
+    static byteLength(
+        string: string | NodeJS.ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+        encoding?: BufferEncoding
+    ): number;
+    /**
+     * Returns a buffer which is the result of concatenating all the buffers in the list together.
+     *
+     * If the list has no items, or if the totalLength is 0, then it returns a zero-length buffer.
+     * If the list has exactly one item, then the first item of the list is returned.
+     * If the list has more than one item, then a new Buffer is created.
+     *
+     * @param list An array of Buffer objects to concatenate
+     * @param totalLength Total length of the buffers when concatenated.
+     *   If totalLength is not provided, it is read from the buffers in the list. However, this adds an additional loop to the function, so it is faster to provide the length explicitly.
+     */
+    static concat(list: Uint8Array[], totalLength?: number): Buffer;
+    /**
+     * The same as buf1.compare(buf2).
+     */
+    static compare(buf1: Uint8Array, buf2: Uint8Array): number;
+    /**
+     * Allocates a new buffer of {size} octets.
+     *
+     * @param size count of octets to allocate.
+     * @param fill if specified, buffer will be initialized by calling buf.fill(fill).
+     *    If parameter is omitted, buffer will be filled with zeros.
+     * @param encoding encoding used for call to buf.fill while initalizing
+     */
+    static alloc(size: number, fill?: string | Buffer | number, encoding?: BufferEncoding): Buffer;
+    /**
+     * Allocates a new buffer of {size} octets, leaving memory not initialized, so the contents
+     * of the newly created Buffer are unknown and may contain sensitive data.
+     *
+     * @param size count of octets to allocate
+     */
+    static allocUnsafe(size: number): Buffer;
+    /**
+     * Allocates a new non-pooled buffer of {size} octets, leaving memory not initialized, so the contents
+     * of the newly created Buffer are unknown and may contain sensitive data.
+     *
+     * @param size count of octets to allocate
+     */
+    static allocUnsafeSlow(size: number): Buffer;
+    /**
+     * This is the number of bytes used to determine the size of pre-allocated, internal Buffer instances used for pooling. This value may be modified.
+     */
+    static poolSize: number;
+
+    write(string: string, encoding?: BufferEncoding): number;
+    write(string: string, offset: number, encoding?: BufferEncoding): number;
+    write(string: string, offset: number, length: number, encoding?: BufferEncoding): number;
+    toString(encoding?: BufferEncoding, start?: number, end?: number): string;
+    toJSON(): { type: 'Buffer'; data: number[] };
+    equals(otherBuffer: Uint8Array): boolean;
+    compare(
+        otherBuffer: Uint8Array,
+        targetStart?: number,
+        targetEnd?: number,
+        sourceStart?: number,
+        sourceEnd?: number
+    ): number;
+    copy(targetBuffer: Uint8Array, targetStart?: number, sourceStart?: number, sourceEnd?: number): number;
+    /**
+     * Returns a new `Buffer` that references **the same memory as the original**, but offset and cropped by the start and end indices.
+     *
+     * This method is incompatible with `Uint8Array#slice()`, which returns a copy of the original memory.
+     *
+     * @param begin Where the new `Buffer` will start. Default: `0`.
+     * @param end Where the new `Buffer` will end (not inclusive). Default: `buf.length`.
+     */
+    slice(begin?: number, end?: number): Buffer;
+    /**
+     * Returns a new `Buffer` that references **the same memory as the original**, but offset and cropped by the start and end indices.
+     *
+     * This method is compatible with `Uint8Array#subarray()`.
+     *
+     * @param begin Where the new `Buffer` will start. Default: `0`.
+     * @param end Where the new `Buffer` will end (not inclusive). Default: `buf.length`.
+     */
+    subarray(begin?: number, end?: number): Buffer;
+    writeUIntLE(value: number, offset: number, byteLength: number): number;
+    writeUIntBE(value: number, offset: number, byteLength: number): number;
+    writeIntLE(value: number, offset: number, byteLength: number): number;
+    writeIntBE(value: number, offset: number, byteLength: number): number;
+    readUIntLE(offset: number, byteLength: number): number;
+    readUIntBE(offset: number, byteLength: number): number;
+    readIntLE(offset: number, byteLength: number): number;
+    readIntBE(offset: number, byteLength: number): number;
+    readUInt8(offset?: number): number;
+    readUInt16LE(offset?: number): number;
+    readUInt16BE(offset?: number): number;
+    readUInt32LE(offset?: number): number;
+    readUInt32BE(offset?: number): number;
+    readInt8(offset?: number): number;
+    readInt16LE(offset?: number): number;
+    readInt16BE(offset?: number): number;
+    readInt32LE(offset?: number): number;
+    readInt32BE(offset?: number): number;
+    readFloatLE(offset?: number): number;
+    readFloatBE(offset?: number): number;
+    readDoubleLE(offset?: number): number;
+    readDoubleBE(offset?: number): number;
+    reverse(): this;
+    swap16(): Buffer;
+    swap32(): Buffer;
+    swap64(): Buffer;
+    writeUInt8(value: number, offset?: number): number;
+    writeUInt16LE(value: number, offset?: number): number;
+    writeUInt16BE(value: number, offset?: number): number;
+    writeUInt32LE(value: number, offset?: number): number;
+    writeUInt32BE(value: number, offset?: number): number;
+    writeInt8(value: number, offset?: number): number;
+    writeInt16LE(value: number, offset?: number): number;
+    writeInt16BE(value: number, offset?: number): number;
+    writeInt32LE(value: number, offset?: number): number;
+    writeInt32BE(value: number, offset?: number): number;
+    writeFloatLE(value: number, offset?: number): number;
+    writeFloatBE(value: number, offset?: number): number;
+    writeDoubleLE(value: number, offset?: number): number;
+    writeDoubleBE(value: number, offset?: number): number;
+
+    fill(value: string | Uint8Array | number, offset?: number, end?: number, encoding?: BufferEncoding): this;
+
+    indexOf(value: string | number | Uint8Array, byteOffset?: number, encoding?: BufferEncoding): number;
+    lastIndexOf(value: string | number | Uint8Array, byteOffset?: number, encoding?: BufferEncoding): number;
+    entries(): IterableIterator<[number, number]>;
+    includes(value: string | number | Buffer, byteOffset?: number, encoding?: BufferEncoding): boolean;
+    keys(): IterableIterator<number>;
+    values(): IterableIterator<number>;
+}
 
 /*----------------------------------------------*
 *                                               *
@@ -1087,12 +1327,31 @@ some CSP errors in the future.
        */
       frame: AffectedFrame;
     }
+    export type ContentSecurityPolicyViolationType = "kInlineViolation"|"kEvalViolation"|"kURLViolation"|"kTrustedTypesSinkViolation"|"kTrustedTypesPolicyViolation";
+    export interface SourceCodeLocation {
+      url: string;
+      lineNumber: number;
+      columnNumber: number;
+    }
+    export interface ContentSecurityPolicyIssueDetails {
+      /**
+       * The url not included in allowed sources.
+       */
+      blockedURL?: string;
+      /**
+       * Specific directive that is violated, causing the CSP issue.
+       */
+      violatedDirective: string;
+      contentSecurityPolicyViolationType: ContentSecurityPolicyViolationType;
+      frameAncestor?: AffectedFrame;
+      sourceCodeLocation?: SourceCodeLocation;
+    }
     /**
      * A unique identifier for the type of issue. Each type may use one of the
 optional fields in InspectorIssueDetails to convey more specific
 information about the kind of issue.
      */
-    export type InspectorIssueCode = "SameSiteCookieIssue"|"MixedContentIssue"|"BlockedByResponseIssue"|"HeavyAdIssue";
+    export type InspectorIssueCode = "SameSiteCookieIssue"|"MixedContentIssue"|"BlockedByResponseIssue"|"HeavyAdIssue"|"ContentSecurityPolicyIssue";
     /**
      * This struct holds a list of optional fields with additional information
 specific to the kind of issue. When adding a new issue code, please also
@@ -1103,6 +1362,7 @@ add a new optional field to this type.
       mixedContentIssueDetails?: MixedContentIssueDetails;
       blockedByResponseIssueDetails?: BlockedByResponseIssueDetails;
       heavyAdIssueDetails?: HeavyAdIssueDetails;
+      contentSecurityPolicyIssueDetails?: ContentSecurityPolicyIssueDetails;
     }
     /**
      * An inspector issue reported from the back-end.
@@ -2010,7 +2270,33 @@ available).
       glyphCount: number;
     }
     /**
+     * Information about font variation axes for variable fonts
+     */
+    export interface FontVariationAxis {
+      /**
+       * The font-variation-setting tag (a.k.a. "axis tag").
+       */
+      tag: string;
+      /**
+       * Human-readable variation name in the default language (normally, "en").
+       */
+      name: string;
+      /**
+       * The minimum value (inclusive) the font supports for this tag.
+       */
+      minValue: number;
+      /**
+       * The maximum value (inclusive) the font supports for this tag.
+       */
+      maxValue: number;
+      /**
+       * The default value.
+       */
+      defaultValue: number;
+    }
+    /**
      * Properties of a web font: https://www.w3.org/TR/2008/REC-CSS2-20080411/fonts.html#font-descriptions
+and additional information such as platformFontFamily and fontVariationAxes.
      */
     export interface FontFace {
       /**
@@ -2045,6 +2331,10 @@ available).
        * The resolved platform font family
        */
       platformFontFamily: string;
+      /**
+       * Available variation settings (a.k.a. "axes").
+       */
+      fontVariationAxes?: FontVariationAxis[];
     }
     /**
      * CSS keyframes rule representation.
@@ -2449,6 +2739,17 @@ instrumentation)
        * Monotonically increasing time, in seconds.
        */
       timestamp: number;
+    }
+    /**
+     * Enables/disables rendering of local CSS fonts (enabled by default).
+     */
+    export type setLocalFontsEnabledParameters = {
+      /**
+       * Whether rendering of local fonts is enabled.
+       */
+      enabled: boolean;
+    }
+    export type setLocalFontsEnabledReturnValue = {
     }
   }
   
@@ -4822,6 +5123,23 @@ flattened.
        */
       angle: number;
     }
+    export interface DisplayFeature {
+      /**
+       * Orientation of a display feature in relation to screen
+       */
+      orientation: "vertical"|"horizontal";
+      /**
+       * The offset from the screen origin in either the x (for vertical
+orientation) or y (for horizontal orientation) direction.
+       */
+      offset: number;
+      /**
+       * A display feature may mask content such that it is not physically
+displayed - this length along with the offset describes this area.
+A display feature that only splits content will have a 0 mask_length.
+       */
+      maskLength: number;
+    }
     export interface MediaFeature {
       name: string;
       value: string;
@@ -4981,6 +5299,11 @@ autosizing and more.
 change is not observed by the page, e.g. viewport-relative elements do not change positions.
        */
       viewport?: Page.Viewport;
+      /**
+       * If set, the display feature of a multi-segment screen. If not set, multi-segment support
+is turned-off.
+       */
+      displayFeature?: DisplayFeature;
     }
     export type setDeviceMetricsOverrideReturnValue = {
     }
@@ -6776,6 +7099,12 @@ milliseconds relatively to this requestTime.
      */
     export type ResourcePriority = "VeryLow"|"Low"|"Medium"|"High"|"VeryHigh";
     /**
+     * Post data entry for HTTP request
+     */
+    export interface PostDataEntry {
+      bytes?: binary;
+    }
+    /**
      * HTTP request data.
      */
     export interface Request {
@@ -6803,6 +7132,10 @@ milliseconds relatively to this requestTime.
        * True when the request has POST data. Note that postData might still be omitted when this flag is true when the data is too long.
        */
       hasPostData?: boolean;
+      /**
+       * Request body elements. This will be converted from base64 to binary
+       */
+      postDataEntries?: PostDataEntry[];
       /**
        * The mixed content type of the request.
        */
@@ -8076,7 +8409,9 @@ detailed cookie information in the `cookies` field.
      */
     export type getCookiesParameters = {
       /**
-       * The list of URLs for which applicable cookies will be fetched
+       * The list of URLs for which applicable cookies will be fetched.
+If not specified, it's assumed to be set to the list containing
+the URLs of the page and all of its subframes.
        */
       urls?: string[];
     }
@@ -8372,6 +8707,18 @@ continueInterceptedRequest call.
        */
       showNegativeLineNumbers?: boolean;
       /**
+       * Show area name labels (default: false).
+       */
+      showAreaNames?: boolean;
+      /**
+       * Show line name labels (default: false).
+       */
+      showLineNames?: boolean;
+      /**
+       * Show track size labels (default: false).
+       */
+      showTrackSizes?: boolean;
+      /**
        * The grid container border highlight color (default: transparent).
        */
       gridBorderColor?: DOM.RGBA;
@@ -8403,6 +8750,10 @@ continueInterceptedRequest call.
        * The column gap hatching fill color (default: transparent).
        */
       columnHatchColor?: DOM.RGBA;
+      /**
+       * The named grid areas border color (Default: transparent).
+       */
+      areaBorderColor?: DOM.RGBA;
     }
     /**
      * Configuration data for the highlighting of page elements.
@@ -8470,6 +8821,19 @@ continueInterceptedRequest call.
       gridHighlightConfig?: GridHighlightConfig;
     }
     export type ColorFormat = "rgb"|"hsl"|"hex";
+    /**
+     * Configurations for Persistent Grid Highlight
+     */
+    export interface GridNodeHighlightConfig {
+      /**
+       * A descriptor for the highlight appearance.
+       */
+      gridHighlightConfig: GridHighlightConfig;
+      /**
+       * Identifier of the node to highlight.
+       */
+      nodeId: DOM.NodeId;
+    }
     /**
      * Configuration for dual screen hinge
      */
@@ -8563,6 +8927,21 @@ user manually inspects an element.
        * Highlight data for the node.
        */
       highlight: { [key: string]: string };
+    }
+    /**
+     * For Persistent Grid testing.
+     */
+    export type getGridHighlightObjectsForTestParameters = {
+      /**
+       * Ids of the node to get highlight object for.
+       */
+      nodeIds: DOM.NodeId[];
+    }
+    export type getGridHighlightObjectsForTestReturnValue = {
+      /**
+       * Grid Highlight data for the node ids provided.
+       */
+      highlights: { [key: string]: string };
     }
     /**
      * Hides any highlight.
@@ -8727,6 +9106,17 @@ Backend then generates 'inspectNodeRequested' event upon element selection.
     export type setShowFPSCounterReturnValue = {
     }
     /**
+     * Highlight multiple elements with the CSS Grid overlay.
+     */
+    export type setShowGridOverlaysParameters = {
+      /**
+       * An array of node identifiers and descriptors for the highlight appearance.
+       */
+      gridNodeHighlightConfigs: GridNodeHighlightConfig[];
+    }
+    export type setShowGridOverlaysReturnValue = {
+    }
+    /**
      * Requests that backend shows paint rectangles
      */
     export type setShowPaintRectsParameters = {
@@ -8803,6 +9193,10 @@ Backend then generates 'inspectNodeRequested' event upon element selection.
      */
     export type FrameId = string;
     /**
+     * Indicates whether a frame has been identified as an ad.
+     */
+    export type AdFrameType = "none"|"child"|"root";
+    /**
      * Information about the Frame on the page.
      */
     export interface Frame {
@@ -8842,6 +9236,10 @@ Backend then generates 'inspectNodeRequested' event upon element selection.
        * If the frame failed to load, this contains the URL that could not be loaded. Note that unlike url above, this URL may contain a fragment.
        */
       unreachableUrl?: string;
+      /**
+       * Indicates whether this frame was tagged as an ad.
+       */
+      adFrameType?: AdFrameType;
     }
     /**
      * Information about the Resource on the page.
@@ -12053,7 +12451,7 @@ If absent, a standard phrase matching responseCode is used.
       /**
        * If set, overrides the post data in the request.
        */
-      postData?: string;
+      postData?: binary;
       /**
        * If set, overrides the request headers.
        */
@@ -12501,6 +12899,16 @@ The default is true.
     }
     export type setUserVerifiedReturnValue = {
     }
+    /**
+     * Sets whether tests of user presence will succeed immediately (if true) or fail to resolve (if false) for an authenticator.
+The default is true.
+     */
+    export type setAutomaticPresenceSimulationParameters = {
+      authenticatorId: AuthenticatorId;
+      enabled: boolean;
+    }
+    export type setAutomaticPresenceSimulationReturnValue = {
+    }
   }
   
   /**
@@ -12945,6 +13353,10 @@ variables as its properties.
        * The language of the script.
        */
       scriptLanguage?: Debugger.ScriptLanguage;
+      /**
+       * The name the embedder supplied for this script.
+       */
+      embedderName?: string;
     }
     /**
      * Fired when virtual machine parses script. This event is also fired for all known and uncollected
@@ -13023,6 +13435,10 @@ scripts upon enabling debugger.
        * If the scriptLanguage is WebASsembly, the source of debug symbols for the module.
        */
       debugSymbols?: Debugger.DebugSymbols;
+      /**
+       * The name the embedder supplied for this script.
+       */
+      embedderName?: string;
     }
     
     /**
@@ -15309,6 +15725,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "CSS.startRuleUsageTracking": CSS.startRuleUsageTrackingParameters;
     "CSS.stopRuleUsageTracking": CSS.stopRuleUsageTrackingParameters;
     "CSS.takeCoverageDelta": CSS.takeCoverageDeltaParameters;
+    "CSS.setLocalFontsEnabled": CSS.setLocalFontsEnabledParameters;
     "CacheStorage.deleteCache": CacheStorage.deleteCacheParameters;
     "CacheStorage.deleteEntry": CacheStorage.deleteEntryParameters;
     "CacheStorage.requestCacheNames": CacheStorage.requestCacheNamesParameters;
@@ -15493,6 +15910,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Overlay.disable": Overlay.disableParameters;
     "Overlay.enable": Overlay.enableParameters;
     "Overlay.getHighlightObjectForTest": Overlay.getHighlightObjectForTestParameters;
+    "Overlay.getGridHighlightObjectsForTest": Overlay.getGridHighlightObjectsForTestParameters;
     "Overlay.hideHighlight": Overlay.hideHighlightParameters;
     "Overlay.highlightFrame": Overlay.highlightFrameParameters;
     "Overlay.highlightNode": Overlay.highlightNodeParameters;
@@ -15503,6 +15921,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Overlay.setPausedInDebuggerMessage": Overlay.setPausedInDebuggerMessageParameters;
     "Overlay.setShowDebugBorders": Overlay.setShowDebugBordersParameters;
     "Overlay.setShowFPSCounter": Overlay.setShowFPSCounterParameters;
+    "Overlay.setShowGridOverlays": Overlay.setShowGridOverlaysParameters;
     "Overlay.setShowPaintRects": Overlay.setShowPaintRectsParameters;
     "Overlay.setShowLayoutShiftRegions": Overlay.setShowLayoutShiftRegionsParameters;
     "Overlay.setShowScrollBottleneckRects": Overlay.setShowScrollBottleneckRectsParameters;
@@ -15640,6 +16059,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "WebAuthn.removeCredential": WebAuthn.removeCredentialParameters;
     "WebAuthn.clearCredentials": WebAuthn.clearCredentialsParameters;
     "WebAuthn.setUserVerified": WebAuthn.setUserVerifiedParameters;
+    "WebAuthn.setAutomaticPresenceSimulation": WebAuthn.setAutomaticPresenceSimulationParameters;
     "Media.enable": Media.enableParameters;
     "Media.disable": Media.disableParameters;
     "Console.clearMessages": Console.clearMessagesParameters;
@@ -15790,6 +16210,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "CSS.startRuleUsageTracking": CSS.startRuleUsageTrackingReturnValue;
     "CSS.stopRuleUsageTracking": CSS.stopRuleUsageTrackingReturnValue;
     "CSS.takeCoverageDelta": CSS.takeCoverageDeltaReturnValue;
+    "CSS.setLocalFontsEnabled": CSS.setLocalFontsEnabledReturnValue;
     "CacheStorage.deleteCache": CacheStorage.deleteCacheReturnValue;
     "CacheStorage.deleteEntry": CacheStorage.deleteEntryReturnValue;
     "CacheStorage.requestCacheNames": CacheStorage.requestCacheNamesReturnValue;
@@ -15974,6 +16395,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Overlay.disable": Overlay.disableReturnValue;
     "Overlay.enable": Overlay.enableReturnValue;
     "Overlay.getHighlightObjectForTest": Overlay.getHighlightObjectForTestReturnValue;
+    "Overlay.getGridHighlightObjectsForTest": Overlay.getGridHighlightObjectsForTestReturnValue;
     "Overlay.hideHighlight": Overlay.hideHighlightReturnValue;
     "Overlay.highlightFrame": Overlay.highlightFrameReturnValue;
     "Overlay.highlightNode": Overlay.highlightNodeReturnValue;
@@ -15984,6 +16406,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Overlay.setPausedInDebuggerMessage": Overlay.setPausedInDebuggerMessageReturnValue;
     "Overlay.setShowDebugBorders": Overlay.setShowDebugBordersReturnValue;
     "Overlay.setShowFPSCounter": Overlay.setShowFPSCounterReturnValue;
+    "Overlay.setShowGridOverlays": Overlay.setShowGridOverlaysReturnValue;
     "Overlay.setShowPaintRects": Overlay.setShowPaintRectsReturnValue;
     "Overlay.setShowLayoutShiftRegions": Overlay.setShowLayoutShiftRegionsReturnValue;
     "Overlay.setShowScrollBottleneckRects": Overlay.setShowScrollBottleneckRectsReturnValue;
@@ -16121,6 +16544,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "WebAuthn.removeCredential": WebAuthn.removeCredentialReturnValue;
     "WebAuthn.clearCredentials": WebAuthn.clearCredentialsReturnValue;
     "WebAuthn.setUserVerified": WebAuthn.setUserVerifiedReturnValue;
+    "WebAuthn.setAutomaticPresenceSimulation": WebAuthn.setAutomaticPresenceSimulationReturnValue;
     "Media.enable": Media.enableReturnValue;
     "Media.disable": Media.disableReturnValue;
     "Console.clearMessages": Console.clearMessagesReturnValue;
@@ -17171,7 +17595,12 @@ export interface Page {
   addStyleTag(options: PageAddStyleTagOptions): Promise<ElementHandle>;
 
   /**
-   * This method fetches an element with `selector`, if element is not already checked, it scrolls it into view if needed, and then uses page.click to click in the center of the element.
+   * Brings page to front (activates tab).
+   */
+  bringToFront(): Promise<void>;
+
+  /**
+   * This method waits for an element matching `selector`, waits for actionability checks. Then, if the element is not already checked, this method scrolls the element into view and uses elementHandle.click to click in the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * Shortcut for page.mainFrame().check(selector[, options]).
    * @param selector A selector to search for checkbox or radio button to check. If there are multiple elements satisfying the selector, the first will be checked. See working with selectors for more details.
@@ -17181,7 +17610,7 @@ export interface Page {
   check(selector: string, options?: PageCheckOptions): Promise<void>;
 
   /**
-   * This method fetches an element with `selector`, scrolls it into view if needed, and then uses page.mouse to click in the center of the element.
+   * This method waits for an element matching `selector`, waits for actionability checks, then scrolls the element into view if needed and uses page.mouse to click in the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * Shortcut for page.mainFrame().click(selector[, options]).
    * @param selector A selector to search for element to click. If there are multiple elements satisfying the selector, the first will be clicked. See working with selectors for more details.
@@ -17215,7 +17644,7 @@ export interface Page {
   coverage: null|ChromiumCoverage;
 
   /**
-   * This method fetches an element with `selector`, scrolls it into view if needed, and then uses page.mouse to double click in the center of the element.
+   * This method waits for an element matching `selector`, waits for actionability checks, then scrolls the element into view if needed and uses page.mouse to double click in the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * Bear in mind that if the first click of the `dblclick()` triggers a navigation event, there will be an exception.
    * 
@@ -17474,7 +17903,7 @@ export interface Page {
   goto(url: string, options?: PageGotoOptions): Promise<null|Response>;
 
   /**
-   * This method fetches an element with `selector`, scrolls it into view if needed, and then uses page.mouse to hover over the center of the element.
+   * This method waits for an element matching `selector`, waits for actionability checks, then scrolls the element into view if needed and uses page.mouse to hover over the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * Shortcut for page.mainFrame().hover(selector[, options]).
    * @param selector A selector to search for element to hover. If there are multiple elements satisfying the selector, the first will be hovered. See working with selectors for more details.
@@ -17570,7 +17999,7 @@ export interface Page {
   /**
    * Focuses the element, and then uses `keyboard.down` and `keyboard.up`.
    * `key` can specify the intended keyboardEvent.key value or a single character to generate the text for. A superset of the `key` values can be found here. Examples of the keys are:
-   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrayRight`, `ArrowUp`, etc.
+   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrowRight`, `ArrowUp`, etc.
    * Following modification shortcuts are also suported: `Shift`, `Control`, `Alt`, `Meta`, `ShiftLeft`.
    * Holding down `Shift` will type the text that corresponds to the `key` in the upper case.
    * If `key` is a single character, it is case-sensitive, so the values `a` and `A` will generate different respective texts.
@@ -17743,7 +18172,7 @@ export interface Page {
   type(selector: string, text: string, options?: PageTypeOptions): Promise<void>;
 
   /**
-   * This method fetches an element with `selector`, if element is not already unchecked, it scrolls it into view if needed, and then uses page.click to click in the center of the element.
+   * This method waits for an element matching `selector`, waits for actionability checks. Then, if the element is not already unchecked, this method scrolls the element into view and uses elementHandle.click to click in the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * Shortcut for page.mainFrame().uncheck(selector[, options]).
    * @param selector A selector to search for uncheckbox to check. If there are multiple elements satisfying the selector, the first will be checked. See working with selectors for more details.
@@ -18198,7 +18627,7 @@ export interface Frame {
   addStyleTag(options: FrameAddStyleTagOptions): Promise<ElementHandle>;
 
   /**
-   * This method fetches an element with `selector`, if element is not already checked, it scrolls it into view if needed, and then uses frame.click to click in the center of the element.
+   * This method waits for an element matching `selector`, waits for actionability checks. Then, if the element is not already checked, this method scrolls the element into view and uses elementHandle.click to click in the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * @param selector A selector to search for checkbox to check. If there are multiple elements satisfying the selector, the first will be checked. See working with selectors for more details.
    * @param options 
@@ -18209,7 +18638,7 @@ export interface Frame {
   childFrames(): Array<Frame>;
 
   /**
-   * This method fetches an element with `selector`, scrolls it into view if needed, and then uses page.mouse to click in the center of the element.
+   * This method waits for an element matching `selector`, waits for actionability checks, then scrolls the element into view if needed and uses page.mouse to click in the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * @param selector A selector to search for element to click. If there are multiple elements satisfying the selector, the first will be clicked. See working with selectors for more details.
    * @param options 
@@ -18223,7 +18652,7 @@ export interface Frame {
   content(): Promise<string>;
 
   /**
-   * This method fetches an element with `selector`, scrolls it into view if needed, and then uses page.mouse to double click in the center of the element.
+   * This method waits for an element matching `selector`, waits for actionability checks, then scrolls the element into view if needed and uses page.mouse to double click in the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * Bear in mind that if the first click of the `dblclick()` triggers a navigation event, there will be an exception.
    * 
@@ -18325,7 +18754,7 @@ export interface Frame {
   goto(url: string, options?: FrameGotoOptions): Promise<null|Response>;
 
   /**
-   * This method fetches an element with `selector`, scrolls it into view if needed, and then uses page.mouse to hover over the center of the element.
+   * This method waits for an element matching `selector`, waits for actionability checks, then scrolls the element into view if needed and uses page.mouse to hover over the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * @param selector A selector to search for element to hover. If there are multiple elements satisfying the selector, the first will be hovered. See working with selectors for more details.
    * @param options 
@@ -18367,7 +18796,7 @@ export interface Frame {
 
   /**
    * `key` can specify the intended keyboardEvent.key value or a single character to generate the text for. A superset of the `key` values can be found here. Examples of the keys are:
-   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrayRight`, `ArrowUp`, etc.
+   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrowRight`, `ArrowUp`, etc.
    * Following modification shortcuts are also suported: `Shift`, `Control`, `Alt`, `Meta`, `ShiftLeft`.
    * Holding down `Shift` will type the text that corresponds to the `key` in the upper case.
    * If `key` is a single character, it is case-sensitive, so the values `a` and `A` will generate different respective texts.
@@ -18439,7 +18868,7 @@ export interface Frame {
   type(selector: string, text: string, options?: FrameTypeOptions): Promise<void>;
 
   /**
-   * This method fetches an element with `selector`, if element is not already unchecked, it scrolls it into view if needed, and then uses frame.click to click in the center of the element.
+   * This method waits for an element matching `selector`, waits for actionability checks. Then, if the element is not already unchecked, this method scrolls the element into view and uses elementHandle.click to click in the center of the element.
    * If there's no element matching `selector`, the method waits until a matching element appears in the DOM. If the element is detached during the actionability checks, the action is retried.
    * @param selector A selector to search for uncheckbox to check. If there are multiple elements satisfying the selector, the first will be checked. See working with selectors for more details.
    * @param options 
@@ -18703,14 +19132,14 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   boundingBox(): Promise<null|ElementHandleBoundingBox>;
 
   /**
-   * If element is not already checked, it scrolls it into view if needed, and then uses elementHandle.click to click in the center of the element.
+   * This method waits for actionability checks. Then, if the element is not already checked, this method scrolls the element into view and uses elementHandle.click to click in the center of the element.
    * @param options 
    * @returns Promise which resolves when the element is successfully checked. Promise gets rejected if the operation fails.
    */
   check(options?: ElementHandleCheckOptions): Promise<void>;
 
   /**
-   * This method scrolls element into view if needed, and then uses page.mouse to click in the center of the element.
+   * This method waits for actionability checks, then scrolls the element into view if needed and uses page.mouse to click in the center of the element.
    * If the element is detached from DOM, the method throws an error.
    * @param options 
    * @returns Promise which resolves when the element is successfully clicked. Promise gets rejected if the element is detached from DOM.
@@ -18723,7 +19152,7 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   contentFrame(): Promise<null|Frame>;
 
   /**
-   * This method scrolls element into view if needed, and then uses page.mouse to click in the center of the element.
+   * This method waits for actionability checks, then scrolls the element into view if needed and uses page.mouse to double click in the center of the element.
    * If the element is detached from DOM, the method throws an error.
    * Bear in mind that if the first click of the `dblclick()` triggers a navigation event, there will be an exception.
    * 
@@ -18781,7 +19210,7 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   getAttribute(name: string): Promise<null|string>;
 
   /**
-   * This method scrolls element into view if needed, and then uses page.mouse to hover over the center of the element.
+   * This method waits for actionability checks, then scrolls the element into view if needed and uses page.mouse to hover over the center of the element.
    * If the element is detached from DOM, the method throws an error.
    * @param options 
    * @returns Promise which resolves when the element is successfully hovered.
@@ -18806,7 +19235,7 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   /**
    * Focuses the element, and then uses `keyboard.down` and `keyboard.up`.
    * `key` can specify the intended keyboardEvent.key value or a single character to generate the text for. A superset of the `key` values can be found here. Examples of the keys are:
-   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrayRight`, `ArrowUp`, etc.
+   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrowRight`, `ArrowUp`, etc.
    * Following modification shortcuts are also suported: `Shift`, `Control`, `Alt`, `Meta`, `ShiftLeft`.
    * Holding down `Shift` will type the text that corresponds to the `key` in the upper case.
    * If `key` is a single character, it is case-sensitive, so the values `a` and `A` will generate different respective texts.
@@ -18892,7 +19321,7 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   type(text: string, options?: ElementHandleTypeOptions): Promise<void>;
 
   /**
-   * If element is not already unchecked, it scrolls it into view if needed, and then uses elementHandle.click to click in the center of the element.
+   * This method waits for actionability checks. Then, if the element is not already unchecked, this method scrolls the element into view and uses elementHandle.click to click in the center of the element.
    * @param options 
    * @returns Promise which resolves when the element is successfully unchecked. Promise gets rejected if the operation fails.
    */
@@ -19163,6 +19592,11 @@ export interface Browser extends EventEmitter {
    * @param options 
    */
   newPage(options?: BrowserNewPageOptions): Promise<Page>;
+
+  /**
+   * Returns the browser version.
+   */
+  version(): string;
 }
 
 /**
@@ -19514,8 +19948,8 @@ export interface BrowserContext extends EventEmitter {
 
   /**
    * Removes a route created with browserContext.route(url, handler). When `handler` is not specified, removes all routes for the `url`.
-   * @param url A glob pattern, regex pattern or predicate receiving URL to match while routing.
-   * @param handler Handler function to route the request.
+   * @param url A glob pattern, regex pattern or predicate receiving URL used to register a routing with browserContext.route(url, handler).
+   * @param handler Handler function used to register a routing with browserContext.route(url, handler).
    */
   unroute(url: string|RegExp|((arg0 : URL) => boolean), handler?: ((arg0 : Route, arg1 : Request) => void)): Promise<void>;
 
@@ -19639,6 +20073,12 @@ export interface Download {
   path(): Promise<null|string>;
 
   /**
+   * Saves the download to a user-specified path.
+   * @param path Path where the download should be saved.
+   */
+  saveAs(path: string): Promise<void>;
+
+  /**
    * Returns suggested filename for this download. It is typically computed by the browser from the `Content-Disposition` response header or the `download` attribute. See the spec on whatwg. Different browsers can use different logic for computing it.
    */
   suggestedFilename(): string;
@@ -19710,7 +20150,7 @@ export interface Keyboard {
   /**
    * Dispatches a `keydown` event.
    * `key` can specify the intended keyboardEvent.key value or a single character to generate the text for. A superset of the `key` values can be found here. Examples of the keys are:
-   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrayRight`, `ArrowUp`, etc.
+   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrowRight`, `ArrowUp`, etc.
    * Following modification shortcuts are also suported: `Shift`, `Control`, `Alt`, `Meta`, `ShiftLeft`.
    * Holding down `Shift` will type the text that corresponds to the `key` in the upper case.
    * If `key` is a single character, it is case-sensitive, so the values `a` and `A` will generate different respective texts.
@@ -19735,7 +20175,7 @@ export interface Keyboard {
 
   /**
    * `key` can specify the intended keyboardEvent.key value or a single character to generate the text for. A superset of the `key` values can be found here. Examples of the keys are:
-   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrayRight`, `ArrowUp`, etc.
+   * `F1` - `F12`, `Digit0`- `Digit9`, `KeyA`- `KeyZ`, `Backquote`, `Minus`, `Equal`, `Backslash`, `Backspace`, `Tab`, `Delete`, `Escape`, `ArrowDown`, `End`, `Enter`, `Home`, `Insert`, `PageDown`, `PageUp`, `ArrowRight`, `ArrowUp`, etc.
    * Following modification shortcuts are also suported: `Shift`, `Control`, `Alt`, `Meta`, `ShiftLeft`.
    * Holding down `Shift` will type the text that corresponds to the `key` in the upper case.
    * If `key` is a single character, it is case-sensitive, so the values `a` and `A` will generate different respective texts.
@@ -19883,6 +20323,11 @@ export interface Request {
   postData(): null|string;
 
   /**
+   * @returns Request's post body in a binary form, if any.
+   */
+  postDataBuffer(): null|Buffer;
+
+  /**
    * When the response is `application/x-www-form-urlencoded` then a key/value object of the values will be returned. Otherwise it will be parsed as JSON.
    * @returns Parsed request's body for `form-urlencoded` and JSON as a fallback if any.
    */
@@ -19952,7 +20397,7 @@ export interface Response {
   /**
    * @returns An object with HTTP headers associated with the response. All header names are lower-case.
    */
-  headers(): Object;
+  headers(): { [key: string]: string; };
 
   /**
    * This method will throw if the response body is not parsable via `JSON.parse`.
@@ -20025,7 +20470,7 @@ export interface Selectors {
    * 
    *   const browser = await firefox.launch();
    *   const page = await browser.newPage();
-   *   await page.goto('https://example.com');
+   *   await page.setContent(`<div><button>Click me</button></div>`);
    * 
    *   // Use the selector prefixed with its name.
    *   const button = await page.$('tag=button');
@@ -20580,7 +21025,7 @@ interface WebKitBrowserNewPageOptions {
   /**
    * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. See page.emulateMedia(options) for more details. Defaults to '`light`'.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: "light"|"dark"|"no-preference";
 
   /**
    * Logger sink for Playwright logging.
@@ -20704,7 +21149,7 @@ interface WebKitBrowserNewContextOptions {
   /**
    * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. See page.emulateMedia(options) for more details. Defaults to '`light`'.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: "light"|"dark"|"no-preference";
 
   /**
    * Logger sink for Playwright logging.
@@ -20828,7 +21273,7 @@ interface FirefoxBrowserNewPageOptions {
   /**
    * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. See page.emulateMedia(options) for more details. Defaults to '`light`'.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: "light"|"dark"|"no-preference";
 
   /**
    * Logger sink for Playwright logging.
@@ -20952,7 +21397,7 @@ interface FirefoxBrowserNewContextOptions {
   /**
    * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. See page.emulateMedia(options) for more details. Defaults to '`light`'.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: "light"|"dark"|"no-preference";
 
   /**
    * Logger sink for Playwright logging.
@@ -21002,6 +21447,11 @@ interface ChromiumCoverageStopJSCoverage {
   url: string;
 
   /**
+   * Script ID
+   */
+  scriptId: string;
+
+  /**
    * Script content, if applicable.
    */
   source?: string;
@@ -21014,6 +21464,8 @@ interface ChromiumCoverageStopJSCoverage {
 
 interface ChromiumCoverageStopJSCoverageFunctions {
   functionName: string;
+
+  isBlockCoverage: boolean;
 
   ranges: Array<ChromiumCoverageStopJSCoverageFunctionsRanges>;
 }
@@ -21368,7 +21820,7 @@ interface RouteContinueOverrides {
   /**
    * If set changes the post data of request
    */
-  postData?: string;
+  postData?: string|Buffer;
 
   /**
    * If set changes the request HTTP headers. Header values will be converted to a string.
@@ -21507,17 +21959,17 @@ interface FileChooserSetFilesFiles {
 
 interface ConsoleMessageLocation {
   /**
-   * URL of the resource if available.
+   * Optional URL of the resource if available.
    */
   url?: string;
 
   /**
-   * 0-based line number in the resource if available.
+   * Optional 0-based line number in the resource if available.
    */
   lineNumber?: number;
 
   /**
-   * 0-based column number in the resource if available.
+   * Optional 0-based column number in the resource if available.
    */
   columnNumber?: number;
 }
@@ -21710,7 +22162,7 @@ interface BrowserNewPageOptions {
   /**
    * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. See page.emulateMedia(options) for more details. Defaults to '`light`'.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: "light"|"dark"|"no-preference";
 
   /**
    * Logger sink for Playwright logging.
@@ -21834,7 +22286,7 @@ export interface BrowserContextOptions {
   /**
    * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. See page.emulateMedia(options) for more details. Defaults to '`light`'.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: "light"|"dark"|"no-preference";
 
   /**
    * Logger sink for Playwright logging.
@@ -21958,7 +22410,7 @@ interface ChromiumBrowserNewPageOptions {
   /**
    * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. See page.emulateMedia(options) for more details. Defaults to '`light`'.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: "light"|"dark"|"no-preference";
 
   /**
    * Logger sink for Playwright logging.
@@ -22082,7 +22534,7 @@ interface ChromiumBrowserNewContextOptions {
   /**
    * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. See page.emulateMedia(options) for more details. Defaults to '`light`'.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: "light"|"dark"|"no-preference";
 
   /**
    * Logger sink for Playwright logging.
@@ -22177,6 +22629,11 @@ interface BrowserTypeLaunchServerOptions {
    * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
    */
   downloadsPath?: string;
+
+  /**
+   * Enable Chromium sandboxing. Defaults to `true`.
+   */
+  chromiumSandbox?: boolean;
 
   /**
    * Firefox user preferences. Learn more about the Firefox user preferences at `about:config`.
@@ -22276,6 +22733,11 @@ interface BrowserTypeLaunchPersistentContextOptions {
    * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
    */
   downloadsPath?: string;
+
+  /**
+   * Enable Chromium sandboxing. Defaults to `true`.
+   */
+  chromiumSandbox?: boolean;
 
   /**
    * Close the browser process on Ctrl-C. Defaults to `true`.
@@ -22392,7 +22854,7 @@ interface BrowserTypeLaunchPersistentContextOptions {
   /**
    * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. See page.emulateMedia(options) for more details. Defaults to '`light`'.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: "light"|"dark"|"no-preference";
 }
 
 interface BrowserTypeLaunchPersistentContextOptionsHttpCredentials {
@@ -22413,7 +22875,7 @@ interface BrowserTypeLaunchPersistentContextOptionsGeolocation {
   longitude: number;
 
   /**
-   * Non-negative accuracy value. Defaults to `0`.
+   * Optional non-negative accuracy value. Defaults to `0`.
    */
   accuracy?: number;
 }
@@ -22482,6 +22944,11 @@ export interface LaunchOptions {
    * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
    */
   downloadsPath?: string;
+
+  /**
+   * Enable Chromium sandboxing. Defaults to `true`.
+   */
+  chromiumSandbox?: boolean;
 
   /**
    * Firefox user preferences. Learn more about the Firefox user preferences at `about:config`.
@@ -23845,14 +24312,14 @@ interface PageFillOptions {
 
 interface PageEmulateMediaOptions {
   /**
-   * Changes the CSS media type of the page. The only allowed values are `'screen'`, `'print'` and `null`. Passing `null` disables CSS media emulation.
+   * Changes the CSS media type of the page. The only allowed values are `'screen'`, `'print'` and `null`. Passing `null` disables CSS media emulation. Omitting `media` or passing `undefined` does not change the emulated value.
    */
-  media?: "screen"|"print";
+  media?: null|"screen"|"print";
 
   /**
-   * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`.
+   * Emulates `'prefers-colors-scheme'` media feature, supported values are `'light'`, `'dark'`, `'no-preference'`. Passing `null` disables color scheme emulation. Omitting `colorScheme` or passing `undefined` does not change the emulated value.
    */
-  colorScheme?: "dark"|"light"|"no-preference";
+  colorScheme?: null|"light"|"dark"|"no-preference";
 }
 
 interface PageDispatchEventOptions {
