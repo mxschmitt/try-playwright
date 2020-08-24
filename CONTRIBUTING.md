@@ -12,7 +12,7 @@ For running everything locally with auto-reload functionality the following setu
 
 - frontend: `npm run start` - starts the React development server
 - backend: `npm run dev-tsc` - starts the TypeScript compiler in watch mode
-- backend: `npm run dev-dev` - starts the Express server with auto-reload using `nodemon`
+- backend: `npm run dev-start` - starts the Express server with auto-reload using `nodemon`
 
 ## Generate / Update autocompletion
 
