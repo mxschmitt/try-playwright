@@ -16,7 +16,7 @@
     "react-monaco-editor": "0.40.0",
     "react-scripts": "3.4.3",
     "rsuite": "4.8.2",
-    "typescript": "4.0.2"
+    "typescript": "3.9.7"
   },
   "scripts": {
     "start": "cross-env SKIP_PREFLIGHT_CHECK=true GENERATE_SOURCEMAP=false react-app-rewired start",
