@@ -35,7 +35,7 @@ set -e
 
 function update_playwright_types {
     TYPES_FILE="frontend/src/components/Editor/types.txt"
-    cat backend/node_modules/@types/node/globals.d.ts > $TYPES_FILE
+    cat backend/node_modules/@types/node/ts3.1/globals.d.ts > $TYPES_FILE
     echo "declare module 'playwright' {" >> $TYPES_FILE
     cat backend/node_modules/playwright/types/protocol.d.ts >> $TYPES_FILE
     cat backend/node_modules/playwright/types/types.d.ts | tail -n +21 >> $TYPES_FILE

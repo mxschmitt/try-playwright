@@ -38,8 +38,6 @@ jobs:
       run: npm ci
     - name: Lint project
       run: npm run lint
-      env:
-        CI: "true"
     - name: Install frontend dependencies
       working-directory: frontend
       run: npm ci
