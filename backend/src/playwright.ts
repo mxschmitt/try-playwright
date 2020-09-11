@@ -1,18 +1,16 @@
 import path from 'path'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import playwright, { LaunchOptions } from 'playwright'
-import { Browser, WebKitBrowser, ChromiumBrowser, FirefoxBrowser, Page as PageType } from 'playwright'
+import { saveVideo, PageVideoCapture } from 'playwright-video'
+import playwright, { Browser, WebKitBrowser, ChromiumBrowser, FirefoxBrowser, Page as PageType, LaunchOptions } from 'playwright'
 // @ts-ignore
 import { Playwright } from 'playwright/lib/server/playwright'
 // @ts-ignore
-import { CRPage } from 'playwright/lib/chromium/crPage';
-// @ts-ignore
-import { Page } from 'playwright/lib/api';
+import { Page } from 'playwright/lib/client/page';
 // @ts-ignore
 import playwrightBrowsers from 'playwright/browsers.json';
-
-import { saveVideo, PageVideoCapture } from 'playwright-video'
+// @ts-ignore
+import { setupInProcess } from 'playwright/lib/inprocess'
 
 const BROWSER_ID = Symbol('BROWSER_ID');
 
@@ -59,12 +57,12 @@ Page.prototype.screenshot = async function (this: PageType, options?: Parameters
   return Buffer.from([]);
 }
 
-const superCRPDF: PageType["pdf"] = CRPage.prototype.pdf;
+const superCRPDF: PageType["pdf"] = Page.prototype._pdf;
 
-CRPage.prototype.pdf = async function (this: PageType, options?: Parameters<typeof superCRPDF>[0]): Promise<Buffer> {
+Page.prototype._pdf = async function (this: PageType, options?: Parameters<typeof superCRPDF>[0]): Promise<Buffer> {
   if (options?.path && superCRPDF) {
     // @ts-ignore
-    const browserId = this._page.context()._browser[BROWSER_ID];
+    const browserId = this.context()._browser[BROWSER_ID];
     const publicPath = emitNewFile(browserId, options.path)
     const buffer = await superCRPDF.call(this, {
       ...options,
@@ -89,14 +87,11 @@ const preBrowserLaunch = async (browser: Browser, id: string): Promise<void> => 
 const pwDirname = path.join(__dirname, "..", "node_modules", "playwright")
 
 export const getPlaywright = (id: string): typeof playwright => {
-  const pw: typeof playwright = new Playwright(pwDirname, playwrightBrowsers["browsers"]);
+  const pw: typeof playwright = setupInProcess(new Playwright(pwDirname, playwrightBrowsers["browsers"]))
 
   const originalChromiumLaunch = pw.chromium.launch
   pw.chromium.launch = async (options: LaunchOptions = {}): Promise<ChromiumBrowser> => {
-    const browser = await originalChromiumLaunch.apply(pw.chromium, [{
-      ...options,
-      args: [...(options.args !== undefined ? options.args : []), "--no-sandbox"]
-    }])
+    const browser = await originalChromiumLaunch.apply(pw.chromium, [options])
     await preBrowserLaunch(browser, id)
     return browser
   }

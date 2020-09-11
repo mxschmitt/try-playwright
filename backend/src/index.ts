@@ -12,10 +12,11 @@ import { ShareStore } from './store'
   app.use(express.json())
   app.use("/public/", express.static('./public'))
 
-  if (process.env.NODE_ENV === "production" && process.env.BACKEND_SENTRY_DSN) {
-    Sentry.init({ dsn: process.env.BACKEND_SENTRY_DSN });
-    app.use(Sentry.Handlers.requestHandler());
-  }
+  // TODO: https://github.com/microsoft/playwright/issues/3848
+  // if (process.env.NODE_ENV === "production" && process.env.BACKEND_SENTRY_DSN) {
+  //   Sentry.init({ dsn: process.env.BACKEND_SENTRY_DSN });
+  //   app.use(Sentry.Handlers.requestHandler());
+  // }
 
   app.get("/api/v1/health", async (req: express.Request, resp: express.Response) => {
     resp.status(200).send("OK")

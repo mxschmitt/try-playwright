@@ -2,8 +2,6 @@ FROM mcr.microsoft.com/playwright:bionic
 
 WORKDIR /backend
 
-USER root
-
 COPY backend/package.json /backend
 COPY backend/package-lock.json /backend
 RUN npm ci

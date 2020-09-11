@@ -6,18 +6,16 @@ const playwright = require("playwright");
   const page = await browser.newPage();
   await page.goto("https://news.ycombinator.com");
 
-  // $$eval is doing basically the same as 'document.querySelectorAll' which will
-  // pass the returned data as a callback to the passed function.
-  const topEntries = await page.$$eval(".athing",
-    elements => [...elements].map(el => {
-      const linkElement = el.children[2].children[0]
-      return {
-        title: linkElement.innerHTML,
-      }
-    })
-  )
-  // Write the crawled data entries to the console
-  topEntries.forEach(({ title }, index) => console.log(`${index + 1}. ${title}`))
+  // Get all the entries on the page with a CSS selector in this case identified
+  // by the class name.
+  const entries = await page.$$(".athing");
+
+  for (let i = 0; i < entries.length; i++) {
+    // Query for the next title element on the page
+    const title = await entries[i].$("td.title > a");
+    // Write the entry to the console
+    console.log(`${i + 1}: ${await title.innerText()}`);
+  }
 
   await page.screenshot({ path: "Y-Combinator.png" });
   await browser.close();
