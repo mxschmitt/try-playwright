@@ -57,12 +57,12 @@ Page.prototype.screenshot = async function (this: PageType, options?: Parameters
   return Buffer.from([]);
 }
 
-const superCRPDF: PageType["pdf"] = Page.prototype.pdf;
+const superCRPDF: PageType["pdf"] = Page.prototype._pdf;
 
 Page.prototype._pdf = async function (this: PageType, options?: Parameters<typeof superCRPDF>[0]): Promise<Buffer> {
   if (options?.path && superCRPDF) {
     // @ts-ignore
-    const browserId = this._page.context()._browser[BROWSER_ID];
+    const browserId = this.context()._browser[BROWSER_ID];
     const publicPath = emitNewFile(browserId, options.path)
     const buffer = await superCRPDF.call(this, {
       ...options,
