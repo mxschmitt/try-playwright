@@ -1,6 +1,6 @@
 
 
-import React, { useEffect, useContext } from 'react'
+import React, { useEffect, useContext, useRef } from 'react'
 import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
@@ -31,6 +31,7 @@ interface EditorProps {
 const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     const [darkMode] = useDarkMode()
     const { code, onChange } = useContext(CodeContext)
+    const ref = useRef<monacoEditor.editor.IStandaloneCodeEditor>()
     useEffect(() => {
         monacoEditor.editor.defineTheme('custom-dark', {
             base: 'vs-dark',
@@ -41,7 +42,15 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
             rules: []
         });
     })
+    useEffect(() => {
+        if (ref.current) {
+            const resizeListener = () => ref.current?.layout()
+            window.addEventListener('resize', resizeListener);
+            return () => window.removeEventListener('resize', resizeListener);
+        }
+    }, [ref])
     const handleEditorDidMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: typeof monacoEditor): Promise<void> => {
+        ref.current = editor
         editor.getModel()?.updateOptions({
             tabSize: 2
         })
