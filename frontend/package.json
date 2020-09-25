@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@sentry/browser": "5.23.0",
-    "@types/jest": "26.0.13",
-    "@types/node": "14.10.0",
+    "@sentry/browser": "5.24.2",
+    "@types/jest": "26.0.14",
+    "@types/node": "14.11.2",
     "@types/react": "16.9.49",
     "@types/react-dom": "16.9.8",
     "clipboard-polyfill": "3.0.1",
-    "monaco-editor": "0.20.0",
-    "monaco-editor-webpack-plugin": "1.9.0",
+    "monaco-editor": "0.21.1",
+    "monaco-editor-webpack-plugin": "2.0.0",
     "react": "16.13.1",
     "react-dom": "16.13.1",
     "react-monaco-editor": "0.40.0",
@@ -38,7 +38,7 @@
   },
   "proxy": "http://localhost:8080",
   "devDependencies": {
-    "@sentry/types": "5.23.0",
+    "@sentry/types": "5.24.2",
     "cross-env": "^7.0.2",
     "raw-loader": "4.0.1",
     "react-app-rewired": "2.1.6"
