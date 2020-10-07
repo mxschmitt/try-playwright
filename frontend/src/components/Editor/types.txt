@@ -1600,10 +1600,6 @@ Note that userVisibleOnly = true is the only currently supported type.
        */
       userVisibleOnly?: boolean;
       /**
-       * For "wake-lock" permission, must specify type as either "screen" or "system".
-       */
-      type?: string;
-      /**
        * For "clipboard" permission, may specify allowWithoutSanitization.
        */
       allowWithoutSanitization?: boolean;
@@ -2015,10 +2011,14 @@ document.written STYLE tags.
       /**
        * Whether this stylesheet is mutable. Inline stylesheets become mutable
 after they have been modified via CSSOM API.
-<link> element's stylesheets are never mutable. Constructed stylesheets
-(new CSSStyleSheet()) are mutable immediately after creation.
+<link> element's stylesheets become mutable only if DevTools modifies them.
+Constructed stylesheets (new CSSStyleSheet()) are mutable immediately after creation.
        */
       isMutable: boolean;
+      /**
+       * Whether this stylesheet is a constructed stylesheet (created using new CSSStyleSheet()).
+       */
+      isConstructed: boolean;
       /**
        * Line offset of the stylesheet within the resource (zero based).
        */
@@ -7868,10 +7868,16 @@ https://wicg.github.io/webpackage/draft-yasskin-httpbis-origin-signed-exchanges-
     export type CrossOriginOpenerPolicyValue = "SameOrigin"|"SameOriginAllowPopups"|"UnsafeNone"|"SameOriginPlusCoep";
     export interface CrossOriginOpenerPolicyStatus {
       value: CrossOriginOpenerPolicyValue;
+      reportOnlyValue: CrossOriginOpenerPolicyValue;
+      reportingEndpoint?: string;
+      reportOnlyReportingEndpoint?: string;
     }
     export type CrossOriginEmbedderPolicyValue = "None"|"RequireCorp";
     export interface CrossOriginEmbedderPolicyStatus {
       value: CrossOriginEmbedderPolicyValue;
+      reportOnlyValue: CrossOriginEmbedderPolicyValue;
+      reportingEndpoint?: string;
+      reportOnlyReportingEndpoint?: string;
     }
     export interface SecurityIsolationStatus {
       coop: CrossOriginOpenerPolicyStatus;
@@ -8759,6 +8765,17 @@ default domain and path values of the created cookie.
     export type setExtraHTTPHeadersReturnValue = {
     }
     /**
+     * Specifies whether to sned a debug header to all outgoing requests.
+     */
+    export type setAttachDebugHeaderParameters = {
+      /**
+       * Whether to send a debug header.
+       */
+      enabled: boolean;
+    }
+    export type setAttachDebugHeaderReturnValue = {
+    }
+    /**
      * Sets the requests to intercept that match the provided patterns and optionally resource types.
 Deprecated, please use Fetch.enable instead.
      */
@@ -8905,6 +8922,10 @@ continueInterceptedRequest call.
        * The named grid areas border color (Default: transparent).
        */
       areaBorderColor?: DOM.RGBA;
+      /**
+       * The grid container background color (Default: transparent).
+       */
+      gridBackgroundColor?: DOM.RGBA;
     }
     /**
      * Configuration data for the highlighting of page elements.
@@ -9387,6 +9408,14 @@ Backend then generates 'inspectNodeRequested' event upon element selection.
      */
     export type AdFrameType = "none"|"child"|"root";
     /**
+     * Indicates whether the frame is a secure context and why it is the case.
+     */
+    export type SecureContextType = "Secure"|"SecureLocalhost"|"InsecureScheme"|"InsecureAncestor";
+    /**
+     * Indicates whether the frame is cross-origin isolated and why it is the case.
+     */
+    export type CrossOriginIsolatedContextType = "Isolated"|"NotIsolated"|"NotIsolatedFeatureDisabled";
+    /**
      * Information about the Frame on the page.
      */
     export interface Frame {
@@ -9437,6 +9466,14 @@ Example URLs: http://www.google.com/file.html -> "google.com"
        * Indicates whether this frame was tagged as an ad.
        */
       adFrameType?: AdFrameType;
+      /**
+       * Indicates whether the main document is a secure context and explains why that is the case.
+       */
+      secureContextType: SecureContextType;
+      /**
+       * Indicates whether this is a cross origin isolated context.
+       */
+      crossOriginIsolatedContextType: CrossOriginIsolatedContextType;
     }
     /**
      * Information about the Resource on the page.
@@ -12801,7 +12838,7 @@ capacity and glitch may occur.
       sampleRate: number;
     }
     /**
-     * Protocol object for AudioListner
+     * Protocol object for AudioListener
      */
     export interface AudioListener {
       listenerId: GraphObjectId;
@@ -14572,6 +14609,23 @@ profile startTime.
        */
       value: number;
     }
+    /**
+     * Runtime call counter information.
+     */
+    export interface RuntimeCallCounterInfo {
+      /**
+       * Counter name.
+       */
+      name: string;
+      /**
+       * Counter value.
+       */
+      value: number;
+      /**
+       * Counter time in seconds.
+       */
+      time: number;
+    }
     
     export type consoleProfileFinishedPayload = {
       id: string;
@@ -14738,6 +14792,31 @@ coverage needs to have started.
       result: ScriptTypeProfile[];
     }
     /**
+     * Enable counters collection.
+     */
+    export type enableCountersParameters = {
+    }
+    export type enableCountersReturnValue = {
+    }
+    /**
+     * Disable counters collection.
+     */
+    export type disableCountersParameters = {
+    }
+    export type disableCountersReturnValue = {
+    }
+    /**
+     * Retrieve counters.
+     */
+    export type getCountersParameters = {
+    }
+    export type getCountersReturnValue = {
+      /**
+       * Collected counters information.
+       */
+      result: CounterInfo[];
+    }
+    /**
      * Enable run time call stats collection.
      */
     export type enableRuntimeCallStatsParameters = {
@@ -14758,9 +14837,9 @@ coverage needs to have started.
     }
     export type getRuntimeCallStatsReturnValue = {
       /**
-       * Collected counter information.
+       * Collected runtime call counter information.
        */
-      result: CounterInfo[];
+      result: RuntimeCallCounterInfo[];
     }
   }
   
@@ -16127,6 +16206,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Network.setCookies": Network.setCookiesParameters;
     "Network.setDataSizeLimitsForTest": Network.setDataSizeLimitsForTestParameters;
     "Network.setExtraHTTPHeaders": Network.setExtraHTTPHeadersParameters;
+    "Network.setAttachDebugHeader": Network.setAttachDebugHeaderParameters;
     "Network.setRequestInterception": Network.setRequestInterceptionParameters;
     "Network.setUserAgentOverride": Network.setUserAgentOverrideParameters;
     "Network.getSecurityIsolationStatus": Network.getSecurityIsolationStatusParameters;
@@ -16345,6 +16425,9 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Profiler.stopTypeProfile": Profiler.stopTypeProfileParameters;
     "Profiler.takePreciseCoverage": Profiler.takePreciseCoverageParameters;
     "Profiler.takeTypeProfile": Profiler.takeTypeProfileParameters;
+    "Profiler.enableCounters": Profiler.enableCountersParameters;
+    "Profiler.disableCounters": Profiler.disableCountersParameters;
+    "Profiler.getCounters": Profiler.getCountersParameters;
     "Profiler.enableRuntimeCallStats": Profiler.enableRuntimeCallStatsParameters;
     "Profiler.disableRuntimeCallStats": Profiler.disableRuntimeCallStatsParameters;
     "Profiler.getRuntimeCallStats": Profiler.getRuntimeCallStatsParameters;
@@ -16620,6 +16703,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Network.setCookies": Network.setCookiesReturnValue;
     "Network.setDataSizeLimitsForTest": Network.setDataSizeLimitsForTestReturnValue;
     "Network.setExtraHTTPHeaders": Network.setExtraHTTPHeadersReturnValue;
+    "Network.setAttachDebugHeader": Network.setAttachDebugHeaderReturnValue;
     "Network.setRequestInterception": Network.setRequestInterceptionReturnValue;
     "Network.setUserAgentOverride": Network.setUserAgentOverrideReturnValue;
     "Network.getSecurityIsolationStatus": Network.getSecurityIsolationStatusReturnValue;
@@ -16838,6 +16922,9 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Profiler.stopTypeProfile": Profiler.stopTypeProfileReturnValue;
     "Profiler.takePreciseCoverage": Profiler.takePreciseCoverageReturnValue;
     "Profiler.takeTypeProfile": Profiler.takeTypeProfileReturnValue;
+    "Profiler.enableCounters": Profiler.enableCountersReturnValue;
+    "Profiler.disableCounters": Profiler.disableCountersReturnValue;
+    "Profiler.getCounters": Profiler.getCountersReturnValue;
     "Profiler.enableRuntimeCallStats": Profiler.enableRuntimeCallStatsReturnValue;
     "Profiler.disableRuntimeCallStats": Profiler.disableRuntimeCallStatsReturnValue;
     "Profiler.getRuntimeCallStats": Profiler.getRuntimeCallStatsReturnValue;
@@ -16899,6 +16986,8 @@ type PageWaitForSelectorOptionsNotHidden = PageWaitForSelectorOptions & {
 type ElementHandleWaitForSelectorOptionsNotHidden = ElementHandleWaitForSelectorOptions & {
   state: 'visible'|'attached';
 };
+
+type BindingSource = { context: BrowserContext, page: Page, frame: Frame };
 
 /**
  * Page provides methods to interact with a single tab in a Browser, or an extension background page in Chromium. One Browser instance might have multiple Page instances.
@@ -17091,12 +17180,57 @@ export interface Page {
   waitForSelector(selector: string, options?: PageWaitForSelectorOptionsNotHidden): Promise<ElementHandle<SVGElement | HTMLElement>>;
   waitForSelector<K extends keyof HTMLElementTagNameMap>(selector: K, options: PageWaitForSelectorOptions): Promise<ElementHandleForTag<K> | null>;
   waitForSelector(selector: string, options: PageWaitForSelectorOptions): Promise<null|ElementHandle<SVGElement | HTMLElement>>;
-  /**
-   * **experimental**
-   * Emitted when video recording has started for this page. The event will fire only if `_recordVideos` option is configured on the parent context.
-   */
-  on(event: '_videostarted', listener: (object: Object) => void): this;
 
+  /**
+   * The method adds a function called `name` on the `window` object of every frame in this page.
+   * When called, the function executes `playwrightBinding` in Node.js and returns a Promise which resolves to the return value of `playwrightBinding`.
+   * If the `playwrightBinding` returns a Promise, it will be awaited.
+   * The first argument of the `playwrightBinding` function contains information about the caller:
+   * `{ browserContext: BrowserContext, page: Page, frame: Frame }`.
+   * See browserContext.exposeBinding(name, playwrightBinding) for the context-wide version.
+   * 
+   * **NOTE** Functions installed via `page.exposeBinding` survive navigations.
+   * 
+   * An example of exposing page URL to all frames in a page:
+   * ```js
+   * const { webkit } = require('playwright');  // Or 'chromium' or 'firefox'.
+   * 
+   * (async () => {
+   *   const browser = await webkit.launch({ headless: false });
+   *   const context = await browser.newContext();
+   *   const page = await context.newPage();
+   *   await page.exposeBinding('pageURL', ({ page }) => page.url());
+   *   await page.setContent(`
+   *     <script>
+   *       async function onClick() {
+   *         document.querySelector('div').textContent = await window.pageURL();
+   *       }
+   *     </script>
+   *     <button onclick="onClick()">Click me</button>
+   *     <div></div>
+   *   `);
+   *   await page.click('button');
+   * })();
+   * ```
+   * An example of passing an element handle:
+   * ```js
+   * await page.exposeBinding('clicked', async (source, element) => {
+   *   console.log(await element.textContent());
+   * }, { handle: true });
+   * await page.setContent(`
+   *   <script>
+   *     document.addEventListener('click', event => window.clicked(event.target));
+   *   </script>
+   *   <div>Click me</div>
+   *   <div>Or click me</div>
+   * `);
+   * ```
+   * @param name Name of the function on the window object.
+   * @param playwrightBinding Callback function that will be called in the Playwright's context.
+   * @param options 
+   */
+  exposeBinding(name: string, playwrightBinding: (source: BindingSource, arg: JSHandle) => any, options: { handle: true }): Promise<void>;
+  exposeBinding(name: string, playwrightBinding: (source: BindingSource, ...args: any[]) => any, options?: { handle?: boolean }): Promise<void>;
   /**
    * Emitted when the page closes.
    */
@@ -17236,12 +17370,6 @@ export interface Page {
    * Emitted when a dedicated WebWorker is spawned by the page.
    */
   on(event: 'worker', listener: (worker: Worker) => void): this;
-
-  /**
-   * **experimental**
-   * Emitted when video recording has started for this page. The event will fire only if `_recordVideos` option is configured on the parent context.
-   */
-  once(event: '_videostarted', listener: (object: Object) => void): this;
 
   /**
    * Emitted when the page closes.
@@ -17384,12 +17512,6 @@ export interface Page {
   once(event: 'worker', listener: (worker: Worker) => void): this;
 
   /**
-   * **experimental**
-   * Emitted when video recording has started for this page. The event will fire only if `_recordVideos` option is configured on the parent context.
-   */
-  addListener(event: '_videostarted', listener: (object: Object) => void): this;
-
-  /**
    * Emitted when the page closes.
    */
   addListener(event: 'close', listener: () => void): this;
@@ -17530,12 +17652,6 @@ export interface Page {
   addListener(event: 'worker', listener: (worker: Worker) => void): this;
 
   /**
-   * **experimental**
-   * Emitted when video recording has started for this page. The event will fire only if `_recordVideos` option is configured on the parent context.
-   */
-  removeListener(event: '_videostarted', listener: (object: Object) => void): this;
-
-  /**
    * Emitted when the page closes.
    */
   removeListener(event: 'close', listener: () => void): this;
@@ -17674,12 +17790,6 @@ export interface Page {
    * Emitted when a dedicated WebWorker is spawned by the page.
    */
   removeListener(event: 'worker', listener: (worker: Worker) => void): this;
-
-  /**
-   * **experimental**
-   * Emitted when video recording has started for this page. The event will fire only if `_recordVideos` option is configured on the parent context.
-   */
-  off(event: '_videostarted', listener: (object: Object) => void): this;
 
   /**
    * Emitted when the page closes.
@@ -18172,42 +18282,6 @@ export interface Page {
      */
     colorScheme?: null|"dark"|"light"|"no-preference";
   }): Promise<void>;
-
-  /**
-   * The method adds a function called `name` on the `window` object of every frame in this page.
-   * When called, the function executes `playwrightBinding` in Node.js and returns a Promise which resolves to the return value of `playwrightBinding`.
-   * If the `playwrightBinding` returns a Promise, it will be awaited.
-   * The first argument of the `playwrightBinding` function contains information about the caller:
-   * `{ browserContext: BrowserContext, page: Page, frame: Frame }`.
-   * See browserContext.exposeBinding(name, playwrightBinding) for the context-wide version.
-   * 
-   * **NOTE** Functions installed via `page.exposeBinding` survive navigations.
-   * 
-   * An example of exposing page URL to all frames in a page:
-   * ```js
-   * const { webkit } = require('playwright');  // Or 'chromium' or 'firefox'.
-   * 
-   * (async () => {
-   *   const browser = await webkit.launch({ headless: false });
-   *   const context = await browser.newContext();
-   *   const page = await context.newPage();
-   *   await page.exposeBinding('pageURL', ({ page }) => page.url());
-   *   await page.setContent(`
-   *     <script>
-   *       async function onClick() {
-   *         document.querySelector('div').textContent = await window.pageURL();
-   *       }
-   *     </script>
-   *     <button onclick="onClick()">Click me</button>
-   *     <div></div>
-   *   `);
-   *   await page.click('button');
-   * })();
-   * ```
-   * @param name Name of the function on the window object.
-   * @param playwrightBinding Callback function that will be called in the Playwright's context.
-   */
-  exposeBinding(name: string, playwrightBinding: Function): Promise<void>;
 
   /**
    * The method adds a function called `name` on the `window` object of every frame in the page.
@@ -18718,6 +18792,9 @@ export interface Page {
   /**
    * Routing provides the capability to modify network requests that are made by a page.
    * Once routing is enabled, every request matching the url pattern will stall unless it's continued, fulfilled or aborted.
+   * 
+   * **NOTE** The handler will only be called for the first url if the response is a redirect.
+   * 
    * An example of a naïve handler that aborts all image requests:
    * ```js
    * const page = await browser.newPage();
@@ -18763,7 +18840,7 @@ export interface Page {
     quality?: number;
 
     /**
-     * When true, takes a screenshot of the full scrollable page, instead of the currently visibvle viewport. Defaults to `false`.
+     * When true, takes a screenshot of the full scrollable page, instead of the currently visible viewport. Defaults to `false`.
      */
     fullPage?: boolean;
 
@@ -19094,12 +19171,6 @@ export interface Page {
      */
     height: number;
   };
-
-  /**
-   * **experimental**
-   * Emitted when video recording has started for this page. The event will fire only if `_recordVideos` option is configured on the parent context.
-   */
-  waitForEvent(event: '_videostarted', optionsOrPredicate?: { predicate?: (object: Object) => boolean, timeout?: number } | ((object: Object) => boolean)): Promise<Object>;
 
   /**
    * Emitted when the page closes.
@@ -20276,6 +20347,473 @@ export interface Frame {
   waitForTimeout(timeout: number): Promise<void>;}
 
 /**
+ * BrowserContexts provide a way to operate multiple independent browser sessions.
+ * If a page opens another page, e.g. with a `window.open` call, the popup will belong to the parent page's browser
+ * context.
+ * Playwright allows creation of "incognito" browser contexts with `browser.newContext()` method.
+ * "Incognito" browser contexts don't write any browsing data to disk.
+ * ```js
+ * // Create a new incognito browser context
+ * const context = await browser.newContext();
+ * // Create a new page inside context.
+ * const page = await context.newPage();
+ * await page.goto('https://example.com');
+ * // Dispose context once it's no longer needed.
+ * await context.close();
+ * ```
+ */
+export interface BrowserContext {
+  /**
+   * The method adds a function called `name` on the `window` object of every frame in every page in the context.
+   * When called, the function executes `playwrightBinding` in Node.js and returns a Promise which resolves to the return value of `playwrightBinding`.
+   * If the `playwrightBinding` returns a Promise, it will be awaited.
+   * The first argument of the `playwrightBinding` function contains information about the caller:
+   * `{ browserContext: BrowserContext, page: Page, frame: Frame }`.
+   * See page.exposeBinding(name, playwrightBinding) for page-only version.
+   * An example of exposing page URL to all frames in all pages in the context:
+   * ```js
+   * const { webkit } = require('playwright');  // Or 'chromium' or 'firefox'.
+   * 
+   * (async () => {
+   *   const browser = await webkit.launch({ headless: false });
+   *   const context = await browser.newContext();
+   *   await context.exposeBinding('pageURL', ({ page }) => page.url());
+   *   const page = await context.newPage();
+   *   await page.setContent(`
+   *     <script>
+   *       async function onClick() {
+   *         document.querySelector('div').textContent = await window.pageURL();
+   *       }
+   *     </script>
+   *     <button onclick="onClick()">Click me</button>
+   *     <div></div>
+   *   `);
+   *   await page.click('button');
+   * })();
+   * ```
+   * An example of passing an element handle:
+   * ```js
+   * await context.exposeBinding('clicked', async (source, element) => {
+   *   console.log(await element.textContent());
+   * }, { handle: true });
+   * await page.setContent(`
+   *   <script>
+   *     document.addEventListener('click', event => window.clicked(event.target));
+   *   </script>
+   *   <div>Click me</div>
+   *   <div>Or click me</div>
+   * `);
+   * ```
+   * @param name Name of the function on the window object.
+   * @param playwrightBinding Callback function that will be called in the Playwright's context.
+   * @param options 
+   */
+  exposeBinding(name: string, playwrightBinding: (source: BindingSource, arg: JSHandle) => any, options: { handle: true }): Promise<void>;
+  exposeBinding(name: string, playwrightBinding: (source: BindingSource, ...args: any[]) => any, options?: { handle?: boolean }): Promise<void>;
+  on(event: 'close', listener: () => void): this;
+
+  /**
+   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
+   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
+   * ```js
+   * const [page] = await Promise.all([
+   *   context.waitForEvent('page'),
+   *   page.click('a[target=_blank]'),
+   * ]);
+   * console.log(await page.evaluate('location.href'));
+   * ```
+   * 
+   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
+   */
+  on(event: 'page', listener: (page: Page) => void): this;
+
+  once(event: 'close', listener: () => void): this;
+
+  /**
+   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
+   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
+   * ```js
+   * const [page] = await Promise.all([
+   *   context.waitForEvent('page'),
+   *   page.click('a[target=_blank]'),
+   * ]);
+   * console.log(await page.evaluate('location.href'));
+   * ```
+   * 
+   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
+   */
+  once(event: 'page', listener: (page: Page) => void): this;
+
+  addListener(event: 'close', listener: () => void): this;
+
+  /**
+   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
+   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
+   * ```js
+   * const [page] = await Promise.all([
+   *   context.waitForEvent('page'),
+   *   page.click('a[target=_blank]'),
+   * ]);
+   * console.log(await page.evaluate('location.href'));
+   * ```
+   * 
+   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
+   */
+  addListener(event: 'page', listener: (page: Page) => void): this;
+
+  removeListener(event: 'close', listener: () => void): this;
+
+  /**
+   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
+   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
+   * ```js
+   * const [page] = await Promise.all([
+   *   context.waitForEvent('page'),
+   *   page.click('a[target=_blank]'),
+   * ]);
+   * console.log(await page.evaluate('location.href'));
+   * ```
+   * 
+   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
+   */
+  removeListener(event: 'page', listener: (page: Page) => void): this;
+
+  off(event: 'close', listener: () => void): this;
+
+  /**
+   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
+   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
+   * ```js
+   * const [page] = await Promise.all([
+   *   context.waitForEvent('page'),
+   *   page.click('a[target=_blank]'),
+   * ]);
+   * console.log(await page.evaluate('location.href'));
+   * ```
+   * 
+   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
+   */
+  off(event: 'page', listener: (page: Page) => void): this;
+
+  /**
+   * ```js
+   * await browserContext.addCookies([cookieObject1, cookieObject2]);
+   * ```
+   * @param cookies 
+   */
+  addCookies(cookies: Array<{
+    /**
+     * **required**
+     */
+    name: string;
+
+    /**
+     * **required**
+     */
+    value: string;
+
+    /**
+     * either url or domain / path are required
+     */
+    url?: string;
+
+    /**
+     * either url or domain / path are required
+     */
+    domain?: string;
+
+    /**
+     * either url or domain / path are required
+     */
+    path?: string;
+
+    /**
+     * Unix time in seconds.
+     */
+    expires?: number;
+
+    httpOnly?: boolean;
+
+    secure?: boolean;
+
+    sameSite?: "Lax"|"None"|"Strict";
+  }>): Promise<void>;
+
+  /**
+   * Adds a script which would be evaluated in one of the following scenarios:
+   * 
+   * Whenever a page is created in the browser context or is navigated.
+   * Whenever a child frame is attached or navigated in any page in the browser context. In this case, the script is evaluated in the context of the newly attached frame.
+   * 
+   * The script is evaluated after the document was created but before any of its scripts were run. This is useful to amend  the JavaScript environment, e.g. to seed `Math.random`.
+   * An example of overriding `Math.random` before the page loads:
+   * ```js
+   * // preload.js
+   * Math.random = () => 42;
+   * ```
+   * ```js
+   * // In your playwright script, assuming the preload.js file is in same folder.
+   * await browserContext.addInitScript({
+   *   path: 'preload.js'
+   * });
+   * ```
+   * 
+   * **NOTE** The order of evaluation of multiple scripts installed via browserContext.addInitScript(script[, arg]) and page.addInitScript(script[, arg]) is not defined.
+   * @param script Script to be evaluated in all pages in the browser context.
+   * @param arg Optional argument to pass to `script` (only supported when passing a function).
+   */
+  addInitScript(script: Function|string|{
+    /**
+     * Path to the JavaScript file. If `path` is a relative path, then it is resolved relative to current working directory.
+     */
+    path?: string;
+
+    /**
+     * Raw script content.
+     */
+    content?: string;
+  }, arg?: Serializable): Promise<void>;
+
+  /**
+   * @returns Returns the browser instance of the context. If it was launched as a persistent context null gets returned.
+   */
+  browser(): null|Browser;
+
+  /**
+   * Clears context cookies.
+   */
+  clearCookies(): Promise<void>;
+
+  /**
+   * Clears all permission overrides for the browser context.
+   * ```js
+   * const context = await browser.newContext();
+   * await context.grantPermissions(['clipboard-read']);
+   * // do stuff ..
+   * context.clearPermissions();
+   * ```
+   */
+  clearPermissions(): Promise<void>;
+
+  /**
+   * Closes the browser context. All the pages that belong to the browser context
+   * will be closed.
+   * 
+   * **NOTE** the default browser context cannot be closed.
+   */
+  close(): Promise<void>;
+
+  /**
+   * If no URLs are specified, this method returns all cookies.
+   * If URLs are specified, only cookies that affect those URLs are returned.
+   * @param urls 
+   */
+  cookies(urls?: string|Array<string>): Promise<Array<Cookie>>;
+
+  /**
+   * The method adds a function called `name` on the `window` object of every frame in every page in the context.
+   * When called, the function executes `playwrightFunction` in Node.js and returns a Promise which resolves to the return value of `playwrightFunction`.
+   * If the `playwrightFunction` returns a Promise, it will be awaited.
+   * See page.exposeFunction(name, playwrightFunction) for page-only version.
+   * An example of adding an `md5` function to all pages in the context:
+   * ```js
+   * const { webkit } = require('playwright');  // Or 'chromium' or 'firefox'.
+   * const crypto = require('crypto');
+   * 
+   * (async () => {
+   *   const browser = await webkit.launch({ headless: false });
+   *   const context = await browser.newContext();
+   *   await context.exposeFunction('md5', text => crypto.createHash('md5').update(text).digest('hex'));
+   *   const page = await context.newPage();
+   *   await page.setContent(`
+   *     <script>
+   *       async function onClick() {
+   *         document.querySelector('div').textContent = await window.md5('PLAYWRIGHT');
+   *       }
+   *     </script>
+   *     <button onclick="onClick()">Click me</button>
+   *     <div></div>
+   *   `);
+   *   await page.click('button');
+   * })();
+   * ```
+   * @param name Name of the function on the window object.
+   * @param playwrightFunction Callback function that will be called in the Playwright's context.
+   */
+  exposeFunction(name: string, playwrightFunction: Function): Promise<void>;
+
+  /**
+   * Grants specified permissions to the browser context. Only grants corresponding permissions to the given origin if specified.
+   * @param permissions A permission or an array of permissions to grant. Permissions can be one of the following values:  - `'*'`
+   *  - `'geolocation'`
+   *  - `'midi'`
+   *  - `'midi-sysex'` (system-exclusive midi)
+   *  - `'notifications'`
+   *  - `'push'`
+   *  - `'camera'`
+   *  - `'microphone'`
+   *  - `'background-sync'`
+   *  - `'ambient-light-sensor'`
+   *  - `'accelerometer'`
+   *  - `'gyroscope'`
+   *  - `'magnetometer'`
+   *  - `'accessibility-events'`
+   *  - `'clipboard-read'`
+   *  - `'clipboard-write'`
+   *  - `'payment-handler'`
+   * @param options 
+   */
+  grantPermissions(permissions: Array<string>, options?: {
+    /**
+     * The origin to grant permissions to, e.g. "https://example.com".
+     */
+    origin?: string;
+  }): Promise<void>;
+
+  /**
+   * Creates a new page in the browser context.
+   */
+  newPage(): Promise<Page>;
+
+  /**
+   * @returns All open pages in the context. Non visible pages, such as `"background_page"`, will not be listed here. You can find them using chromiumBrowserContext.backgroundPages().
+   */
+  pages(): Array<Page>;
+
+  /**
+   * Routing provides the capability to modify network requests that are made by any page in the browser context.
+   * Once route is enabled, every request matching the url pattern will stall unless it's continued, fulfilled or aborted.
+   * An example of a naïve handler that aborts all image requests:
+   * ```js
+   * const context = await browser.newContext();
+   * await context.route('**\/*.{png,jpg,jpeg}', route => route.abort());
+   * const page = await context.newPage();
+   * await page.goto('https://example.com');
+   * await browser.close();
+   * ```
+   * or the same snippet using a regex pattern instead:
+   * ```js
+   * const context = await browser.newContext();
+   * await context.route(/(\.png$)|(\.jpg$)/, route => route.abort());
+   * const page = await context.newPage();
+   * await page.goto('https://example.com');
+   * await browser.close();
+   * ```
+   * Page routes (set up with page.route(url, handler)) take precedence over browser context routes when request matches both handlers.
+   * 
+   * **NOTE** Enabling routing disables http cache.
+   * @param url A glob pattern, regex pattern or predicate receiving URL to match while routing.
+   * @param handler handler function to route the request.
+   */
+  route(url: string|RegExp|((url: URL) => boolean), handler: ((route: Route, request: Request) => void)): Promise<void>;
+
+  /**
+   * This setting will change the default maximum navigation time for the following methods and related shortcuts:
+   * 
+   * page.goBack([options])
+   * page.goForward([options])
+   * page.goto(url[, options])
+   * page.reload([options])
+   * page.setContent(html[, options])
+   * page.waitForNavigation([options])
+   * 
+   * 
+   * **NOTE** `page.setDefaultNavigationTimeout` and `page.setDefaultTimeout` take priority over `browserContext.setDefaultNavigationTimeout`.
+   * @param timeout Maximum navigation time in milliseconds
+   */
+  setDefaultNavigationTimeout(timeout: number): void;
+
+  /**
+   * This setting will change the default maximum time for all the methods accepting `timeout` option.
+   * 
+   * **NOTE** `page.setDefaultNavigationTimeout`, `page.setDefaultTimeout` and `browserContext.setDefaultNavigationTimeout` take priority over `browserContext.setDefaultTimeout`.
+   * @param timeout Maximum time in milliseconds
+   */
+  setDefaultTimeout(timeout: number): void;
+
+  /**
+   * The extra HTTP headers will be sent with every request initiated by any page in the context. These headers are merged with page-specific extra HTTP headers set with page.setExtraHTTPHeaders(). If page overrides a particular header, page-specific header value will be used instead of the browser context header value.
+   * 
+   * **NOTE** `browserContext.setExtraHTTPHeaders` does not guarantee the order of headers in the outgoing requests.
+   * @param headers An object containing additional HTTP headers to be sent with every request. All header values must be strings.
+   */
+  setExtraHTTPHeaders(headers: { [key: string]: string; }): Promise<void>;
+
+  /**
+   * Sets the context's geolocation. Passing `null` or `undefined` emulates position unavailable.
+   * ```js
+   * await browserContext.setGeolocation({latitude: 59.95, longitude: 30.31667});
+   * ```
+   * 
+   * **NOTE** Consider using browserContext.grantPermissions to grant permissions for the browser context pages to read its geolocation.
+   * @param geolocation 
+   */
+  setGeolocation(geolocation: null|{
+    /**
+     * Latitude between -90 and 90. **required**
+     */
+    latitude: number;
+
+    /**
+     * Longitude between -180 and 180. **required**
+     */
+    longitude: number;
+
+    /**
+     * Non-negative accuracy value. Defaults to `0`.
+     */
+    accuracy?: number;
+  }): Promise<void>;
+
+  /**
+   * Provide credentials for HTTP authentication.
+   * 
+   * **NOTE** Browsers may cache credentials after successful authentication. Passing different credentials or passing `null` to disable authentication will be unreliable. To remove or replace credentials, create a new browser context instead.
+   * @param httpCredentials 
+   */
+  setHTTPCredentials(httpCredentials: null|{
+    /**
+     * **required**
+     */
+    username: string;
+
+    /**
+     * **required**
+     */
+    password: string;
+  }): Promise<void>;
+
+  /**
+   * @param offline Whether to emulate network being offline for the browser context.
+   */
+  setOffline(offline: boolean): Promise<void>;
+
+  /**
+   * Removes a route created with browserContext.route(url, handler). When `handler` is not specified, removes all routes for the `url`.
+   * @param url A glob pattern, regex pattern or predicate receiving URL used to register a routing with browserContext.route(url, handler).
+   * @param handler Handler function used to register a routing with browserContext.route(url, handler).
+   */
+  unroute(url: string|RegExp|((url: URL) => boolean), handler?: ((route: Route, request: Request) => void)): Promise<void>;
+
+  waitForEvent(event: 'close', optionsOrPredicate?: { predicate?: () => boolean, timeout?: number } | (() => boolean)): Promise<void>;
+
+  /**
+   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
+   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
+   * ```js
+   * const [page] = await Promise.all([
+   *   context.waitForEvent('page'),
+   *   page.click('a[target=_blank]'),
+   * ]);
+   * console.log(await page.evaluate('location.href'));
+   * ```
+   * 
+   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
+   */
+  waitForEvent(event: 'page', optionsOrPredicate?: { predicate?: (page: Page) => boolean, timeout?: number } | ((page: Page) => boolean)): Promise<Page>;
+}
+
+/**
  * The Worker class represents a WebWorker.
  * `worker` event is emitted on the page object to signal a worker creation.
  * `close` event is emitted on the worker object when the worker is gone.
@@ -21336,14 +21874,14 @@ export interface BrowserType<Browser> {
     colorScheme?: "dark"|"light"|"no-preference";
 
     /**
-     * **experimental** If specified, recorded videos are saved into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
+     * Enables video recording for all pages to `videosPath` folder. If not specified, videos are not recorded.
      */
-    _videosPath?: string;
+    videosPath?: string;
 
     /**
-     * **experimental** Enables automatic video recording for the new page. The video will have frames with the provided dimensions. Actual picture of the page will be scaled down if necessary to fit specified size.
+     * Specifies dimensions of the automatically recorded video. Can only be used if `videosPath` is set. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of the page will be scaled down if necessary to fit specified size.
      */
-    _recordVideos?: {
+    videoSize?: {
       /**
        * Video frame width.
        */
@@ -21428,11 +21966,6 @@ export interface BrowserType<Browser> {
      * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
      */
     downloadsPath?: string;
-
-    /**
-     * **experimental** If specified, recorded videos are saved into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
-     */
-    _videosPath?: string;
 
     /**
      * Enable Chromium sandboxing. Defaults to `true`.
@@ -21893,9 +22426,14 @@ export interface Browser extends EventEmitter {
     logger?: Logger;
 
     /**
-     * **experimental** Enables automatic video recording for the new page. The video will have frames with the provided dimensions. Actual picture of the page will be scaled down if necessary to fit specified size.
+     * Enables video recording for all pages to `videosPath` folder. If not specified, videos are not recorded.
      */
-    _recordVideos?: {
+    videosPath?: string;
+
+    /**
+     * Specifies dimensions of the automatically recorded video. Can only be used if `videosPath` is set. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of the page will be scaled down if necessary to fit specified size.
+     */
+    videoSize?: {
       /**
        * Video frame width.
        */
@@ -21912,455 +22450,6 @@ export interface Browser extends EventEmitter {
    * Returns the browser version.
    */
   version(): string;
-}
-
-/**
- * BrowserContexts provide a way to operate multiple independent browser sessions.
- * If a page opens another page, e.g. with a `window.open` call, the popup will belong to the parent page's browser
- * context.
- * Playwright allows creation of "incognito" browser contexts with `browser.newContext()` method.
- * "Incognito" browser contexts don't write any browsing data to disk.
- * ```js
- * // Create a new incognito browser context
- * const context = await browser.newContext();
- * // Create a new page inside context.
- * const page = await context.newPage();
- * await page.goto('https://example.com');
- * // Dispose context once it's no longer needed.
- * await context.close();
- * ```
- */
-export interface BrowserContext extends EventEmitter {
-  on(event: 'close', listener: () => void): this;
-
-  /**
-   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
-   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
-   * ```js
-   * const [page] = await Promise.all([
-   *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
-   * ]);
-   * console.log(await page.evaluate('location.href'));
-   * ```
-   * 
-   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
-   */
-  on(event: 'page', listener: (page: Page) => void): this;
-
-  once(event: 'close', listener: () => void): this;
-
-  /**
-   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
-   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
-   * ```js
-   * const [page] = await Promise.all([
-   *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
-   * ]);
-   * console.log(await page.evaluate('location.href'));
-   * ```
-   * 
-   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
-   */
-  once(event: 'page', listener: (page: Page) => void): this;
-
-  addListener(event: 'close', listener: () => void): this;
-
-  /**
-   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
-   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
-   * ```js
-   * const [page] = await Promise.all([
-   *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
-   * ]);
-   * console.log(await page.evaluate('location.href'));
-   * ```
-   * 
-   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
-   */
-  addListener(event: 'page', listener: (page: Page) => void): this;
-
-  removeListener(event: 'close', listener: () => void): this;
-
-  /**
-   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
-   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
-   * ```js
-   * const [page] = await Promise.all([
-   *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
-   * ]);
-   * console.log(await page.evaluate('location.href'));
-   * ```
-   * 
-   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
-   */
-  removeListener(event: 'page', listener: (page: Page) => void): this;
-
-  off(event: 'close', listener: () => void): this;
-
-  /**
-   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
-   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
-   * ```js
-   * const [page] = await Promise.all([
-   *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
-   * ]);
-   * console.log(await page.evaluate('location.href'));
-   * ```
-   * 
-   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
-   */
-  off(event: 'page', listener: (page: Page) => void): this;
-
-  /**
-   * ```js
-   * await browserContext.addCookies([cookieObject1, cookieObject2]);
-   * ```
-   * @param cookies 
-   */
-  addCookies(cookies: Array<{
-    /**
-     * **required**
-     */
-    name: string;
-
-    /**
-     * **required**
-     */
-    value: string;
-
-    /**
-     * either url or domain / path are required
-     */
-    url?: string;
-
-    /**
-     * either url or domain / path are required
-     */
-    domain?: string;
-
-    /**
-     * either url or domain / path are required
-     */
-    path?: string;
-
-    /**
-     * Unix time in seconds.
-     */
-    expires?: number;
-
-    httpOnly?: boolean;
-
-    secure?: boolean;
-
-    sameSite?: "Lax"|"None"|"Strict";
-  }>): Promise<void>;
-
-  /**
-   * Adds a script which would be evaluated in one of the following scenarios:
-   * 
-   * Whenever a page is created in the browser context or is navigated.
-   * Whenever a child frame is attached or navigated in any page in the browser context. In this case, the script is evaluated in the context of the newly attached frame.
-   * 
-   * The script is evaluated after the document was created but before any of its scripts were run. This is useful to amend  the JavaScript environment, e.g. to seed `Math.random`.
-   * An example of overriding `Math.random` before the page loads:
-   * ```js
-   * // preload.js
-   * Math.random = () => 42;
-   * ```
-   * ```js
-   * // In your playwright script, assuming the preload.js file is in same folder.
-   * await browserContext.addInitScript({
-   *   path: 'preload.js'
-   * });
-   * ```
-   * 
-   * **NOTE** The order of evaluation of multiple scripts installed via browserContext.addInitScript(script[, arg]) and page.addInitScript(script[, arg]) is not defined.
-   * @param script Script to be evaluated in all pages in the browser context.
-   * @param arg Optional argument to pass to `script` (only supported when passing a function).
-   */
-  addInitScript(script: Function|string|{
-    /**
-     * Path to the JavaScript file. If `path` is a relative path, then it is resolved relative to current working directory.
-     */
-    path?: string;
-
-    /**
-     * Raw script content.
-     */
-    content?: string;
-  }, arg?: Serializable): Promise<void>;
-
-  /**
-   * Clears context cookies.
-   */
-  clearCookies(): Promise<void>;
-
-  /**
-   * Clears all permission overrides for the browser context.
-   * ```js
-   * const context = await browser.newContext();
-   * await context.grantPermissions(['clipboard-read']);
-   * // do stuff ..
-   * context.clearPermissions();
-   * ```
-   */
-  clearPermissions(): Promise<void>;
-
-  /**
-   * Closes the browser context. All the pages that belong to the browser context
-   * will be closed.
-   * 
-   * **NOTE** the default browser context cannot be closed.
-   */
-  close(): Promise<void>;
-
-  /**
-   * If no URLs are specified, this method returns all cookies.
-   * If URLs are specified, only cookies that affect those URLs are returned.
-   * @param urls 
-   */
-  cookies(urls?: string|Array<string>): Promise<Array<Cookie>>;
-
-  /**
-   * The method adds a function called `name` on the `window` object of every frame in every page in the context.
-   * When called, the function executes `playwrightBinding` in Node.js and returns a Promise which resolves to the return value of `playwrightBinding`.
-   * If the `playwrightBinding` returns a Promise, it will be awaited.
-   * The first argument of the `playwrightBinding` function contains information about the caller:
-   * `{ browserContext: BrowserContext, page: Page, frame: Frame }`.
-   * See page.exposeBinding(name, playwrightBinding) for page-only version.
-   * An example of exposing page URL to all frames in all pages in the context:
-   * ```js
-   * const { webkit } = require('playwright');  // Or 'chromium' or 'firefox'.
-   * 
-   * (async () => {
-   *   const browser = await webkit.launch({ headless: false });
-   *   const context = await browser.newContext();
-   *   await context.exposeBinding('pageURL', ({ page }) => page.url());
-   *   const page = await context.newPage();
-   *   await page.setContent(`
-   *     <script>
-   *       async function onClick() {
-   *         document.querySelector('div').textContent = await window.pageURL();
-   *       }
-   *     </script>
-   *     <button onclick="onClick()">Click me</button>
-   *     <div></div>
-   *   `);
-   *   await page.click('button');
-   * })();
-   * ```
-   * @param name Name of the function on the window object.
-   * @param playwrightBinding Callback function that will be called in the Playwright's context.
-   */
-  exposeBinding(name: string, playwrightBinding: Function): Promise<void>;
-
-  /**
-   * The method adds a function called `name` on the `window` object of every frame in every page in the context.
-   * When called, the function executes `playwrightFunction` in Node.js and returns a Promise which resolves to the return value of `playwrightFunction`.
-   * If the `playwrightFunction` returns a Promise, it will be awaited.
-   * See page.exposeFunction(name, playwrightFunction) for page-only version.
-   * An example of adding an `md5` function to all pages in the context:
-   * ```js
-   * const { webkit } = require('playwright');  // Or 'chromium' or 'firefox'.
-   * const crypto = require('crypto');
-   * 
-   * (async () => {
-   *   const browser = await webkit.launch({ headless: false });
-   *   const context = await browser.newContext();
-   *   await context.exposeFunction('md5', text => crypto.createHash('md5').update(text).digest('hex'));
-   *   const page = await context.newPage();
-   *   await page.setContent(`
-   *     <script>
-   *       async function onClick() {
-   *         document.querySelector('div').textContent = await window.md5('PLAYWRIGHT');
-   *       }
-   *     </script>
-   *     <button onclick="onClick()">Click me</button>
-   *     <div></div>
-   *   `);
-   *   await page.click('button');
-   * })();
-   * ```
-   * @param name Name of the function on the window object.
-   * @param playwrightFunction Callback function that will be called in the Playwright's context.
-   */
-  exposeFunction(name: string, playwrightFunction: Function): Promise<void>;
-
-  /**
-   * Grants specified permissions to the browser context. Only grants corresponding permissions to the given origin if specified.
-   * @param permissions A permission or an array of permissions to grant. Permissions can be one of the following values:  - `'*'`
-   *  - `'geolocation'`
-   *  - `'midi'`
-   *  - `'midi-sysex'` (system-exclusive midi)
-   *  - `'notifications'`
-   *  - `'push'`
-   *  - `'camera'`
-   *  - `'microphone'`
-   *  - `'background-sync'`
-   *  - `'ambient-light-sensor'`
-   *  - `'accelerometer'`
-   *  - `'gyroscope'`
-   *  - `'magnetometer'`
-   *  - `'accessibility-events'`
-   *  - `'clipboard-read'`
-   *  - `'clipboard-write'`
-   *  - `'payment-handler'`
-   * @param options 
-   */
-  grantPermissions(permissions: Array<string>, options?: {
-    /**
-     * The origin to grant permissions to, e.g. "https://example.com".
-     */
-    origin?: string;
-  }): Promise<void>;
-
-  /**
-   * Creates a new page in the browser context.
-   */
-  newPage(): Promise<Page>;
-
-  /**
-   * @returns All open pages in the context. Non visible pages, such as `"background_page"`, will not be listed here. You can find them using chromiumBrowserContext.backgroundPages().
-   */
-  pages(): Array<Page>;
-
-  /**
-   * Routing provides the capability to modify network requests that are made by any page in the browser context.
-   * Once route is enabled, every request matching the url pattern will stall unless it's continued, fulfilled or aborted.
-   * An example of a naïve handler that aborts all image requests:
-   * ```js
-   * const context = await browser.newContext();
-   * await context.route('**\/*.{png,jpg,jpeg}', route => route.abort());
-   * const page = await context.newPage();
-   * await page.goto('https://example.com');
-   * await browser.close();
-   * ```
-   * or the same snippet using a regex pattern instead:
-   * ```js
-   * const context = await browser.newContext();
-   * await context.route(/(\.png$)|(\.jpg$)/, route => route.abort());
-   * const page = await context.newPage();
-   * await page.goto('https://example.com');
-   * await browser.close();
-   * ```
-   * Page routes (set up with page.route(url, handler)) take precedence over browser context routes when request matches both handlers.
-   * 
-   * **NOTE** Enabling routing disables http cache.
-   * @param url A glob pattern, regex pattern or predicate receiving URL to match while routing.
-   * @param handler handler function to route the request.
-   */
-  route(url: string|RegExp|((url: URL) => boolean), handler: ((route: Route, request: Request) => void)): Promise<void>;
-
-  /**
-   * This setting will change the default maximum navigation time for the following methods and related shortcuts:
-   * 
-   * page.goBack([options])
-   * page.goForward([options])
-   * page.goto(url[, options])
-   * page.reload([options])
-   * page.setContent(html[, options])
-   * page.waitForNavigation([options])
-   * 
-   * 
-   * **NOTE** `page.setDefaultNavigationTimeout` and `page.setDefaultTimeout` take priority over `browserContext.setDefaultNavigationTimeout`.
-   * @param timeout Maximum navigation time in milliseconds
-   */
-  setDefaultNavigationTimeout(timeout: number): void;
-
-  /**
-   * This setting will change the default maximum time for all the methods accepting `timeout` option.
-   * 
-   * **NOTE** `page.setDefaultNavigationTimeout`, `page.setDefaultTimeout` and `browserContext.setDefaultNavigationTimeout` take priority over `browserContext.setDefaultTimeout`.
-   * @param timeout Maximum time in milliseconds
-   */
-  setDefaultTimeout(timeout: number): void;
-
-  /**
-   * The extra HTTP headers will be sent with every request initiated by any page in the context. These headers are merged with page-specific extra HTTP headers set with page.setExtraHTTPHeaders(). If page overrides a particular header, page-specific header value will be used instead of the browser context header value.
-   * 
-   * **NOTE** `browserContext.setExtraHTTPHeaders` does not guarantee the order of headers in the outgoing requests.
-   * @param headers An object containing additional HTTP headers to be sent with every request. All header values must be strings.
-   */
-  setExtraHTTPHeaders(headers: { [key: string]: string; }): Promise<void>;
-
-  /**
-   * Sets the context's geolocation. Passing `null` or `undefined` emulates position unavailable.
-   * ```js
-   * await browserContext.setGeolocation({latitude: 59.95, longitude: 30.31667});
-   * ```
-   * 
-   * **NOTE** Consider using browserContext.grantPermissions to grant permissions for the browser context pages to read its geolocation.
-   * @param geolocation 
-   */
-  setGeolocation(geolocation: null|{
-    /**
-     * Latitude between -90 and 90. **required**
-     */
-    latitude: number;
-
-    /**
-     * Longitude between -180 and 180. **required**
-     */
-    longitude: number;
-
-    /**
-     * Non-negative accuracy value. Defaults to `0`.
-     */
-    accuracy?: number;
-  }): Promise<void>;
-
-  /**
-   * Provide credentials for HTTP authentication.
-   * 
-   * **NOTE** Browsers may cache credentials after successful authentication. Passing different credentials or passing `null` to disable authentication will be unreliable. To remove or replace credentials, create a new browser context instead.
-   * @param httpCredentials 
-   */
-  setHTTPCredentials(httpCredentials: null|{
-    /**
-     * **required**
-     */
-    username: string;
-
-    /**
-     * **required**
-     */
-    password: string;
-  }): Promise<void>;
-
-  /**
-   * @param offline Whether to emulate network being offline for the browser context.
-   */
-  setOffline(offline: boolean): Promise<void>;
-
-  /**
-   * Removes a route created with browserContext.route(url, handler). When `handler` is not specified, removes all routes for the `url`.
-   * @param url A glob pattern, regex pattern or predicate receiving URL used to register a routing with browserContext.route(url, handler).
-   * @param handler Handler function used to register a routing with browserContext.route(url, handler).
-   */
-  unroute(url: string|RegExp|((url: URL) => boolean), handler?: ((route: Route, request: Request) => void)): Promise<void>;
-
-  waitForEvent(event: 'close', optionsOrPredicate?: { predicate?: () => boolean, timeout?: number } | (() => boolean)): Promise<void>;
-
-  /**
-   * The event is emitted when a new Page is created in the BrowserContext. The page may still be loading. The event will also fire for popup pages. See also `Page.on('popup')` to receive events about popups relevant to a specific page.
-   * The earliest moment that page is available is when it has navigated to the initial url. For example, when opening a popup with `window.open('http://example.com')`, this event will fire when the network request to "http://example.com" is done and its response has started loading in the popup.
-   * ```js
-   * const [page] = await Promise.all([
-   *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
-   * ]);
-   * console.log(await page.evaluate('location.href'));
-   * ```
-   * 
-   * **NOTE** Use `page.waitForLoadState([state[, options]])` to wait until the page gets to a particular state (you should not need it in most cases).
-   */
-  waitForEvent(event: 'page', optionsOrPredicate?: { predicate?: (page: Page) => boolean, timeout?: number } | ((page: Page) => boolean)): Promise<Page>;
-
 }
 
 /**
@@ -23551,27 +23640,6 @@ export interface WebKitBrowser extends Browser {
 
 }
 
-export interface Cookie {
-  name: string;
-
-  value: string;
-
-  domain: string;
-
-  path: string;
-
-  /**
-   * Unix time in seconds.
-   */
-  expires: number;
-
-  httpOnly: boolean;
-
-  secure: boolean;
-
-  sameSite: "Lax"|"None"|"Strict";
-}
-
 export interface BrowserContextOptions {
   /**
    * Whether to automatically download all the attachments. Defaults to `false` where all the downloads are canceled.
@@ -23661,9 +23729,14 @@ export interface BrowserContextOptions {
   logger?: Logger;
 
   /**
-   * **experimental** Enables automatic video recording for new pages. The video will have frames with the provided dimensions. Actual picture of the page will be scaled down if necessary to fit specified size.
+   * Enables video recording for all pages to `videosPath` folder. If not specified, videos are not recorded.
    */
-  _recordVideos?: {
+  videosPath?: string;
+
+  /**
+   * Specifies dimensions of the automatically recorded video. Can only be used if `videosPath` is set. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of the page will be scaled down if necessary to fit specified size.
+   */
+  videoSize?: {
     /**
      * Video frame width.
      */
@@ -23763,11 +23836,6 @@ export interface LaunchOptions {
   downloadsPath?: string;
 
   /**
-   * **experimental** If specified, recorded videos are saved into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
-   */
-  _videosPath?: string;
-
-  /**
    * Enable Chromium sandboxing. Defaults to `true`.
    */
   chromiumSandbox?: boolean;
@@ -23854,6 +23922,27 @@ interface ElementHandleWaitForSelectorOptions {
    * Maximum time in milliseconds, defaults to 30 seconds, pass `0` to disable timeout. The default value can be changed by using the browserContext.setDefaultTimeout(timeout) or page.setDefaultTimeout(timeout) methods.
    */
   timeout?: number;
+}
+
+export interface Cookie {
+  name: string;
+
+  value: string;
+
+  domain: string;
+
+  path: string;
+
+  /**
+   * Unix time in seconds.
+   */
+  expires: number;
+
+  httpOnly: boolean;
+
+  secure: boolean;
+
+  sameSite: "Lax"|"None"|"Strict";
 }
 
 interface PageWaitForSelectorOptions {

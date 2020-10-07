@@ -57,7 +57,8 @@ describe('Examples', () => {
     const videoCount = await getVideoCount(page)
     expect(videoCount).toBe(1)
     const imageNames = await getFileNames(page)
-    expect(imageNames).toEqual(["/tmp/video.mp4"])
+    expect(imageNames.length).toBe(1)
+    expect(imageNames[0].endsWith(".webm")).toBe(true)
   })
   it("5: should be able to execute something in the browser context", async () => {
     await executeExample(page, 5)
