@@ -52,7 +52,7 @@ describe('Examples', () => {
     const imageNames = await getFileNames(page)
     expect(imageNames).toEqual(["document.pdf"])
   })
-  it("4: should be able to record via 'playwright-video'", async () => {
+  it("4: should be able to record a video", async () => {
     await executeExample(page, 4)
     const videoCount = await getVideoCount(page)
     expect(videoCount).toBe(1)
@@ -86,7 +86,8 @@ describe('Examples', () => {
     const videoCount = await getVideoCount(page)
     expect(videoCount).toBe(1)
     const imageNames = await getFileNames(page)
-    expect(imageNames).toEqual(["video.mp4"])
+    expect(imageNames.length).toBe(1)
+    expect(imageNames[0].endsWith(".webm")).toBe(true)
   })
   it("9: should be able to run the y-combinator crawling example", async () => {
     await executeExample(page, 9)
