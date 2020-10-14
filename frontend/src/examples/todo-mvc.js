@@ -15,7 +15,7 @@ const TODO_NAME = "Bake a cake";
 
 (async () => {
   const browser = await playwright.chromium.launch({
-    slowMo: 50
+    slowMo: 100
   });
   const context = await browser.newContext({
     videosPath: 'videos/'
@@ -43,7 +43,9 @@ const TODO_NAME = "Bake a cake";
   expect(textContentOfFirstTodoEntry, TODO_NAME)
 
   // The todo list should be persistent. Here we reload the page and see if the entry is still there
-  await page.reload()
+  await page.reload({
+    waitUntil: "networkidle"
+  });
   expect(await getCountOfTodos(), 1)
 
   // Set the entry to completed
