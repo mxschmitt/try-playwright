@@ -1,6 +1,5 @@
 // @ts-check
 const playwright = require("playwright");
-const { saveVideo } = require('playwright-video');
 
 /**
  * Helper function which will compare val1 with val2.
@@ -18,9 +17,10 @@ const TODO_NAME = "Bake a cake";
   const browser = await playwright.chromium.launch({
     slowMo: 50
   });
-  const context = await browser.newContext();
+  const context = await browser.newContext({
+    videosPath: 'videos/'
+  });
   const page = await context.newPage();
-  const capture = await saveVideo(page, 'video.mp4');
 
   await page.goto("http://todomvc.com/examples/react/");
 
@@ -61,6 +61,5 @@ const TODO_NAME = "Bake a cake";
   await page.click('"Clear completed"');
   expect(await getCountOfTodos(), 0)
 
-  await capture.stop()
   await browser.close();
 })();
