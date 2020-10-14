@@ -1,4 +1,5 @@
 import { VM } from 'vm2'
+import tmp from 'tmp'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import Bottleneck from 'bottleneck'
@@ -46,7 +47,9 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
 
   const browserId = uuidv4()
 
-  const getFiles = registerFileListener(browserId)
+  const assetDir = tmp.dirSync();
+
+  const getFiles = registerFileListener(browserId, assetDir.name)
 
   const sandbox = {
     require: (packageName: string): unknown => {
@@ -58,7 +61,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
         case "playwright-chromium":
         case "playwright-firefox":
         case "playwright-webkit":
-          return getPlaywright(browserId)
+          return getPlaywright(browserId, assetDir.name)
         default:
           throw new Error(`Package ${packageName} not recognized`)
       }
@@ -80,7 +83,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
 
   await limiter.schedule(() => vm.run(code));
 
-  const files = getFiles()
+  const files = await getFiles()
 
   files.forEach(file => {
     setTimeout(() => {

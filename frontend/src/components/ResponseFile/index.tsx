@@ -18,9 +18,13 @@ const ResponseFile: React.FunctionComponent<ResponseFileProps> = ({ file }) => {
             <video autoPlay muted className={styles.video} controls loop>
                 <source src={publicURL} type="video/mp4" />
             </video>
+        </> : extension === ".webm" ? <>
+            <video autoPlay muted className={styles.video} controls loop>
+                <source src={publicURL} type="video/webm" />
+            </video>
         </> : <>
-                    <img src={publicURL} alt={filename} className={styles.image} />
-                </>}
+                        <img src={publicURL} alt={filename} className={styles.image} />
+                    </>}
     </p>
 }
 
