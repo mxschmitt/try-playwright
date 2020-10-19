@@ -1,5 +1,15 @@
 version: '3'
 services:
+  minio:
+    image: minio/minio
+    command: server /data
+    environment:
+      - MINIO_ACCESS_KEY
+      - MINIO_SECRET_KEY
+    ports:
+      - "9000:9000"
+    volumes:
+      - /data
   frontend:
     build:
       context: .
@@ -9,19 +19,52 @@ services:
       - "80:80"
       - "443:443"
     depends_on:
-      - backend
+      - control
     environment:
       - SITE_ADDRESS
     volumes:
       - ${PWD}/cert.pem:/cert.pem
       - ${PWD}/key.pem:/key.pem
-  backend:
+  worker:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: worker/Dockerfile
     restart: always
-    volumes:
-      - ${PWD}/data:/backend/data
+    depends_on:
+      - rabbitmq
     # will be injected via the .env file
     environment:
       - BACKEND_SENTRY_DSN
+      - AMQP_URL
+  control:
+    build:
+      context: .
+      dockerfile: control-service/Dockerfile
+    restart: always
+    # will be injected via the .env file
+    environment:
+      - ETCD_ENDPOINT
+      - CONTROL_HTTP_PORT
+      - AMQP_URL
+    depends_on:
+      - rabbitmq
+      - etcd
+    ports:
+      - "1234:1234"
+  etcd:
+    image: docker.io/bitnami/etcd:3-debian-10
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+    ports:
+      - "2379:2379"
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - '15672:15672'
+      - '5672:5672'
+    volumes:
+      - 'rabbitmq_data:/var/lib/rabbitmq'
+volumes:
+  rabbitmq_data:
+    driver: local

@@ -2,7 +2,6 @@ import { VM } from 'vm2'
 import tmp from 'tmp'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
-import Bottleneck from 'bottleneck'
 
 import { getPlaywright, getPlaywrightVideo, registerFileListener } from "./playwright"
 
@@ -11,10 +10,6 @@ const packageJson = require("../package.json")
 
 const FILE_DELETION_TIME = 60 * 1000
 const PLAYWRIGHT_VERSION = packageJson.dependencies["playwright"]
-
-const limiter = new Bottleneck({
-  maxConcurrent: 5
-});
 
 export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   if (!code) {
@@ -81,7 +76,7 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     sandbox,
   })
 
-  await limiter.schedule(() => vm.run(code));
+  await vm.run(code);
 
   const files = await getFiles()
 

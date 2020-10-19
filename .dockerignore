@@ -1,7 +1,6 @@
 frontend/node_modules
 frontend/build
-backend/node_modules
-backend/lib
+worker/node_modules
+worker/lib
 node_modules
-tests/node_modules
 .git
