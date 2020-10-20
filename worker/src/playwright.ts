@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs'
+import os from 'os'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
 import { saveVideo, PageVideoCapture } from 'playwright-video'
@@ -12,10 +13,33 @@ import { Page } from 'playwright/lib/client/page';
 import playwrightBrowsers from 'playwright/browsers.json';
 // @ts-ignore
 import { setupInProcess } from 'playwright/lib/inprocess'
+import fetch from 'node-fetch'
+import FormData from 'form-data'
 
 const BROWSER_ID = Symbol('BROWSER_ID');
-
 const fileEmitter = new EventEmitter()
+
+const uploadFiles = async (files: RegisteredFile[]): Promise<FileWrapper[]> => {
+  if (files.length === 0)
+    return []
+  const form = new FormData();
+  let i = 0
+  for (const file of files) {
+    const content = await fs.promises.readFile(file.filePath)
+    form.append(`file-${i}`, content, {
+      filename: file.fileName,
+    });
+    i++
+  }
+  const resp = await fetch(`${process.env.FILE_SERVICE_URL}/api/v1/file/upload`, {
+    body: form,
+    method: "POST",
+  })
+  if (!resp.ok) {
+    throw new Error("could not upload file: " + await resp.text())
+  }
+  return await resp.json()
+}
 
 const dir2Filesizes = async (dir: string): Promise<Map<string, number>> => {
   const out = new Map<string, number>();
@@ -25,11 +49,14 @@ const dir2Filesizes = async (dir: string): Promise<Map<string, number>> => {
   return out
 }
 
+type RegisteredFile = {
+  fileName: string
+  filePath: string
+}
+
 export const registerFileListener = (browserId: string, assetDir: string): (() => Promise<FileWrapper[]>) => {
-  const files: FileWrapper[] = []
-  const handler = (file: FileWrapper): void => {
-    files.push(file)
-  }
+  const files: RegisteredFile[] = []
+  const handler = (file: RegisteredFile): number => files.push(file)
   fileEmitter.on(browserId, handler)
   return async (): Promise<FileWrapper[]> => {
     fileEmitter.removeListener(browserId, handler)
@@ -42,17 +69,14 @@ export const registerFileListener = (browserId: string, assetDir: string): (() =
         break
       fileStats = currentStats
     }
-    for (const file of await fs.promises.readdir(assetDir)) {
-      const ext = path.extname(file)
-      const publicPath = path.join("public", uuidv4() + ext)
-      await fs.promises.rename(path.join(assetDir, file), publicPath);
-      files.push({
-        extension: ext,
-        filename: path.basename(file),
-        publicURL: publicPath
+    return [
+      ...await uploadFiles(files),
+      ...await uploadFiles(((await fs.promises.readdir(assetDir)).map(file => ({
+        fileName: file,
+        filePath: path.join(assetDir, file)
       })
-    }
-    return files
+      )))
+    ]
   }
 }
 
@@ -60,16 +84,13 @@ const superScreenshot: PageType["screenshot"] = Page.prototype.screenshot;
 
 export const emitNewFile = (browserId: string, originalFileName: string): string => {
   const ext = path.extname(originalFileName)
-  const publicPath = path.join("public", uuidv4() + ext)
-  const event: FileWrapper = {
-    filename: originalFileName,
-    publicURL: publicPath,
-    extension: ext
-  }
-  fileEmitter.emit(browserId, event)
-  return publicPath
+  const mockPath = path.join(os.tmpdir(), uuidv4() + ext)
+  fileEmitter.emit(browserId, {
+    fileName: originalFileName,
+    filePath: mockPath
+  })
+  return mockPath
 }
-
 
 Page.prototype.screenshot = async function (this: PageType, options?: Parameters<typeof superScreenshot>[0]): Promise<Buffer> {
   if (options?.path) {

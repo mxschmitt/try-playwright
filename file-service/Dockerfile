@@ -4,7 +4,7 @@ COPY go.mod /root/
 COPY go.sum /root/
 RUN go mod download
 
-COPY control-service/* /root/
+COPY file-service/* /root/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app main.go
 
 FROM alpine:latest

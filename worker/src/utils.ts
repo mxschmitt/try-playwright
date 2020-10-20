@@ -80,13 +80,6 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
 
   const files = await getFiles()
 
-  files.forEach(file => {
-    setTimeout(() => {
-      console.log(`Removing old file '${file.publicURL}'`)
-      fs.unlinkSync(file.publicURL)
-    }, FILE_DELETION_TIME)
-  })
-
   return {
     version: PLAYWRIGHT_VERSION,
     duration: Math.abs(new Date().getTime() - executionStart),

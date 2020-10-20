@@ -20,6 +20,7 @@ services:
       - "443:443"
     depends_on:
       - control
+      - worker
     environment:
       - SITE_ADDRESS
     volumes:
@@ -32,8 +33,11 @@ services:
     restart: always
     depends_on:
       - rabbitmq
+      - minio
+      - file
     # will be injected via the .env file
     environment:
+      - FILE_SERVICE_URL=http://file:8080
       - BACKEND_SENTRY_DSN
       - AMQP_URL
   control:
@@ -43,8 +47,8 @@ services:
     restart: always
     # will be injected via the .env file
     environment:
-      - ETCD_ENDPOINT
-      - CONTROL_HTTP_PORT
+      - ETCD_ENDPOINT=etcd:2379
+      - CONTROL_HTTP_PORT=1234
       - AMQP_URL
     depends_on:
       - rabbitmq
@@ -65,6 +69,21 @@ services:
       - '5672:5672'
     volumes:
       - 'rabbitmq_data:/var/lib/rabbitmq'
+  file:
+    build:
+      context: .
+      dockerfile: file-service/Dockerfile
+    restart: always
+    # will be injected via the .env file
+    environment:
+      - FILE_HTTP_PORT=8080
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY
+      - MINIO_SECRET_KEY
+    depends_on:
+      - minio
+    ports:
+      - "8080:8080"
 volumes:
   rabbitmq_data:
     driver: local

@@ -12,7 +12,4 @@ RUN npm run build
 
 ENV NODE_ENV=production
 
-RUN mkdir -p /worker/public
-RUN mkdir -p /worker/data
-
 CMD ["node", "/worker/lib/index.js"]

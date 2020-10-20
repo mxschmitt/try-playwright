@@ -14,7 +14,7 @@ const IMAGE_URL = "https://via.placeholder.com/300x70/e74c3c/2c3e50/?text=Yey%20
   // service. We respond for all the backend calls which are made by pressing the
   // 'Run' button a hard-coded response which will lead to a blue banner with the
   // text Playwright.
-  await page.route("https://try.playwright.tech/api/v1/run", (route) => {
+  await page.route("https://try.playwright.tech/service/control/run", (route) => {
     // Here you can either modify the response by using 'route.fulfill()' or
     // just continue as normal by using 'route.continue()'. Try to remove
     // the entire statement and replace it with the other one in the bottom.

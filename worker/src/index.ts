@@ -16,14 +16,18 @@ const QUEUE_NAME = 'rpc_queue';
     durable: false
   });
   channel.prefetch(1);
-  console.log(' [x] Awaiting RPC requests');
+
   await channel.consume(QUEUE_NAME, async (msg) => {
     if (!msg)
       return
     const payload = JSON.parse(msg.content.toString())
-
-    const response = await runUntrustedCode(payload?.code)
-
+    let response
+    try {
+      response = await runUntrustedCode(payload?.code)
+    } catch (error) {
+      response = { error: error.toString() }
+      console.log("Errored request", error)
+    }
     channel.sendToQueue(msg.properties.replyTo,
       Buffer.from(JSON.stringify(response)), {
       correlationId: msg.properties.correlationId

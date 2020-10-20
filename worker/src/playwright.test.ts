@@ -12,6 +12,6 @@ describe("File handling", () => {
     expect(files.length).toBe(1)
     expect(files[0].extension).toBe(".pdf")
     expect(files[0].publicURL).toMatch(/public\/.*\.pdf/)
-    expect(files[0].filename).toBe(filename)
+    expect(files[0].fileName).toBe(filename)
   })
 })

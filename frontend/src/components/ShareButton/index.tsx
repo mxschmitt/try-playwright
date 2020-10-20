@@ -12,7 +12,7 @@ const ShareButton: React.FunctionComponent = () => {
         // if there is a example existing with the same code, then use this
         const example = Examples.find(example => example.code === code)
         if (!example) {
-            const resp = await fetch("/api/v1/share/create", {
+            const resp = await fetch("/service/control/share/create", {
                 method: "POST",
                 body: JSON.stringify({
                     code

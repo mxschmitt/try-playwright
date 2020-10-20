@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SITE_ADDRESS: https://localhost
+      MINIO_ACCESS_KEY: AKIAIOSFODNN7EXAMPLE
+      MINIO_SECRET_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      AMQP_URL: amqp://rabbitmq:5672?heartbeat=5s
     steps:
     - uses: microsoft/playwright-github-action@v1
     - uses: actions/checkout@v2
@@ -44,12 +47,12 @@ jobs:
     - name: Build frontend
       working-directory: frontend
       run: npm run build
-    - name: Install backend dependencies
-      working-directory: backend
+    - name: Install worker dependencies
+      working-directory: worker
       run: npm ci
-    - name: Run backend tests
-      working-directory: backend
+    - name: Run worker tests
+      working-directory: worker
       run: npm run test
-    - name: Build backend
-      working-directory: backend
+    - name: Build worker
+      working-directory: worker
       run: npm run build

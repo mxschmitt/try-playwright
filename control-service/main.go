@@ -9,7 +9,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
+	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,8 +24,8 @@ import (
 const ID_LENGTH = 5
 
 type server struct {
+	server         *http.Server
 	etcdClient     *clientv3.Client
-	router         *httprouter.Router
 	amqpConnection *amqp.Connection
 	amqpChannel    *amqp.Channel
 	amqpReplyQueue amqp.Queue
@@ -81,19 +84,20 @@ func newServer() (*server, error) {
 	go func() {
 		for d := range msgs {
 			s.repliesLock.Lock()
-			if _, ok := s.replies[d.CorrelationId]; ok {
-				s.replies[d.CorrelationId] <- d.Body
-			}
+			reply, ok := s.replies[d.CorrelationId]
 			s.repliesLock.Unlock()
+			if ok {
+				reply <- d.Body
+			}
 		}
 	}()
 
 	router := httprouter.New()
-	router.GET("/api/v1/health", s.handleHealth)
-	router.POST("/api/v1/run", s.handleRun)
-	router.GET("/api/v1/share/get/:id", s.handleShareGet)
-	router.POST("/api/v1/share/create", s.handleShareCreate)
-	s.router = router
+	router.GET("/service/control/health", s.handleHealth)
+	router.POST("/service/control/run", s.handleRun)
+	router.GET("/service/control/share/get/:id", s.handleShareGet)
+	router.POST("/service/control/share/create", s.handleShareCreate)
+	s.server = &http.Server{Handler: router, Addr: fmt.Sprintf(":%s", os.Getenv("CONTROL_HTTP_PORT"))}
 	return s, nil
 }
 
@@ -109,8 +113,9 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	}
 	corrId := uuid.New().String()
 
+	reply := make(chan []byte, 1)
 	s.repliesLock.Lock()
-	s.replies[corrId] = make(chan []byte, 1)
+	s.replies[corrId] = reply
 	s.repliesLock.Unlock()
 
 	msgBody, err := json.Marshal(map[string]string{
@@ -136,11 +141,15 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		return
 	}
 
-	result := <-s.replies[corrId]
+	result := <-reply
+
 	s.repliesLock.Lock()
 	delete(s.replies, corrId)
 	s.repliesLock.Unlock()
 
+	if strings.HasPrefix(string(result), `{"error":"`) {
+		w.WriteHeader(http.StatusBadRequest)
+	}
 	if _, err := w.Write(result); err != nil {
 		http.Error(w, fmt.Sprintf("could not write response8: %v", err), http.StatusInternalServerError)
 		return
@@ -200,11 +209,14 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprout
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *server) ListenAndServe(port string) error {
-	return http.ListenAndServe(fmt.Sprintf(":%s", port), s.router)
+func (s *server) ListenAndServe() error {
+	return s.server.ListenAndServe()
 }
 
-func (s *server) Close() error {
+func (s *server) Stop() error {
+	if err := s.server.Shutdown(context.Background()); err != nil {
+		return fmt.Errorf("could not shutdown server: %w", err)
+	}
 	return s.etcdClient.Close()
 }
 
@@ -214,8 +226,16 @@ func main() {
 		log.Fatalf("could not init server: %v", err)
 	}
 	fmt.Println("Running...")
-	if err := s.ListenAndServe(os.Getenv("CONTROL_HTTP_PORT")); err != nil {
-		log.Fatalf("could not listen: %v", err)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		if err := s.ListenAndServe(); err != nil {
+			log.Fatalf("could not listen: %v", err)
+		}
+	}()
+	<-stop
+	if err := s.Stop(); err != nil {
+		log.Fatalf("could not stop: %v", err)
 	}
 }
 

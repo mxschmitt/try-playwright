@@ -12,7 +12,7 @@ const executeExample = async (page, nth, switchToExamples=true) => {
   }
   await page.click(`.rs-panel-group > .rs-panel:nth-child(${nth})`);
   await page.click('text="Run"');
-  await page.waitForResponse(resp => resp.url().endsWith("/api/v1/run"))
+  await page.waitForResponse(resp => resp.url().endsWith("/service/control/run"))
 }
 
 const getImageCount = async (page) => {

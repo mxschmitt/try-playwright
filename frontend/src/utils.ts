@@ -1,7 +1,7 @@
 import { Examples } from "./constants";
 
 export const runCode = async (code: string): Promise<APIResponse> => {
-  const resp = await fetch("/api/v1/run", {
+  const resp = await fetch("/service/control/run", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -31,7 +31,7 @@ export const trackEvent = (): void => {
 }
 
 const fetchSharedCode = async (code: string): Promise<string | null> => {
-  const resp = await fetch(`/api/v1/share/get/${code}`)
+  const resp = await fetch(`/service/control/share/get/${code}`)
   if (!resp.ok) {
     return null
   }
