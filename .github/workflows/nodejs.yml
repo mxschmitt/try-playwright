@@ -50,9 +50,6 @@ jobs:
     - name: Install worker dependencies
       working-directory: worker
       run: npm ci
-    - name: Run worker tests
-      working-directory: worker
-      run: npm run test
     - name: Build worker
       working-directory: worker
       run: npm run build

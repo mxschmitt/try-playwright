@@ -81,7 +81,9 @@ func (s *server) handleUploadImage(w http.ResponseWriter, r *http.Request, _ htt
 			id := uuid.New().String()
 			fileExtension := filepath.Ext(files[i].Filename)
 			objectName := id + fileExtension
-			if _, err := s.minioClient.PutObject(context.Background(), bucketName, objectName, file, files[i].Size, minio.PutObjectOptions{}); err != nil {
+			if _, err := s.minioClient.PutObject(context.Background(), bucketName, objectName, file, files[i].Size, minio.PutObjectOptions{
+				ContentType: files[i].Header.Get("Content-Type"),
+			}); err != nil {
 				http.Error(w, fmt.Sprintf("could not put object: %v", err), http.StatusInternalServerError)
 				return
 			}

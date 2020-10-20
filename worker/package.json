@@ -25,20 +25,16 @@
     "build": "tsc",
     "start": "node lib/index.js",
     "dev-tsc": "tsc --watch",
-    "dev-start": "nodemon lib/index.js",
-    "test": "jest src"
+    "dev-start": "nodemon lib/index.js"
   },
   "devDependencies": {
     "@sentry/types": "5.26.0",
     "@types/amqplib": "^0.5.14",
-    "@types/jest": "26.0.14",
     "@types/mime-types": "2.1.0",
     "@types/node": "14.11.8",
     "@types/node-fetch": "^2.5.7",
     "@types/tmp": "^0.2.0",
     "@types/uuid": "8.3.0",
-    "jest": "26.5.3",
-    "nodemon": "2.0.5",
-    "ts-jest": "26.4.1"
+    "nodemon": "2.0.5"
   }
 }
