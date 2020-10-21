@@ -30,6 +30,8 @@ services:
     build:
       context: .
       dockerfile: worker/Dockerfile
+    deploy:
+      replicas: 5
     restart: always
     depends_on:
       - rabbitmq

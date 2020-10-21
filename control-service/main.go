@@ -140,20 +140,30 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		http.Error(w, fmt.Sprintf("could not publish message: %v", err), http.StatusInternalServerError)
 		return
 	}
-
-	result := <-reply
+	w.Header().Set("Content-Type", "application/json")
+	select {
+	case result := <-reply:
+		// TODO: mxschmitt change structure in amqp to add a success field
+		if strings.HasPrefix(string(result), `{"error":"`) {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		if _, err := w.Write(result); err != nil {
+			http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
+			return
+		}
+	case <-time.After(30 * time.Second):
+		w.WriteHeader(http.StatusRequestTimeout)
+		if err := json.NewEncoder(w).Encode(map[string]string{
+			"error": "Timeout!",
+		}); err != nil {
+			http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
 
 	s.repliesLock.Lock()
 	delete(s.replies, corrId)
 	s.repliesLock.Unlock()
-
-	if strings.HasPrefix(string(result), `{"error":"`) {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-	if _, err := w.Write(result); err != nil {
-		http.Error(w, fmt.Sprintf("could not write response8: %v", err), http.StatusInternalServerError)
-		return
-	}
 }
 
 func (s *server) handleShareGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) {

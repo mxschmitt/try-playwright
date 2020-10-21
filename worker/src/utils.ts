@@ -1,6 +1,5 @@
 import { VM } from 'vm2'
 import tmp from 'tmp'
-import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 
 import { getPlaywright, getPlaywrightVideo, registerFileListener } from "./playwright"
@@ -8,7 +7,6 @@ import { getPlaywright, getPlaywrightVideo, registerFileListener } from "./playw
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJson = require("../package.json")
 
-const FILE_DELETION_TIME = 60 * 1000
 const PLAYWRIGHT_VERSION = packageJson.dependencies["playwright"]
 
 export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
