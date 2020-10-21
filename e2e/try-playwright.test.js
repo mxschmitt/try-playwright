@@ -35,7 +35,7 @@ describe('Examples', () => {
     const imageCount = await getImageCount(page)
     expect(imageCount).toBe(2)
     const imageNames = await getFileNames(page)
-    expect(imageNames).toEqual(["example-chromium.png", "example-webkit.png"])
+    expect(new Set(imageNames)).toEqual(new Set(["example-chromium.png", "example-webkit.png"]))
   })
   it("2: should be able to set the geolocation", async () => {
     await executeExample(page, 2)
