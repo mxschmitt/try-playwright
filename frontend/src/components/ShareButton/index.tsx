@@ -14,12 +14,7 @@ const ShareButton: React.FunctionComponent = () => {
         if (!example) {
             const resp = await fetch("/service/control/share/create", {
                 method: "POST",
-                body: JSON.stringify({
-                    code
-                }),
-                headers: {
-                    "Content-Type": "application/json"
-                }
+                body: code,
             })
             if (!resp.ok) {
                 Notification.error({
