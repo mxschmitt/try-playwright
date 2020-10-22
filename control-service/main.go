@@ -94,6 +94,7 @@ func newServer() (*server, error) {
 
 	router := httprouter.New()
 	router.GET("/service/control/health", s.handleHealth)
+	router.HEAD("/service/control/health", s.handleHealth)
 	router.POST("/service/control/run", s.handleRun)
 	router.GET("/service/control/share/get/:id", s.handleShareGet)
 	router.POST("/service/control/share/create", s.handleShareCreate)

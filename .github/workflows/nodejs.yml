@@ -23,6 +23,8 @@ jobs:
       run: npm ci
     - name: Generate self-signed certificate
       run: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
+    - name: Pull Docker images
+      run: docker-compose pull
     - name: Build Docker images
       run: docker-compose build
     - name: Start Docker containers

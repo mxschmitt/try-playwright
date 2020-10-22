@@ -52,6 +52,7 @@ func newServer() (*server, error) {
 
 	router := httprouter.New()
 	router.GET("/api/v1/health", s.handleHealth)
+	router.HEAD("/api/v1/health", s.handleHealth)
 	router.POST("/api/v1/file/upload", s.handleUploadImage)
 	s.server = &http.Server{Addr: fmt.Sprintf(":%s", os.Getenv("FILE_HTTP_PORT")), Handler: router}
 	return s, nil
