@@ -6,10 +6,8 @@ services:
     environment:
       - MINIO_ACCESS_KEY
       - MINIO_SECRET_KEY
-    ports:
-      - "9000:9000"
     volumes:
-      - /data
+      - minio_data:/data
   frontend:
     build:
       context: .
@@ -53,20 +51,18 @@ services:
     # will be injected via the .env file
     environment:
       - ETCD_ENDPOINT=etcd:2379
-      - CONTROL_HTTP_PORT=1234
+      - CONTROL_HTTP_PORT=8080
       - AMQP_URL
     depends_on:
       - rabbitmq
       - etcd
-    ports:
-      - "1234:1234"
   etcd:
     image: docker.io/bitnami/etcd:3-debian-10
     environment:
       - ALLOW_NONE_AUTHENTICATION=yes
       - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-    ports:
-      - "2379:2379"
+    volumes:
+      - etcd_data:/bitnami/etcd
   rabbitmq:
     image: rabbitmq:3-management
     ports:
@@ -86,8 +82,10 @@ services:
       - MINIO_SECRET_KEY
     depends_on:
       - minio
-    ports:
-      - "8080:8080"
 volumes:
   rabbitmq_data:
+    driver: local
+  etcd_data:
+    driver: local
+  minio_data:
     driver: local

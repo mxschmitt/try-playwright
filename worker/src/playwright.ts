@@ -4,7 +4,7 @@ import os from 'os'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
 import { saveVideo, PageVideoCapture } from 'playwright-video'
-import playwright, { Browser, WebKitBrowser, ChromiumBrowser, FirefoxBrowser, Page as PageType, LaunchOptions, BrowserContextOptions, BrowserContext, ChromiumBrowserContext } from 'playwright'
+import playwright, { Browser, WebKitBrowser, ChromiumBrowser, FirefoxBrowser, Page as PageType, LaunchOptions, BrowserContextOptions, BrowserContext } from 'playwright'
 // @ts-ignore
 import { Playwright } from 'playwright/lib/server/playwright'
 // @ts-ignore
