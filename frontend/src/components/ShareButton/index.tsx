@@ -42,14 +42,25 @@ const ShareButton: React.FunctionComponent = () => {
             })
     }
     useEffect(() => {
-        const handler = function (e: KeyboardEvent): void {
+        let processingKeyboardEvent = false
+        const keyupHandler = (e: KeyboardEvent) => {
+             processingKeyboardEvent = false
+        }
+        const keydownHandler = (e: KeyboardEvent): void => {
             if ((e.ctrlKey || e.metaKey) && e.key === "s") {
                 e.preventDefault();
-                handleOnClick()
+                if (!processingKeyboardEvent) {
+                    handleOnClick()
+                    processingKeyboardEvent = true
+                }
             }
         }
-        window.addEventListener("keydown", handler);
-        return (): void => window.removeEventListener("keydown", handler)
+        window.addEventListener("keydown", keydownHandler);
+        window.addEventListener("keyup", keyupHandler);
+        return (): void => {
+            window.removeEventListener("keydown", keydownHandler)
+            window.removeEventListener("keyup", keyupHandler)
+        }
     })
     return (<IconButton className={styles.iconButton} onClick={handleOnClick} icon={<Icon icon="share" />}>
         Share
