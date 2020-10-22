@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   minio:
     image: minio/minio
@@ -66,9 +66,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - '5672:5672'
+      - "5672:5672"
     volumes:
-      - 'rabbitmq_data:/var/lib/rabbitmq'
+      - "rabbitmq_data:/var/lib/rabbitmq"
   file:
     build:
       context: .
@@ -82,6 +82,15 @@ services:
       - MINIO_SECRET_KEY
     depends_on:
       - minio
+  # migrate-db:
+  #   build:
+  #     context: .
+  #     dockerfile: migration/Dockerfile
+  #   command: /app
+  #   depends_on:
+  #     - etcd
+  #   volumes:
+  #     - ${PWD}/db.sqlite:/db.sqlite
 volumes:
   rabbitmq_data:
     driver: local

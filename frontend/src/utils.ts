@@ -21,9 +21,7 @@ export const runCode = async (code: string): Promise<APIResponse> => {
 }
 
 export const trackEvent = (): void => {
-  // @ts-ignore
   if (window.gtag && process.env.NODE_ENV === "production") {
-    // @ts-ignore
     window.gtag('event', "execute", {
       'event_category': "engagement",
     });
@@ -35,8 +33,7 @@ const fetchSharedCode = async (code: string): Promise<string | null> => {
   if (!resp.ok) {
     return null
   }
-  const body = await resp.json()
-  return body?.code
+  return await resp.text()
 }
 
 export const determineCode = async (setCode: ((code: string) => void)): Promise<void> => {
