@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "lint": "eslint --ext ts,tsx,js,jsx .",
-    "test": "folio e2e"
+    "test": "folio e2e/ -j 1"
   },
   "repository": {
     "type": "git",

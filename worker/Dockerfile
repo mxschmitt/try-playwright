@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.5.1-focal
+FROM mcr.microsoft.com/playwright:v1.5.1-bionic
 
 USER pwuser
 RUN mkdir -p /home/pwuser/worker
