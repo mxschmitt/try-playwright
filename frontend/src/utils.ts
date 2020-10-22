@@ -11,11 +11,14 @@ export const runCode = async (code: string): Promise<APIResponse> => {
     })
   })
   if (!resp.ok) {
+    if (resp.status === 429) {
+      throw new Error("You are rate limited, please try again in a few minutes.")
+    }
     if (resp.headers.get("Content-Type")?.includes("application/json")) {
       const error = await resp.json()
       throw new Error(error.error)
     }
-    throw new Error("Execution was not successfull, please try again in a few minutes...")
+    throw new Error("Execution was not successfull, please try again in a few minutes.")
   }
   return await resp.json()
 }
