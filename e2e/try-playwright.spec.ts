@@ -16,10 +16,8 @@ const { it, describe } = fixtures.build();
 
 const ROOT_URL = process.env.ROOT_TEST_URL || "https://localhost"
 
-const executeExample = async (page: Page, nth: number, switchToExamples = true): Promise<void> => {
-  await page.goto(ROOT_URL, {
-    waitUntil: "networkidle"
-  });
+const executeExample = async (page: Page, nth: number): Promise<void> => {
+  await page.goto(ROOT_URL, { waitUntil: "networkidle" });
   await page.click(`.rs-panel-group > .rs-panel:nth-child(${nth})`);
   await page.click('text="Run"');
   await page.waitForResponse(resp => resp.url().endsWith("/service/control/run"))
@@ -109,3 +107,27 @@ describe('Examples', () => {
     expect(logStatements.length).toBeGreaterThan(20)
   })
 });
+
+describe("Share functionality", () => {
+  it("should not generate share URL for predefined example", async ({ page }) => {
+    await page.goto(ROOT_URL, { waitUntil: "networkidle" });
+    await page.click("text='Share'")
+    await page.waitForTimeout(500)
+    expect(page.url()).toBe(`${ROOT_URL}/?e=page-screenshot`)
+  })
+  it("should not generate share URL for predefined example", async ({ page }) => {
+    await page.goto(ROOT_URL, { waitUntil: "networkidle" });
+
+    await page.click(".monaco-editor")
+    await page.keyboard.press("Meta+KeyA")
+    await page.keyboard.type('console.log("FolioAssert")')
+
+    await page.click("text='Share'")
+    await page.waitForTimeout(500)
+    expect(page.url().startsWith(`${ROOT_URL}/?s=`)).toBeTruthy()
+
+    await page.reload()
+    await page.click("text='Run'")
+    await page.waitForSelector("text=FolioAssert")
+  })
+})

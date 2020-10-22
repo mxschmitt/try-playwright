@@ -21,7 +21,7 @@ import (
 	"go.etcd.io/etcd/clientv3"
 )
 
-const ID_LENGTH = 5
+const ID_LENGTH = 7
 
 type server struct {
 	server         *http.Server
@@ -214,6 +214,7 @@ func (s *server) handleShareCreate(w http.ResponseWriter, r *http.Request, _ htt
 			return
 		}
 	}
+	http.Error(w, "could not generate a key", http.StatusInternalServerError)
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
