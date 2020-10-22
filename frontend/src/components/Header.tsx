@@ -7,7 +7,7 @@ const Header: React.FunctionComponent = () => {
       <Navbar.Header>
         <Nav>
           <Nav.Item href="https://playwright.tech">
-            <strong>Playwright Community</strong>{' '}
+            <strong>Try Playwright</strong>{' '}
             <span role="img" aria-label="Playwright">🎭</span>
           </Nav.Item>
         </Nav>

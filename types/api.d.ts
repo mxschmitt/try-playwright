@@ -7,7 +7,7 @@ interface LogEntry {
 
 interface FileWrapper {
   publicURL: string;
-  filename?: string;
+  fileName?: string;
   extension: string;
 }
 
