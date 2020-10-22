@@ -28,7 +28,9 @@ jobs:
     - name: Start Docker containers
       run: docker-compose up -d
     - name: Run e2e tests
-      run: npm run test
+      run: |
+        npx wait-on https://localhost
+        npm run test
   build:
     runs-on: ubuntu-latest
     steps:
