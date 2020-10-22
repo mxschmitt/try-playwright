@@ -15,10 +15,12 @@ require (
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/mattn/go-sqlite3 v1.14.4
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/minio/minio-go/v7 v7.0.5
 	github.com/streadway/amqp v1.0.0
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 	go.uber.org/zap v1.16.0 // indirect
 	google.golang.org/grpc v1.26.0 // indirect
+	modernc.org/sqlite v1.7.4
 )
