@@ -64,9 +64,7 @@ services:
     volumes:
       - etcd_data:/bitnami/etcd
   rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
+    image: rabbitmq:3
     volumes:
       - "rabbitmq_data:/var/lib/rabbitmq"
   file:
@@ -85,7 +83,7 @@ services:
   # migrate-db:
   #   build:
   #     context: .
-  #     dockerfile: migration/Dockerfile
+  #     dockerfile: scripts/migration/Dockerfile
   #   command: /app
   #   depends_on:
   #     - etcd
