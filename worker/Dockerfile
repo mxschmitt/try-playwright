@@ -1,15 +1,18 @@
 FROM mcr.microsoft.com/playwright:v1.5.1-focal
 
-WORKDIR /worker
+USER pwuser
+RUN mkdir -p /home/pwuser/worker
+WORKDIR /home/pwuser/worker
 
-COPY worker/package.json /worker
-COPY worker/package-lock.json /worker
+COPY worker/package.json /home/pwuser/worker/
+COPY worker/package-lock.json /home/pwuser/worker/
 RUN npm ci
 
-COPY worker/ /worker
-COPY types/ /types
-RUN npm run build
+COPY worker/ /home/pwuser/worker
+COPY types/ /home/pwuser/types
 
 ENV NODE_ENV=production
 
-CMD ["node", "/worker/lib/index.js"]
+RUN npm run build
+
+CMD ["node", "/home/pwuser/worker/lib/index.js"]

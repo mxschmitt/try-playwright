@@ -32,6 +32,9 @@ services:
       dockerfile: worker/Dockerfile
     deploy:
       replicas: 5
+      resources:
+        limits:
+          memory: 1g
     restart: always
     depends_on:
       - rabbitmq
@@ -67,7 +70,6 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - '15672:15672'
       - '5672:5672'
     volumes:
       - 'rabbitmq_data:/var/lib/rabbitmq'
