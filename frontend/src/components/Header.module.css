@@ -1,5 +1,11 @@
 @media screen and (max-width: 420px) {
-  .hideSuperSmall {
+  .hideSmallScreens {
+    display: none;
+  }
+}
+
+@media screen and (min-width: 421px) {
+  .hideBigScreens {
     display: none;
   }
 }

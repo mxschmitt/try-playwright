@@ -8,8 +8,18 @@ const useDarkMode = (): [boolean] => {
     const handler = (ev: MediaQueryListEvent): void => {
       setDarkMode(ev.matches)
     }
-    mql.addEventListener("change", handler);
-    return (): void => mql.removeEventListener("change", handler)
+    if (mql.addListener){
+      mql.addListener(handler);
+    } else {
+      mql.addEventListener("change", handler);
+    }
+    return (): void => {
+      if (mql.removeListener) {
+        mql.removeListener(handler)
+      } else {
+        mql.removeEventListener("change", handler)
+      }
+    }
   }, [])
   return [darkMode]
 }

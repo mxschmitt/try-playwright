@@ -4,6 +4,10 @@ root * /frontend
 
 file_server
 
+header *.js Cache-Control max-age=86400
+header *.css Cache-Control max-age=86400
+header *.tff Cache-Control max-age=86400
+
 log
 
 tls /cert.pem /key.pem

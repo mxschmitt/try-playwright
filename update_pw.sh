@@ -35,15 +35,15 @@ set -e
 
 function update_playwright_types {
     TYPES_FILE="frontend/src/components/Editor/types.txt"
-    cat backend/node_modules/@types/node/globals.d.ts > $TYPES_FILE
+    cat worker/node_modules/@types/node/globals.d.ts > $TYPES_FILE
     echo "declare module 'playwright' {" >> $TYPES_FILE
-    cat backend/node_modules/playwright/types/protocol.d.ts >> $TYPES_FILE
-    cat backend/node_modules/playwright/types/types.d.ts | tail -n +21 >> $TYPES_FILE
+    cat worker/node_modules/playwright/types/protocol.d.ts >> $TYPES_FILE
+    cat worker/node_modules/playwright/types/types.d.ts | tail -n +21 >> $TYPES_FILE
     echo "$CUSTOM_SUFFIX" >> $TYPES_FILE
 }
 
 
 update_dependencies frontend
-update_dependencies backend
+update_dependencies worker
 update_playwright_types
 update_dependencies .
