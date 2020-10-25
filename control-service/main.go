@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.com/streadway/amqp"
@@ -34,6 +36,13 @@ type server struct {
 }
 
 func newServer() (*server, error) {
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("CONTORL_SERVICE_SENTRY_DSN"),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not init Sentry: %w", err)
+	}
+
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{os.Getenv("ETCD_ENDPOINT")},
 		DialTimeout: 5 * time.Second,
@@ -98,6 +107,15 @@ func newServer() (*server, error) {
 	router.POST("/service/control/run", s.handleRun)
 	router.GET("/service/control/share/get/:id", s.handleShareGet)
 	router.POST("/service/control/share/create", s.handleShareCreate)
+	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, err interface{}) {
+		if exception, ok := err.(string); ok {
+			sentry.CaptureException(errors.New(exception))
+		}
+		if exception, ok := err.(error); ok {
+			sentry.CaptureException(exception)
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 	s.server = &http.Server{Handler: router, Addr: fmt.Sprintf(":%s", os.Getenv("CONTROL_HTTP_PORT"))}
 	return s, nil
 }

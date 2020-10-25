@@ -41,7 +41,7 @@ services:
     # will be injected via the .env file
     environment:
       - FILE_SERVICE_URL=http://file:8080
-      - BACKEND_SENTRY_DSN
+      - WORKER_NODE_SENTRY_DSN
       - AMQP_URL
   control:
     build:
@@ -53,6 +53,7 @@ services:
       - ETCD_ENDPOINT=etcd:2379
       - CONTROL_HTTP_PORT=8080
       - AMQP_URL
+      - CONTORL_SERVICE_SENTRY_DSN
     depends_on:
       - rabbitmq
       - etcd
@@ -78,6 +79,7 @@ services:
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY
       - MINIO_SECRET_KEY
+      - FILE_SERVICE_SENTRY_DSN
     depends_on:
       - minio
   # migrate-db:
