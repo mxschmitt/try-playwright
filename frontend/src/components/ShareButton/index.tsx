@@ -17,9 +17,16 @@ const ShareButton: React.FunctionComponent = () => {
                 body: code,
             })
             if (!resp.ok) {
+                if (resp.status === 429) {
+                    Notification.error({
+                        title: "You are rate limited, please try again in a few minutes."
+                    })
+                    return
+                }
                 Notification.error({
                     title: "Creating of a Share link was not successfull",
                 });
+                return
             }
             const body = await resp.json()
             path = `s=${body?.key}`

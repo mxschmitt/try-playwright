@@ -6,8 +6,8 @@ import { runUntrustedCode } from './utils';
 const QUEUE_NAME = 'rpc_queue';
 
 (async (): Promise<void> => {
-  if (process.env.NODE_ENV === "production" && process.env.BACKEND_SENTRY_DSN) {
-    Sentry.init({ dsn: process.env.BACKEND_SENTRY_DSN });
+  if (process.env.NODE_ENV === "production" && process.env.WORKER_NODE_SENTRY_DSN) {
+    Sentry.init({ dsn: process.env.WORKER_NODE_SENTRY_DSN });
   }
   const queueConnection = await amqp.connect(process.env.AMQP_URL as string)
   const channel = await queueConnection.createChannel()
@@ -21,12 +21,18 @@ const QUEUE_NAME = 'rpc_queue';
     if (!msg)
       return
     const payload = JSON.parse(msg.content.toString())
+    Sentry.addBreadcrumb({
+      category: "execution-code",
+      message: payload?.code,
+      level: Sentry.Severity.Info,
+    });
     let response
     try {
       response = await runUntrustedCode(payload?.code)
     } catch (error) {
       response = { error: error.toString() }
       console.log("Errored request", error)
+      Sentry.captureException(error)
     }
     channel.sendToQueue(msg.properties.replyTo,
       Buffer.from(JSON.stringify(response)), {

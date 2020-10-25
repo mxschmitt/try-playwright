@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.com/minio/minio-go/v7"
@@ -27,6 +29,12 @@ type server struct {
 const bucketName = "file-uploads"
 
 func newServer() (*server, error) {
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("FILE_SERVICE_SENTRY_DSN"),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not init Sentry: %w", err)
+	}
 	minioClient, err := minio.New(os.Getenv("MINIO_ENDPOINT"), &minio.Options{
 		Creds:  credentials.NewStaticV4(os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), ""),
 		Secure: false,
@@ -54,6 +62,15 @@ func newServer() (*server, error) {
 	router.GET("/api/v1/health", s.handleHealth)
 	router.HEAD("/api/v1/health", s.handleHealth)
 	router.POST("/api/v1/file/upload", s.handleUploadImage)
+	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, err interface{}) {
+		if exception, ok := err.(string); ok {
+			sentry.CaptureException(errors.New(exception))
+		}
+		if exception, ok := err.(error); ok {
+			sentry.CaptureException(exception)
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 	s.server = &http.Server{Addr: fmt.Sprintf(":%s", os.Getenv("FILE_HTTP_PORT")), Handler: router}
 	return s, nil
 }
