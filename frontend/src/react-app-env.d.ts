@@ -1,7 +1,8 @@
 /// <reference types="react-scripts" />
 
 declare module '*.txt' {
-  export default string;
+  const src: string;
+  export default src;
 }
 
 interface Window {

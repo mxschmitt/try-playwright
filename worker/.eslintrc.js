@@ -4,13 +4,7 @@ module.exports = {
   plugins: [
     '@typescript-eslint',
   ],
-  settings: {
-    react: {
-      version: "16.13"
-    }
-  },
   extends: [
-    'react-app',
     'eslint:recommended',
     'plugin:@typescript-eslint/eslint-recommended',
     'plugin:@typescript-eslint/recommended',

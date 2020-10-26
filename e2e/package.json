@@ -1,0 +1,19 @@
+{
+  "name": "try-playwright",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "folio -j 1 --reporter list try-playwright.spec.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxschmitt/try-playwright.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mxschmitt/try-playwright/issues"
+  },
+  "homepage": "https://github.com/mxschmitt/try-playwright#readme",
+  "devDependencies": {
+    "@playwright/test": "^0.151.1"
+  },
+  "dependencies": {}
+}
