@@ -21,6 +21,7 @@ jobs:
         node-version: 14.x
     - name: Install dependencies
       run: npm ci
+      working-directory: e2e
     - name: Generate self-signed certificate
       run: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
     - name: Pull Docker images
@@ -30,30 +31,28 @@ jobs:
     - name: Start Docker containers
       run: docker-compose up -d
     - name: Run e2e tests
+      working-directory: e2e
       run: |
         npx wait-on https://localhost/service/control/health
         npm run test
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: [frontend, worker]
+    defaults:
+      run:
+        working-directory: ${{ matrix.folder }}
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: 14.x
-    - name: Install root dependencies
+        node-version: 15.x
+    - name: Install
       run: npm ci
-    - name: Lint project
+    - name: Lint
       run: npm run lint
-    - name: Install frontend dependencies
-      working-directory: frontend
-      run: npm ci
-    - name: Build frontend
-      working-directory: frontend
-      run: npm run build
-    - name: Install worker dependencies
-      working-directory: worker
-      run: npm ci
-    - name: Build worker
-      working-directory: worker
+    - name: Build
       run: npm run build

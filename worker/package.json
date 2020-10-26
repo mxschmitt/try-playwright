@@ -1,5 +1,5 @@
 {
-  "name": "try-playwright-backend",
+  "name": "try-playwright-worker",
   "version": "1.0.0",
   "description": "Try Playwright tests in your browser without installing the entire suite.",
   "main": "index.js",
@@ -8,7 +8,7 @@
   "license": "MIT",
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.0.20",
-    "@sentry/node": "^5.26.0",
+    "@sentry/node": "^5.27.1",
     "amqplib": "^0.6.0",
     "form-data": "^3.0.0",
     "mime-types": "^2.1.27",
@@ -25,16 +25,20 @@
     "build": "tsc",
     "start": "node lib/index.js",
     "dev-tsc": "tsc --watch",
-    "dev-start": "nodemon lib/index.js"
+    "dev-start": "nodemon lib/index.js",
+    "lint": "eslint src/"
   },
   "devDependencies": {
-    "@sentry/types": "5.26.0",
-    "@types/amqplib": "^0.5.14",
+    "@sentry/types": "5.27.1",
+    "@types/amqplib": "^0.5.15",
     "@types/mime-types": "2.1.0",
-    "@types/node": "14.11.8",
+    "@types/node": "14.14.3",
     "@types/node-fetch": "^2.5.7",
     "@types/tmp": "^0.2.0",
     "@types/uuid": "8.3.0",
-    "nodemon": "2.0.5"
+    "@typescript-eslint/eslint-plugin": "^4.5.0",
+    "@typescript-eslint/parser": "^4.5.0",
+    "eslint": "^7.12.0",
+    "nodemon": "2.0.6"
   }
 }

@@ -9,7 +9,6 @@ export interface Example extends MetaExample {
 }
 
 const injectCode = (example: MetaExample): Example => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const code = require(`!!raw-loader!./examples/${example.id}.js`)
   return {
     ...example,

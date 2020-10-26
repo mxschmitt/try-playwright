@@ -46,4 +46,4 @@ function update_playwright_types {
 update_dependencies frontend
 update_dependencies worker
 update_playwright_types
-update_dependencies .
+update_dependencies e2e
