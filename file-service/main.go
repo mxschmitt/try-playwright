@@ -19,6 +19,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 type server struct {
@@ -53,6 +54,19 @@ func newServer() (*server, error) {
 		}
 	} else {
 		log.Printf("Successfully created bucket %s\n", bucketName)
+		config := lifecycle.NewConfiguration()
+		config.Rules = []lifecycle.Rule{
+			{
+				ID:     "expire-bucket",
+				Status: "Enabled",
+				Expiration: lifecycle.Expiration{
+					Days: 1,
+				},
+			},
+		}
+		if err := minioClient.SetBucketLifecycle(context.Background(), bucketName, config); err != nil {
+			return nil, fmt.Errorf("could not set bucket lifecycle rule: %w", err)
+		}
 	}
 	s := &server{
 		minioClient: minioClient,
