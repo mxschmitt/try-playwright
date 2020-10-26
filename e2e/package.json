@@ -2,7 +2,7 @@
   "name": "try-playwright",
   "version": "1.0.0",
   "scripts": {
-    "test": "folio e2e/ -j 1 --reporter list"
+    "test": "folio -j 1 --reporter list"
   },
   "repository": {
     "type": "git",
