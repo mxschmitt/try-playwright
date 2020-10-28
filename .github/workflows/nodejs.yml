@@ -12,6 +12,8 @@ jobs:
       MINIO_ACCESS_KEY: AKIAIOSFODNN7EXAMPLE
       MINIO_SECRET_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
       AMQP_URL: amqp://rabbitmq:5672?heartbeat=5s
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: foobar
     steps:
     - uses: microsoft/playwright-github-action@v1
     - uses: actions/checkout@v2

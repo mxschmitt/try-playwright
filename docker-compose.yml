@@ -54,7 +54,7 @@ services:
       - CONTROL_HTTP_PORT=8080
       - AMQP_URL
       - CONTORL_SERVICE_SENTRY_DSN
-      - MONGO_DB_URI
+      - MONGO_DB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017
     depends_on:
       - rabbitmq
       - etcd
