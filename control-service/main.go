@@ -104,7 +104,7 @@ func newServer() (*server, error) {
 	s := &server{
 		etcdClient:               etcdClient,
 		mongoClient:              mongoClient,
-		mongoExecutionCollection: mongoClient.Database("try-playwright").Collection("execution"),
+		mongoExecutionCollection: mongoClient.Database("try-playwright").Collection("executions"),
 		amqpConnection:           amqpConnection,
 		amqpChannel:              amqpChannel,
 		amqpReplyQueue:           amqpReplyQueue,
