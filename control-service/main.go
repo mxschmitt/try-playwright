@@ -21,18 +21,24 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/streadway/amqp"
 	"go.etcd.io/etcd/clientv3"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 const ID_LENGTH = 7
 
 type server struct {
-	server         *http.Server
-	etcdClient     *clientv3.Client
-	amqpConnection *amqp.Connection
-	amqpChannel    *amqp.Channel
-	amqpReplyQueue amqp.Queue
-	replies        map[string]chan []byte
-	repliesLock    sync.Mutex
+	server                   *http.Server
+	etcdClient               *clientv3.Client
+	mongoClient              *mongo.Client
+	mongoExecutionCollection *mongo.Collection
+	amqpConnection           *amqp.Connection
+	amqpChannel              *amqp.Channel
+	amqpReplyQueue           amqp.Queue
+	replies                  map[string]chan []byte
+	repliesLock              sync.Mutex
 }
 
 func newServer() (*server, error) {
@@ -43,6 +49,18 @@ func newServer() (*server, error) {
 		return nil, fmt.Errorf("could not init Sentry: %w", err)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_DB_URI")))
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to MongoDB database: %w", err)
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err = mongoClient.Ping(ctx, readpref.Primary()); err != nil {
+		return nil, fmt.Errorf("could not ping MongoDB: %w", err)
+	}
+
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{os.Getenv("ETCD_ENDPOINT")},
 		DialTimeout: 5 * time.Second,
@@ -50,6 +68,7 @@ func newServer() (*server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to etcd: %w", err)
 	}
+
 	amqpConnection, err := amqp.Dial(os.Getenv("AMQP_URL"))
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to queue: %w", err)
@@ -83,11 +102,13 @@ func newServer() (*server, error) {
 		return nil, fmt.Errorf("Failed to register a consumer: %w", err)
 	}
 	s := &server{
-		etcdClient:     etcdClient,
-		amqpConnection: amqpConnection,
-		amqpChannel:    amqpChannel,
-		amqpReplyQueue: amqpReplyQueue,
-		replies:        make(map[string]chan []byte),
+		etcdClient:               etcdClient,
+		mongoClient:              mongoClient,
+		mongoExecutionCollection: mongoClient.Database("try-playwright").Collection("execution"),
+		amqpConnection:           amqpConnection,
+		amqpChannel:              amqpChannel,
+		amqpReplyQueue:           amqpReplyQueue,
+		replies:                  make(map[string]chan []byte),
 	}
 
 	go func() {
@@ -183,6 +204,19 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	s.repliesLock.Lock()
 	delete(s.replies, corrId)
 	s.repliesLock.Unlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := s.mongoExecutionCollection.InsertOne(ctx, bson.M{
+		"userAgent":         r.Header.Get("User-Agent"),
+		"ip":                readUserIP(r),
+		"code":              req.Code,
+		"executionDuration": 0, // TODO: update once RPC protocol is established
+		"language":          "js",
+		"createdAt":         time.Now(),
+	}); err != nil {
+		http.Error(w, fmt.Sprintf("could not insert MongoDB record: %v", err), http.StatusInternalServerError)
+	}
 }
 
 func (s *server) handleShareGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -244,6 +278,9 @@ func (s *server) ListenAndServe() error {
 }
 
 func (s *server) Stop() error {
+	if err := s.mongoClient.Disconnect(context.Background()); err != nil {
+		return fmt.Errorf("could not disconnect from MongoDB: %w", err)
+	}
 	if err := s.server.Shutdown(context.Background()); err != nil {
 		return fmt.Errorf("could not shutdown server: %w", err)
 	}
@@ -276,4 +313,13 @@ func generateRandom(n int) string {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 	return string(b)
+}
+
+func readUserIP(r *http.Request) string {
+	forwardedIPAddresses := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+	IPAddress := r.RemoteAddr
+	if len(forwardedIPAddresses) > 0 {
+		IPAddress = forwardedIPAddresses[0]
+	}
+	return IPAddress
 }
