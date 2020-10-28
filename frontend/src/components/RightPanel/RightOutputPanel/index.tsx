@@ -5,7 +5,7 @@ import ResponseFile from '../../ResponseFile'
 import styles from './index.module.css'
 
 interface RightOutputPanelProps {
-    resp: APIResponse | null;
+    resp: SuccessExecutionResponse | null;
 }
 
 const RightOutputPanel: React.FunctionComponent<RightOutputPanelProps> = ({ resp }) => {

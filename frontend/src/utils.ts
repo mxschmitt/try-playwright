@@ -1,6 +1,6 @@
 import { Examples } from "./constants";
 
-export const runCode = async (code: string): Promise<APIResponse> => {
+export const runCode = async (code: string): Promise<SuccessExecutionResponse> => {
   const resp = await fetch("/service/control/run", {
     method: "POST",
     headers: {

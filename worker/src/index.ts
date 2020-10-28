@@ -26,11 +26,11 @@ const QUEUE_NAME = 'rpc_queue';
       message: payload?.code,
       level: Sentry.Severity.Info,
     });
-    let response
+    let response: ExecutionResponse
     try {
       response = await runUntrustedCode(payload?.code)
     } catch (error) {
-      response = { error: error.toString() }
+      response = { success: false, error: error.toString() }
       console.log("Errored request", error)
       Sentry.captureException(error)
     }

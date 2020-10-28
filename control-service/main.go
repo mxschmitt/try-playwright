@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -145,6 +146,21 @@ type runPayload struct {
 	Code string `json:"code"`
 }
 
+type workerResponsePayload struct {
+	Success  bool   `json:"success"`
+	Version  string `json:"version"`
+	Duration int64  `json:"duration"`
+	Files    []struct {
+		PublicURL string `json:"publicURL"`
+		FileName  string `json:"fileName"`
+		Extension string `json:"extension"`
+	} `json:"files"`
+	Logs []struct {
+		Mode string   `json:"mode"`
+		Args []string `json:"args"`
+	} `json:"logs"`
+}
+
 func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req *runPayload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -166,6 +182,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		return
 	}
 
+	start := time.Now()
 	if err := s.amqpChannel.Publish(
 		"",          // exchange
 		"rpc_queue", // routing key
@@ -181,13 +198,18 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
+	var payload workerResponsePayload
 	select {
 	case result := <-reply:
-		// TODO: mxschmitt change structure in amqp to add a success field
-		if strings.HasPrefix(string(result), `{"error":"`) {
+		if err := json.NewDecoder(bytes.NewBuffer(result)).Decode(&payload); err != nil {
+			http.Error(w, fmt.Sprintf("could not decode worker response: %v", err), http.StatusInternalServerError)
+			return
+		}
+		payload.Duration = time.Since(start).Milliseconds()
+		if !payload.Success {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		if _, err := w.Write(result); err != nil {
+		if err := json.NewEncoder(w).Encode(payload); err != nil {
 			http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
 			return
 		}
@@ -211,7 +233,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		"userAgent":         r.Header.Get("User-Agent"),
 		"ip":                readUserIP(r),
 		"code":              req.Code,
-		"executionDuration": 0, // TODO: update once RPC protocol is established
+		"executionDuration": payload.Duration,
 		"language":          "js",
 		"createdAt":         time.Now(),
 	}); err != nil {
