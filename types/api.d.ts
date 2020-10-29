@@ -11,9 +11,21 @@ interface FileWrapper {
   extension: string;
 }
 
-interface APIResponse {
+interface BaseExecutionResponse {
+  success: boolean;
+}
+
+type ErroredExecutionResponse = {
+  success: false
+  error: string
+}
+
+type SuccessExecutionResponse ={
+  success: true
   version: string;
-  duration: number;
+  duration?: number;
   files: FileWrapper[];
   logs: LogEntry[];
 }
+
+type ExecutionResponse = ErroredExecutionResponse | SuccessExecutionResponse

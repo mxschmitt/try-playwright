@@ -9,7 +9,7 @@ const packageJson = require("../package.json")
 
 const PLAYWRIGHT_VERSION = packageJson.dependencies["playwright"]
 
-export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
+export const runUntrustedCode = async (code: string): Promise<SuccessExecutionResponse> => {
   if (!code) {
     throw new Error("no code specified")
   }
@@ -67,8 +67,6 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
     setTimeout,
   };
 
-  const executionStart = new Date().getTime()
-
   const vm = new VM({
     timeout: 30 * 1000,
     sandbox,
@@ -79,8 +77,8 @@ export const runUntrustedCode = async (code: string): Promise<APIResponse> => {
   const files = await getFiles()
 
   return {
+    success: true,
     version: PLAYWRIGHT_VERSION,
-    duration: Math.abs(new Date().getTime() - executionStart),
     files,
     logs: logEntries
   }

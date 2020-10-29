@@ -10,7 +10,7 @@ import { CodeContext } from '../CodeContext'
 import styles from './index.module.css'
 
 interface RightPanelProps {
-    resp: APIResponse | null;
+    resp: SuccessExecutionResponse | null;
 }
 
 const getHeaderText = (mode: boolean): string => {

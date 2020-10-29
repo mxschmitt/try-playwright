@@ -12,7 +12,7 @@ import styles from './index.module.css'
 const App: React.FunctionComponent = () => {
   const { code, onChangeRightPanelMode } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
-  const [resp, setResponse] = useState<APIResponse | null>(null)
+  const [resp, setResponse] = useState<SuccessExecutionResponse | null>(null)
   const handleExecutionRef = useRef<() => Promise<void>>()
 
   // Store the code which was entered if the user is leaving the page
