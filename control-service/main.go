@@ -126,9 +126,9 @@ func newServer() (*server, error) {
 	router := httprouter.New()
 	router.GET("/service/control/health", s.handleHealth)
 	router.HEAD("/service/control/health", s.handleHealth)
-	router.POST("/service/control/run", s.handleRun)
-	router.GET("/service/control/share/get/:id", s.handleShareGet)
-	router.POST("/service/control/share/create", s.handleShareCreate)
+	router.POST("/service/control/run", handleRequestError(s.handleRun))
+	router.GET("/service/control/share/get/:id", handleRequestError(s.handleShareGet))
+	router.POST("/service/control/share/create", handleRequestError(s.handleShareCreate))
 	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, err interface{}) {
 		if exception, ok := err.(string); ok {
 			sentry.CaptureException(errors.New(exception))
@@ -161,11 +161,35 @@ type workerResponsePayload struct {
 	} `json:"logs"`
 }
 
-func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+type Response struct {
+	Body       interface{}
+	StatusCode int
+}
+
+func handleRequestError(cb func(http.ResponseWriter, *http.Request, httprouter.Params) (*Response, error)) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+		response, err := cb(w, r, params)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if response != nil {
+			w.Header().Set("Content-Type", "application/json")
+			if response.StatusCode != 0 {
+				w.WriteHeader(response.StatusCode)
+			}
+			if err := json.NewEncoder(w).Encode(response.Body); err != nil {
+				http.Error(w, fmt.Sprintf("could encode response: %v", err), http.StatusInternalServerError)
+			}
+		}
+	}
+}
+
+func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.Params) (*Response, error) {
 	var req *runPayload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("could not decode request body: %v", err), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 	corrId := uuid.New().String()
 
@@ -178,8 +202,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		"code": req.Code,
 	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("could not encode msg payload: %v", err), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("could not encode msg payload: %w", err)
 	}
 
 	start := time.Now()
@@ -194,33 +217,22 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 			ReplyTo:       s.amqpReplyQueue.Name,
 			Body:          msgBody,
 		}); err != nil {
-		http.Error(w, fmt.Sprintf("could not publish message: %v", err), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("could not publish message: %w", err)
 	}
-	w.Header().Set("Content-Type", "application/json")
 	var payload workerResponsePayload
 	select {
 	case result := <-reply:
 		if err := json.NewDecoder(bytes.NewBuffer(result)).Decode(&payload); err != nil {
-			http.Error(w, fmt.Sprintf("could not decode worker response: %v", err), http.StatusInternalServerError)
-			return
+			return nil, fmt.Errorf("could not decode worker response: %w", err)
 		}
 		payload.Duration = time.Since(start).Milliseconds()
-		if !payload.Success {
-			w.WriteHeader(http.StatusBadRequest)
-		}
-		if err := json.NewEncoder(w).Encode(payload); err != nil {
-			http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
-			return
-		}
 	case <-time.After(30 * time.Second):
-		w.WriteHeader(http.StatusRequestTimeout)
-		if err := json.NewEncoder(w).Encode(map[string]string{
-			"error": "Timeout!",
-		}); err != nil {
-			http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
-			return
-		}
+		return &Response{
+			StatusCode: http.StatusRequestTimeout,
+			Body: map[string]string{
+				"error": "Timeout!",
+			},
+		}, nil
 	}
 
 	s.repliesLock.Lock()
@@ -237,61 +249,65 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		"language":          "js",
 		"createdAt":         time.Now(),
 	}); err != nil {
-		http.Error(w, fmt.Sprintf("could not insert MongoDB record: %v", err), http.StatusInternalServerError)
+		return nil, fmt.Errorf("could not insert MongoDB record: %w", err)
 	}
+	if !payload.Success {
+		return &Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       payload,
+		}, nil
+	}
+	return &Response{
+		Body: payload,
+	}, nil
 }
 
-func (s *server) handleShareGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (s *server) handleShareGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
 	id := params.ByName("id")
 	resp, err := s.etcdClient.Get(context.Background(), id)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("could not fetch share: %v", err), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("could not fetch share: %w", err)
 	}
 	if resp.Count == 0 {
-		http.Error(w, "no share found", http.StatusNotFound)
-		return
+		return nil, fmt.Errorf("no share found")
 	}
 	if _, err := w.Write(resp.Kvs[0].Value); err != nil {
-		http.Error(w, fmt.Sprintf("could not write share: %v", err), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("could not write share: %w", err)
 	}
+	return nil, nil
 }
 
-func (s *server) handleShareCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *server) handleShareCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) (*Response, error) {
 	code, err := ioutil.ReadAll(http.MaxBytesReader(w, r.Body, 1024))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("could read request body: %v", err), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("could read request body: %w", err)
 	}
 	for retryCount := 0; retryCount <= 3; retryCount++ {
 		id := generateRandom(ID_LENGTH)
 		resp, err := s.etcdClient.Get(context.Background(), id)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("could not fetch share: %v", err), http.StatusInternalServerError)
-			return
+			return nil, fmt.Errorf("could not fetch share: %w", err)
 		}
 		if resp.Count == 0 {
 			_, err = s.etcdClient.Put(context.Background(), id, string(code))
 			if err != nil {
-				http.Error(w, fmt.Sprintf("could not save share: %v", err), http.StatusInternalServerError)
-				return
+				return nil, fmt.Errorf("could not save share: %w", err)
 			}
-			respBody := map[string]string{
-				"key": id,
-			}
-			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(respBody); err != nil {
-				http.Error(w, fmt.Sprintf("could encode response: %v", err), http.StatusInternalServerError)
-				return
-			}
-			return
+			return &Response{
+				Body: map[string]string{
+					"key": id,
+				},
+			}, nil
 		}
 	}
-	http.Error(w, "could not generate a key", http.StatusInternalServerError)
+	return nil, errors.New("could not generate a key")
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if err := s.mongoClient.Ping(context.Background(), readpref.Primary()); err != nil {
+		http.Error(w, "could not ping MongoDB", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 }
 
