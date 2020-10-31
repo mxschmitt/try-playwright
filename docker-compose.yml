@@ -76,6 +76,8 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME
       - MONGO_INITDB_ROOT_PASSWORD
+    volumes:
+      - mongo_data:/data/db
   # mongo-express:
   #   image: mongo-express
   #   ports:
@@ -114,4 +116,6 @@ volumes:
   etcd_data:
     driver: local
   minio_data:
+    driver: local
+  mongo_data:
     driver: local

@@ -36,6 +36,7 @@ jobs:
       working-directory: e2e
       run: |
         npx wait-on https://localhost/service/control/health
+        sleep 10
         npm run test
   build:
     runs-on: ubuntu-latest
