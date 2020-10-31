@@ -131,3 +131,24 @@ describe("Share functionality", () => {
     await page.waitForSelector("text=FolioAssert")
   })
 })
+
+describe("should handle platform core related features", test => {
+  test.slow();
+}, () => {
+  it("should handle the timeout correctly", async ({ page }) => {
+    const CODE = `(async () => {
+  await new Promise(resolve => setTimeout(resolve, 40 * 1000))`
+    await page.goto(ROOT_URL, { waitUntil: "networkidle" });
+    await page.click(".monaco-editor")
+    await page.keyboard.press("Meta+KeyA")
+    await page.keyboard.type(CODE)
+    await page.keyboard.press("ArrowDown")
+    await page.keyboard.press("ArrowDown")
+    await page.keyboard.type("();")
+
+    await page.click("text='Run'")
+    await page.waitForSelector("text='Error: Timeout!'", {
+      timeout: 40 * 1000
+    })
+  })
+})
