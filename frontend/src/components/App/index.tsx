@@ -18,7 +18,9 @@ const App: React.FunctionComponent = () => {
   // Store the code which was entered if the user is leaving the page
   useEffect((): (() => void) => {
     const handler = (): void => {
-      window.localStorage.setItem("code", code)
+      if (window.localStorage) {
+        window.localStorage.setItem("code", code)
+      }
     }
     window.addEventListener("unload", handler)
     return (): void => window.removeEventListener("unload", handler)
