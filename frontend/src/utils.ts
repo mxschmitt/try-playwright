@@ -41,7 +41,7 @@ const fetchSharedCode = async (code: string): Promise<string | null> => {
 
 export const determineCode = async (setCode: ((code: string) => void)): Promise<void> => {
   const urlParams = new URLSearchParams(window.location.search);
-  const localStorageCode = window.localStorage.getItem("code")
+  const localStorageCode = window.localStorage && window.localStorage.getItem("code")
   if (urlParams.has("s")) {
     const key = urlParams.get("s")
     if (key) {
