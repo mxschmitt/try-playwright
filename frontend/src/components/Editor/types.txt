@@ -1394,6 +1394,7 @@ some CSP errors in the future.
        * Specific directive that is violated, causing the CSP issue.
        */
       violatedDirective: string;
+      isReportOnly: boolean;
       contentSecurityPolicyViolationType: ContentSecurityPolicyViolationType;
       frameAncestor?: AffectedFrame;
       sourceCodeLocation?: SourceCodeLocation;
@@ -1615,7 +1616,7 @@ events afterwards if enabled and recording.
        */
       windowState?: WindowState;
     }
-    export type PermissionType = "accessibilityEvents"|"audioCapture"|"backgroundSync"|"backgroundFetch"|"clipboardReadWrite"|"clipboardSanitizedWrite"|"durableStorage"|"flash"|"geolocation"|"midi"|"midiSysex"|"nfc"|"notifications"|"paymentHandler"|"periodicBackgroundSync"|"protectedMediaIdentifier"|"sensors"|"videoCapture"|"idleDetection"|"wakeLockScreen"|"wakeLockSystem";
+    export type PermissionType = "accessibilityEvents"|"audioCapture"|"backgroundSync"|"backgroundFetch"|"clipboardReadWrite"|"clipboardSanitizedWrite"|"durableStorage"|"flash"|"geolocation"|"midi"|"midiSysex"|"nfc"|"notifications"|"paymentHandler"|"periodicBackgroundSync"|"protectedMediaIdentifier"|"sensors"|"videoCapture"|"videoCapturePanTiltZoom"|"idleDetection"|"wakeLockScreen"|"wakeLockSystem";
     export type PermissionSetting = "granted"|"denied"|"prompt";
     /**
      * Definition of PermissionDescriptor defined in the Permissions API:
@@ -1640,7 +1641,15 @@ Note that userVisibleOnly = true is the only currently supported type.
        * For "clipboard" permission, may specify allowWithoutSanitization.
        */
       allowWithoutSanitization?: boolean;
+      /**
+       * For "camera" permission, may specify panTiltZoom.
+       */
+      panTiltZoom?: boolean;
     }
+    /**
+     * Browser command ids used by executeBrowserCommand.
+     */
+    export type BrowserCommandId = "openTabSearch";
     /**
      * Chrome histogram bucket.
      */
@@ -1916,6 +1925,14 @@ with 'left', 'top', 'width' or 'height'. Leaves unspecified fields unchanged.
       image?: binary;
     }
     export type setDockTileReturnValue = {
+    }
+    /**
+     * Invoke custom browser commands used by telemetry.
+     */
+    export type executeBrowserCommandParameters = {
+      commandId: BrowserCommandId;
+    }
+    export type executeBrowserCommandReturnValue = {
     }
   }
   
@@ -3118,7 +3135,7 @@ front-end.
     /**
      * Pseudo element type.
      */
-    export type PseudoType = "first-line"|"first-letter"|"before"|"after"|"marker"|"backdrop"|"selection"|"first-line-inherited"|"scrollbar"|"scrollbar-thumb"|"scrollbar-button"|"scrollbar-track"|"scrollbar-track-piece"|"scrollbar-corner"|"resizer"|"input-list-button";
+    export type PseudoType = "first-line"|"first-letter"|"before"|"after"|"marker"|"backdrop"|"selection"|"target-text"|"first-line-inherited"|"scrollbar"|"scrollbar-thumb"|"scrollbar-button"|"scrollbar-track"|"scrollbar-track-piece"|"scrollbar-corner"|"resizer"|"input-list-button";
     /**
      * Shadow root type.
      */
@@ -5283,6 +5300,10 @@ resource fetches.
       model: string;
       mobile: boolean;
     }
+    /**
+     * Enum of image types that can be disabled.
+     */
+    export type DisabledImageType = "avif"|"webp";
     
     /**
      * Notification sent after the virtual time budget for the current VirtualTimePolicy has run out.
@@ -5636,6 +5657,14 @@ on Android.
       height: number;
     }
     export type setVisibleSizeReturnValue = {
+    }
+    export type setDisabledImageTypesParameters = {
+      /**
+       * Image types to disable.
+       */
+      imageTypes: DisabledImageType[];
+    }
+    export type setDisabledImageTypesReturnValue = {
     }
     /**
      * Allows overriding user agent with the given string.
@@ -6161,6 +6190,22 @@ the top of the viewport and Y increases as it proceeds towards the bottom of the
        */
       force?: number;
       /**
+       * The normalized tangential pressure, which has a range of [-1,1] (default: 0).
+       */
+      tangentialPressure?: number;
+      /**
+       * The plane angle between the Y-Z plane and the plane containing both the stylus axis and the Y axis, in degrees of the range [-90,90], a positive tiltX is to the right (default: 0)
+       */
+      tiltX?: number;
+      /**
+       * The plane angle between the X-Z plane and the plane containing both the stylus axis and the X axis, in degrees of the range [-90,90], a positive tiltY is towards the user (default: 0).
+       */
+      tiltY?: number;
+      /**
+       * The clockwise rotation of a pen stylus around its own major axis, in degrees in the range [0,359] (default: 0).
+       */
+      twist?: number;
+      /**
        * Identifier used to track touch sources between events, must be unique within an event.
        */
       id?: number;
@@ -6298,6 +6343,26 @@ Left=1, Right=2, Middle=4, Back=8, Forward=16, None=0.
        * Number of times the mouse button was clicked (default: 0).
        */
       clickCount?: number;
+      /**
+       * The normalized pressure, which has a range of [0,1] (default: 0).
+       */
+      force?: number;
+      /**
+       * The normalized tangential pressure, which has a range of [-1,1] (default: 0).
+       */
+      tangentialPressure?: number;
+      /**
+       * The plane angle between the Y-Z plane and the plane containing both the stylus axis and the Y axis, in degrees of the range [-90,90], a positive tiltX is to the right (default: 0).
+       */
+      tiltX?: number;
+      /**
+       * The plane angle between the X-Z plane and the plane containing both the stylus axis and the X axis, in degrees of the range [-90,90], a positive tiltY is towards the user (default: 0).
+       */
+      tiltY?: number;
+      /**
+       * The clockwise rotation of a pen stylus around its own major axis, in degrees in the range [0,359] (default: 0).
+       */
+      twist?: number;
       /**
        * X delta in CSS pixels for mouse wheel event (default: 0).
        */
@@ -7287,6 +7352,11 @@ milliseconds relatively to this requestTime.
        * Whether is loaded via link preload.
        */
       isLinkPreload?: boolean;
+      /**
+       * Set for requests when the TrustToken API is used. Contains the parameters
+passed by the developer (e.g. via "fetch") as understood by the backend.
+       */
+      trustTokenParams?: TrustTokenParams;
     }
     /**
      * Details of a signed certificate timestamp (SCT).
@@ -7391,9 +7461,35 @@ milliseconds relatively to this requestTime.
      */
     export type BlockedReason = "other"|"csp"|"mixed-content"|"origin"|"inspector"|"subresource-filter"|"content-type"|"collapsed-by-client"|"coep-frame-resource-needs-coep-header"|"coop-sandboxed-iframe-cannot-navigate-to-coop-page"|"corp-not-same-origin"|"corp-not-same-origin-after-defaulted-to-same-origin-by-coep"|"corp-not-same-site";
     /**
+     * The reason why request was blocked.
+     */
+    export type CorsError = "DisallowedByMode"|"InvalidResponse"|"WildcardOriginNotAllowed"|"MissingAllowOriginHeader"|"MultipleAllowOriginValues"|"InvalidAllowOriginValue"|"AllowOriginMismatch"|"InvalidAllowCredentials"|"CorsDisabledScheme"|"PreflightInvalidStatus"|"PreflightDisallowedRedirect"|"PreflightWildcardOriginNotAllowed"|"PreflightMissingAllowOriginHeader"|"PreflightMultipleAllowOriginValues"|"PreflightInvalidAllowOriginValue"|"PreflightAllowOriginMismatch"|"PreflightInvalidAllowCredentials"|"PreflightMissingAllowExternal"|"PreflightInvalidAllowExternal"|"InvalidAllowMethodsPreflightResponse"|"InvalidAllowHeadersPreflightResponse"|"MethodDisallowedByPreflightResponse"|"HeaderDisallowedByPreflightResponse"|"RedirectContainsCredentials"|"InsecurePrivateNetwork";
+    export interface CorsErrorStatus {
+      corsError: CorsError;
+      failedParameter: string;
+    }
+    /**
      * Source of serviceworker response.
      */
     export type ServiceWorkerResponseSource = "cache-storage"|"http-cache"|"fallback-code"|"network";
+    /**
+     * Determines what type of Trust Token operation is executed and
+depending on the type, some additional parameters.
+     */
+    export interface TrustTokenParams {
+      type: TrustTokenOperationType;
+      /**
+       * Only set for "srr-token-redemption" type and determine whether
+to request a fresh SRR or use a still valid cached SRR.
+       */
+      refreshPolicy: "UseCached"|"Refresh";
+      /**
+       * Origins of issuers from whom to request tokens or redemption
+records.
+       */
+      issuers?: string[];
+    }
+    export type TrustTokenOperationType = "Issuance"|"Redemption"|"Signing";
     /**
      * HTTP response data.
      */
@@ -7648,11 +7744,11 @@ module) (0-based).
     /**
      * Types of reasons why a cookie may not be stored from a response.
      */
-    export type SetCookieBlockedReason = "SecureOnly"|"SameSiteStrict"|"SameSiteLax"|"SameSiteUnspecifiedTreatedAsLax"|"SameSiteNoneInsecure"|"UserPreferences"|"SyntaxError"|"SchemeNotSupported"|"OverwriteSecure"|"InvalidDomain"|"InvalidPrefix"|"UnknownError";
+    export type SetCookieBlockedReason = "SecureOnly"|"SameSiteStrict"|"SameSiteLax"|"SameSiteUnspecifiedTreatedAsLax"|"SameSiteNoneInsecure"|"UserPreferences"|"SyntaxError"|"SchemeNotSupported"|"OverwriteSecure"|"InvalidDomain"|"InvalidPrefix"|"UnknownError"|"SchemefulSameSiteStrict"|"SchemefulSameSiteLax"|"SchemefulSameSiteUnspecifiedTreatedAsLax";
     /**
      * Types of reasons why a cookie may not be sent with a request.
      */
-    export type CookieBlockedReason = "SecureOnly"|"NotOnPath"|"DomainMismatch"|"SameSiteStrict"|"SameSiteLax"|"SameSiteUnspecifiedTreatedAsLax"|"SameSiteNoneInsecure"|"UserPreferences"|"UnknownError";
+    export type CookieBlockedReason = "SecureOnly"|"NotOnPath"|"DomainMismatch"|"SameSiteStrict"|"SameSiteLax"|"SameSiteUnspecifiedTreatedAsLax"|"SameSiteNoneInsecure"|"UserPreferences"|"UnknownError"|"SchemefulSameSiteStrict"|"SchemefulSameSiteLax"|"SchemefulSameSiteUnspecifiedTreatedAsLax";
     /**
      * A cookie which was not stored from a response with the corresponding reason.
      */
@@ -8028,6 +8124,10 @@ CORB and streaming.
        * The reason why loading was blocked, if any.
        */
       blockedReason?: BlockedReason;
+      /**
+       * The reason why loading was blocked by CORS, if any.
+       */
+      corsErrorStatus?: CorsErrorStatus;
     }
     /**
      * Fired when HTTP request has finished loading.
@@ -8835,15 +8935,15 @@ default domain and path values of the created cookie.
     export type setExtraHTTPHeadersReturnValue = {
     }
     /**
-     * Specifies whether to sned a debug header to all outgoing requests.
+     * Specifies whether to attach a page script stack id in requests
      */
-    export type setAttachDebugHeaderParameters = {
+    export type setAttachDebugStackParameters = {
       /**
-       * Whether to send a debug header.
+       * Whether to attach a page script stack for debugging purpose.
        */
       enabled: boolean;
     }
-    export type setAttachDebugHeaderReturnValue = {
+    export type setAttachDebugStackReturnValue = {
     }
     /**
      * Sets the requests to intercept that match the provided patterns and optionally resource types.
@@ -11684,9 +11784,34 @@ For cached script it is the last time the cache entry was validated.
        */
       quota: number;
       /**
+       * Whether or not the origin has an active storage quota override
+       */
+      overrideActive: boolean;
+      /**
        * Storage usage per type (bytes).
        */
       usageBreakdown: UsageForType[];
+    }
+    /**
+     * Override quota for the specified origin
+     */
+    export type overrideQuotaForOriginParameters = {
+      /**
+       * Security origin.
+       */
+      origin: string;
+      /**
+       * The quota size (in bytes) to override the original quota with.
+If this is called multiple times, the overriden quota will be equal to
+the quotaSize provided in the final call. If this is called without
+specifying a quotaSize, the quota will be reset to the default value for
+the specified origin. If this is called multiple times with different
+origins, the override will be maintained for each origin until it is
+disabled (called without a quotaSize).
+       */
+      quotaSize?: number;
+    }
+    export type overrideQuotaForOriginReturnValue = {
     }
     /**
      * Registers origin to be notified when an update occurs to its cache storage list.
@@ -12407,6 +12532,12 @@ protocol buffer format. Note that the JSON format will be deprecated soon.
      * Compression type to use for traces returned via streams.
      */
     export type StreamCompression = "none"|"gzip";
+    /**
+     * Details exposed when memory request explicitly declared.
+Keep consistent with memory_dump_request_args.h and
+memory_instrumentation.mojom
+     */
+    export type MemoryDumpLevelOfDetail = "background"|"light"|"detailed";
     
     export type bufferUsagePayload = {
       /**
@@ -12492,6 +12623,10 @@ buffer wrapped around.
        * Enables more deterministic results by forcing garbage collection
        */
       deterministic?: boolean;
+      /**
+       * Specifies level of details in memory dump. Defaults to "detailed".
+       */
+      levelOfDetail?: MemoryDumpLevelOfDetail;
     }
     export type requestMemoryDumpReturnValue = {
       /**
@@ -13097,9 +13232,14 @@ API.
   export module WebAuthn {
     export type AuthenticatorId = string;
     export type AuthenticatorProtocol = "u2f"|"ctap2";
+    export type Ctap2Version = "ctap2_0"|"ctap2_1";
     export type AuthenticatorTransport = "usb"|"nfc"|"ble"|"cable"|"internal";
     export interface VirtualAuthenticatorOptions {
       protocol: AuthenticatorProtocol;
+      /**
+       * Defaults to ctap2_0. Ignored if |protocol| == u2f.
+       */
+      ctap2Version?: Ctap2Version;
       transport: AuthenticatorTransport;
       /**
        * Defaults to false.
@@ -13149,6 +13289,11 @@ assertion.
 See https://w3c.github.io/webauthn/#signature-counter
        */
       signCount: number;
+      /**
+       * The large blob associated with the credential.
+See https://w3c.github.io/webauthn/#sctn-large-blob-extension
+       */
+      largeBlob?: binary;
     }
     
     
@@ -16115,6 +16260,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Browser.getWindowForTarget": Browser.getWindowForTargetParameters;
     "Browser.setWindowBounds": Browser.setWindowBoundsParameters;
     "Browser.setDockTile": Browser.setDockTileParameters;
+    "Browser.executeBrowserCommand": Browser.executeBrowserCommandParameters;
     "CSS.addRule": CSS.addRuleParameters;
     "CSS.collectClassNames": CSS.collectClassNamesParameters;
     "CSS.createStyleSheet": CSS.createStyleSheetParameters;
@@ -16245,6 +16391,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Emulation.setLocaleOverride": Emulation.setLocaleOverrideParameters;
     "Emulation.setTimezoneOverride": Emulation.setTimezoneOverrideParameters;
     "Emulation.setVisibleSize": Emulation.setVisibleSizeParameters;
+    "Emulation.setDisabledImageTypes": Emulation.setDisabledImageTypesParameters;
     "Emulation.setUserAgentOverride": Emulation.setUserAgentOverrideParameters;
     "HeadlessExperimental.beginFrame": HeadlessExperimental.beginFrameParameters;
     "HeadlessExperimental.disable": HeadlessExperimental.disableParameters;
@@ -16322,7 +16469,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Network.setCookies": Network.setCookiesParameters;
     "Network.setDataSizeLimitsForTest": Network.setDataSizeLimitsForTestParameters;
     "Network.setExtraHTTPHeaders": Network.setExtraHTTPHeadersParameters;
-    "Network.setAttachDebugHeader": Network.setAttachDebugHeaderParameters;
+    "Network.setAttachDebugStack": Network.setAttachDebugStackParameters;
     "Network.setRequestInterception": Network.setRequestInterceptionParameters;
     "Network.setUserAgentOverride": Network.setUserAgentOverrideParameters;
     "Network.getSecurityIsolationStatus": Network.getSecurityIsolationStatusParameters;
@@ -16431,6 +16578,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Storage.setCookies": Storage.setCookiesParameters;
     "Storage.clearCookies": Storage.clearCookiesParameters;
     "Storage.getUsageAndQuota": Storage.getUsageAndQuotaParameters;
+    "Storage.overrideQuotaForOrigin": Storage.overrideQuotaForOriginParameters;
     "Storage.trackCacheStorageForOrigin": Storage.trackCacheStorageForOriginParameters;
     "Storage.trackIndexedDBForOrigin": Storage.trackIndexedDBForOriginParameters;
     "Storage.untrackCacheStorageForOrigin": Storage.untrackCacheStorageForOriginParameters;
@@ -16614,6 +16762,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Browser.getWindowForTarget": Browser.getWindowForTargetReturnValue;
     "Browser.setWindowBounds": Browser.setWindowBoundsReturnValue;
     "Browser.setDockTile": Browser.setDockTileReturnValue;
+    "Browser.executeBrowserCommand": Browser.executeBrowserCommandReturnValue;
     "CSS.addRule": CSS.addRuleReturnValue;
     "CSS.collectClassNames": CSS.collectClassNamesReturnValue;
     "CSS.createStyleSheet": CSS.createStyleSheetReturnValue;
@@ -16744,6 +16893,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Emulation.setLocaleOverride": Emulation.setLocaleOverrideReturnValue;
     "Emulation.setTimezoneOverride": Emulation.setTimezoneOverrideReturnValue;
     "Emulation.setVisibleSize": Emulation.setVisibleSizeReturnValue;
+    "Emulation.setDisabledImageTypes": Emulation.setDisabledImageTypesReturnValue;
     "Emulation.setUserAgentOverride": Emulation.setUserAgentOverrideReturnValue;
     "HeadlessExperimental.beginFrame": HeadlessExperimental.beginFrameReturnValue;
     "HeadlessExperimental.disable": HeadlessExperimental.disableReturnValue;
@@ -16821,7 +16971,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Network.setCookies": Network.setCookiesReturnValue;
     "Network.setDataSizeLimitsForTest": Network.setDataSizeLimitsForTestReturnValue;
     "Network.setExtraHTTPHeaders": Network.setExtraHTTPHeadersReturnValue;
-    "Network.setAttachDebugHeader": Network.setAttachDebugHeaderReturnValue;
+    "Network.setAttachDebugStack": Network.setAttachDebugStackReturnValue;
     "Network.setRequestInterception": Network.setRequestInterceptionReturnValue;
     "Network.setUserAgentOverride": Network.setUserAgentOverrideReturnValue;
     "Network.getSecurityIsolationStatus": Network.getSecurityIsolationStatusReturnValue;
@@ -16930,6 +17080,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Storage.setCookies": Storage.setCookiesReturnValue;
     "Storage.clearCookies": Storage.clearCookiesReturnValue;
     "Storage.getUsageAndQuota": Storage.getUsageAndQuotaReturnValue;
+    "Storage.overrideQuotaForOrigin": Storage.overrideQuotaForOriginReturnValue;
     "Storage.trackCacheStorageForOrigin": Storage.trackCacheStorageForOriginReturnValue;
     "Storage.trackIndexedDBForOrigin": Storage.trackIndexedDBForOriginReturnValue;
     "Storage.untrackCacheStorageForOrigin": Storage.untrackCacheStorageForOriginReturnValue;
@@ -17486,6 +17637,11 @@ export interface Page {
   on(event: 'response', listener: (response: Response) => void): this;
 
   /**
+   * Emitted when <WebSocket> request is sent.
+   */
+  on(event: 'websocket', listener: (webSocket: WebSocket) => void): this;
+
+  /**
    * Emitted when a dedicated WebWorker is spawned by the page.
    */
   on(event: 'worker', listener: (worker: Worker) => void): this;
@@ -17624,6 +17780,11 @@ export interface Page {
    * Emitted when response status and headers are received for a request. For a successful response, the sequence of events is `request`, `response` and `requestfinished`.
    */
   once(event: 'response', listener: (response: Response) => void): this;
+
+  /**
+   * Emitted when <WebSocket> request is sent.
+   */
+  once(event: 'websocket', listener: (webSocket: WebSocket) => void): this;
 
   /**
    * Emitted when a dedicated WebWorker is spawned by the page.
@@ -17766,6 +17927,11 @@ export interface Page {
   addListener(event: 'response', listener: (response: Response) => void): this;
 
   /**
+   * Emitted when <WebSocket> request is sent.
+   */
+  addListener(event: 'websocket', listener: (webSocket: WebSocket) => void): this;
+
+  /**
    * Emitted when a dedicated WebWorker is spawned by the page.
    */
   addListener(event: 'worker', listener: (worker: Worker) => void): this;
@@ -17904,6 +18070,11 @@ export interface Page {
    * Emitted when response status and headers are received for a request. For a successful response, the sequence of events is `request`, `response` and `requestfinished`.
    */
   removeListener(event: 'response', listener: (response: Response) => void): this;
+
+  /**
+   * Emitted when <WebSocket> request is sent.
+   */
+  removeListener(event: 'websocket', listener: (webSocket: WebSocket) => void): this;
 
   /**
    * Emitted when a dedicated WebWorker is spawned by the page.
@@ -18046,6 +18217,11 @@ export interface Page {
   off(event: 'response', listener: (response: Response) => void): this;
 
   /**
+   * Emitted when <WebSocket> request is sent.
+   */
+  off(event: 'websocket', listener: (webSocket: WebSocket) => void): this;
+
+  /**
    * Emitted when a dedicated WebWorker is spawned by the page.
    */
   off(event: 'worker', listener: (worker: Worker) => void): this;
@@ -18064,7 +18240,7 @@ export interface Page {
    * // preload.js
    * Math.random = () => 42;
    * 
-   * // In your playwright script, assuming the preload.js file is in same folder
+   * // In your playwright script, assuming the preload.js file is in same directory
    * const preloadFile = fs.readFileSync('./preload.js', 'utf8');
    * await page.addInitScript(preloadFile);
    * ```
@@ -19189,6 +19365,55 @@ export interface Page {
   }): Promise<void>;
 
   /**
+   * This method taps an element matching `selector` by performing the following steps:
+   * 
+   * Find an element match matching `selector`. If there is none, wait until a matching element is attached to the DOM.
+   * Wait for actionability checks on the matched element, unless `force` option is set. If the element is detached during the checks, the whole action is retried.
+   * Scroll the element into view if needed.
+   * Use page.touchscreen to tap the center of the element, or the specified `position`.
+   * Wait for initiated navigations to either succeed or fail, unless `noWaitAfter` option is set.
+   * 
+   * When all steps combined have not finished during the specified `timeout`, this method rejects with a TimeoutError. Passing zero timeout disables this.
+   * 
+   * **NOTE** `page.tap()` requires that the `hasTouch` option of the browser context be set to true.
+   * 
+   * Shortcut for page.mainFrame().tap().
+   * @param selector A selector to search for element to tap. If there are multiple elements satisfying the selector, the first will be tapped. See working with selectors for more details.
+   * @param options 
+   * @returns Promise that resolves when the element matching `selector` is successfully tapped.
+   */
+  tap(selector: string, options?: {
+    /**
+     * A point to tap relative to the top-left corner of element padding box. If not specified, taps some visible point of the element.
+     */
+    position?: {
+      x: number;
+
+      y: number;
+    };
+
+    /**
+     * Modifier keys to press. Ensures that only these modifiers are pressed during the tap, and then restores current modifiers back. If not specified, currently pressed modifiers are used.
+     */
+    modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
+
+    /**
+     * Actions that initiate navigations are waiting for these navigations to happen and for pages to start loading. You can opt out of waiting via setting this flag. You would only need this option in the exceptional cases such as navigating to inaccessible pages. Defaults to `false`.
+     */
+    noWaitAfter?: boolean;
+
+    /**
+     * Whether to bypass the actionability checks. Defaults to `false`.
+     */
+    force?: boolean;
+
+    /**
+     * Maximum time in milliseconds, defaults to 30 seconds, pass `0` to disable timeout. The default value can be changed by using the browserContext.setDefaultTimeout(timeout) or page.setDefaultTimeout(timeout) methods.
+     */
+    timeout?: number;
+  }): Promise<void>;
+
+  /**
    * Resolves to the `element.textContent`.
    * @param selector A selector to search for an element. If there are multiple elements satisfying the selector, the first will be picked. See working with selectors for more details.
    * @param options 
@@ -19205,6 +19430,8 @@ export interface Page {
    * @returns The page's title.
    */
   title(): Promise<string>;
+
+  touchscreen: Touchscreen;
 
   /**
    * Sends a `keydown`, `keypress`/`input`, and `keyup` event for each character in the text. `page.type` can be used to send fine-grained keyboard events. To fill values in form fields, use `page.fill`.
@@ -19432,6 +19659,11 @@ export interface Page {
    * Emitted when response status and headers are received for a request. For a successful response, the sequence of events is `request`, `response` and `requestfinished`.
    */
   waitForEvent(event: 'response', optionsOrPredicate?: { predicate?: (response: Response) => boolean, timeout?: number } | ((response: Response) => boolean)): Promise<Response>;
+
+  /**
+   * Emitted when <WebSocket> request is sent.
+   */
+  waitForEvent(event: 'websocket', optionsOrPredicate?: { predicate?: (webSocket: WebSocket) => boolean, timeout?: number } | ((webSocket: WebSocket) => boolean)): Promise<WebSocket>;
 
   /**
    * Emitted when a dedicated WebWorker is spawned by the page.
@@ -20331,6 +20563,53 @@ export interface Frame {
   }): Promise<void>;
 
   /**
+   * This method taps an element matching `selector` by performing the following steps:
+   * 
+   * Find an element match matching `selector`. If there is none, wait until a matching element is attached to the DOM.
+   * Wait for actionability checks on the matched element, unless `force` option is set. If the element is detached during the checks, the whole action is retried.
+   * Scroll the element into view if needed.
+   * Use page.touchscreen to tap the center of the element, or the specified `position`.
+   * Wait for initiated navigations to either succeed or fail, unless `noWaitAfter` option is set.
+   * 
+   * When all steps combined have not finished during the specified `timeout`, this method rejects with a TimeoutError. Passing zero timeout disables this.
+   * 
+   * **NOTE** `frame.tap()` requires that the `hasTouch` option of the browser context be set to true.
+   * @param selector A selector to search for element to tap. If there are multiple elements satisfying the selector, the first will be tapped. See working with selectors for more details.
+   * @param options 
+   * @returns Promise that resolves when the element matching `selector` is successfully tapped.
+   */
+  tap(selector: string, options?: {
+    /**
+     * A point to tap relative to the top-left corner of element padding box. If not specified, taps some visible point of the element.
+     */
+    position?: {
+      x: number;
+
+      y: number;
+    };
+
+    /**
+     * Modifier keys to press. Ensures that only these modifiers are pressed during the tap, and then restores current modifiers back. If not specified, currently pressed modifiers are used.
+     */
+    modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
+
+    /**
+     * Actions that initiate navigations are waiting for these navigations to happen and for pages to start loading. You can opt out of waiting via setting this flag. You would only need this option in the exceptional cases such as navigating to inaccessible pages. Defaults to `false`.
+     */
+    noWaitAfter?: boolean;
+
+    /**
+     * Whether to bypass the actionability checks. Defaults to `false`.
+     */
+    force?: boolean;
+
+    /**
+     * Maximum time in milliseconds, defaults to 30 seconds, pass `0` to disable timeout. The default value can be changed by using the browserContext.setDefaultTimeout(timeout) or page.setDefaultTimeout(timeout) methods.
+     */
+    timeout?: number;
+  }): Promise<void>;
+
+  /**
    * Resolves to the `element.textContent`.
    * @param selector A selector to search for an element. If there are multiple elements satisfying the selector, the first will be picked. See working with selectors for more details.
    * @param options 
@@ -20678,7 +20957,7 @@ export interface BrowserContext {
    * Math.random = () => 42;
    * ```
    * ```js
-   * // In your playwright script, assuming the preload.js file is in same folder.
+   * // In your playwright script, assuming the preload.js file is in same directory.
    * await browserContext.addInitScript({
    *   path: 'preload.js'
    * });
@@ -20770,8 +21049,7 @@ export interface BrowserContext {
 
   /**
    * Grants specified permissions to the browser context. Only grants corresponding permissions to the given origin if specified.
-   * @param permissions A permission or an array of permissions to grant. Permissions can be one of the following values:  - `'*'`
-   *  - `'geolocation'`
+   * @param permissions A permission or an array of permissions to grant. Permissions can be one of the following values:  - `'geolocation'`
    *  - `'midi'`
    *  - `'midi-sysex'` (system-exclusive midi)
    *  - `'notifications'`
@@ -21649,6 +21927,52 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * This method taps the element by performing the following steps:
+   * 
+   * Wait for actionability checks on the element, unless `force` option is set.
+   * Scroll the element into view if needed.
+   * Use page.touchscreen to tap in the center of the element, or the specified `position`.
+   * Wait for initiated navigations to either succeed or fail, unless `noWaitAfter` option is set.
+   * 
+   * If the element is detached from the DOM at any moment during the action, this method rejects.
+   * When all steps combined have not finished during the specified `timeout`, this method rejects with a TimeoutError. Passing zero timeout disables this.
+   * 
+   * **NOTE** `elementHandle.tap()` requires that the `hasTouch` option of the browser context be set to true.
+   * @param options 
+   * @returns Promise that resolves when the element is successfully tapped.
+   */
+  tap(options?: {
+    /**
+     * A point to tap relative to the top-left corner of element padding box. If not specified, taps some visible point of the element.
+     */
+    position?: {
+      x: number;
+
+      y: number;
+    };
+
+    /**
+     * Modifier keys to press. Ensures that only these modifiers are pressed during the tap, and then restores current modifiers back. If not specified, currently pressed modifiers are used.
+     */
+    modifiers?: Array<"Alt"|"Control"|"Meta"|"Shift">;
+
+    /**
+     * Whether to bypass the actionability checks. Defaults to `false`.
+     */
+    force?: boolean;
+
+    /**
+     * Actions that initiate navigations are waiting for these navigations to happen and for pages to start loading. You can opt out of waiting via setting this flag. You would only need this option in the exceptional cases such as navigating to inaccessible pages. Defaults to `false`.
+     */
+    noWaitAfter?: boolean;
+
+    /**
+     * Maximum time in milliseconds, defaults to 30 seconds, pass `0` to disable timeout. The default value can be changed by using the browserContext.setDefaultTimeout(timeout) or page.setDefaultTimeout(timeout) methods.
+     */
+    timeout?: number;
+  }): Promise<void>;
+
+  /**
    * @returns Resolves to the `node.textContent`.
    */
   textContent(): Promise<null|string>;
@@ -21844,7 +22168,7 @@ export interface BrowserType<Browser> {
     acceptDownloads?: boolean;
 
     /**
-     * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
+     * If specified, accepted downloads are downloaded into this directory. Otherwise, temporary directory is created and is deleted when browser is closed.
      */
     downloadsPath?: string;
 
@@ -22000,12 +22324,12 @@ export interface BrowserType<Browser> {
     colorScheme?: "dark"|"light"|"no-preference";
 
     /**
-     * Enables video recording for all pages to `videosPath` folder. If not specified, videos are not recorded.
+     * **NOTE** Use `recordVideo` instead, it takes precedence over `videosPath`. Enables video recording for all pages to `videosPath` directory. If not specified, videos are not recorded. Make sure to await `browserContext.close` for videos to be saved.
      */
     videosPath?: string;
 
     /**
-     * Specifies dimensions of the automatically recorded video. Can only be used if `videosPath` is set. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of the page will be scaled down if necessary to fit specified size.
+     * **NOTE** Use `recordVideo` instead, it takes precedence over `videoSize`. Specifies dimensions of the automatically recorded video. Can only be used if `videosPath` is set. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of the page will be scaled down if necessary to fit specified size.
      */
     videoSize?: {
       /**
@@ -22017,6 +22341,46 @@ export interface BrowserType<Browser> {
        * Video frame height.
        */
       height: number;
+    };
+
+    /**
+     * Enables HAR recording for all the pages into `recordHar.path` file. If not specified, HAR is not recorded. Make sure to await `page.close` for HAR to be saved.
+     */
+    recordHar?: {
+      /**
+       * Optional setting to control whether to omit request content from the HAR. Defaults to false.
+       */
+      omitContent?: boolean;
+
+      /**
+       * Path on the filesystem to write the HAR file to.
+       */
+      path: string;
+    };
+
+    /**
+     * Enables video recording for all pages into `recordVideo.dir` directory. If not specified videos are not recorded. Make sure to await `browserContext.close` for videos to be saved.
+     */
+    recordVideo?: {
+      /**
+       * Path to the directory to put videos into.
+       */
+      dir: string;
+
+      /**
+       * Optional dimensions of the recorded videos. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of each page will be scaled down if necessary to fit the specified size.
+       */
+      size?: {
+        /**
+         * Video frame width.
+         */
+        width: number;
+
+        /**
+         * Video frame height.
+         */
+        height: number;
+      };
     };
   }): Promise<BrowserContext>;
 
@@ -22089,7 +22453,7 @@ export interface BrowserType<Browser> {
     };
 
     /**
-     * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
+     * If specified, accepted downloads are downloaded into this directory. Otherwise, temporary directory is created and is deleted when browser is closed.
      */
     downloadsPath?: string;
 
@@ -22552,12 +22916,37 @@ export interface Browser extends EventEmitter {
     logger?: Logger;
 
     /**
-     * Enables video recording for all pages to `videosPath` folder. If not specified, videos are not recorded.
+     * Network proxy settings to use with this context. Note that browser needs to be launched with the global proxy for this option to work. If all contexts override the proxy, global proxy will be never used and can be any string, for example `launch({ proxy: { server: 'per-context' } })`.
+     */
+    proxy?: {
+      /**
+       * Proxy to be used for all requests. HTTP and SOCKS proxies are supported, for example `http://myproxy.com:3128` or `socks5://myproxy.com:3128`. Short form `myproxy.com:3128` is considered an HTTP proxy.
+       */
+      server: string;
+
+      /**
+       * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+       */
+      bypass?: string;
+
+      /**
+       * Optional username to use if HTTP proxy requires authentication.
+       */
+      username?: string;
+
+      /**
+       * Optional password to use if HTTP proxy requires authentication.
+       */
+      password?: string;
+    };
+
+    /**
+     * **NOTE** Use `recordVideo` instead, it takes precedence over `videosPath`. Enables video recording for all pages to `videosPath` directory. If not specified, videos are not recorded. Make sure to await `page.close` for videos to be saved.
      */
     videosPath?: string;
 
     /**
-     * Specifies dimensions of the automatically recorded video. Can only be used if `videosPath` is set. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of the page will be scaled down if necessary to fit specified size.
+     * **NOTE** Use `recordVideo` instead, it takes precedence over `videoSize`. Specifies dimensions of the automatically recorded video. Can only be used if `videosPath` is set. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of the page will be scaled down if necessary to fit specified size.
      */
     videoSize?: {
       /**
@@ -22569,6 +22958,46 @@ export interface Browser extends EventEmitter {
        * Video frame height.
        */
       height: number;
+    };
+
+    /**
+     * Enables HAR recording for all pages into `recordHar.path` file. If not specified, the HAR is not recorded. Make sure to await `page.close` for the HAR to be saved.
+     */
+    recordHar?: {
+      /**
+       * Optional setting to control whether to omit request content from the HAR. Defaults to `false`.
+       */
+      omitContent?: boolean;
+
+      /**
+       * Path on the filesystem to write the HAR file to.
+       */
+      path: string;
+    };
+
+    /**
+     * Enables video recording for all pages into `recordVideo.dir` directory. If not specified videos are not recorded. Make sure to await `page.close` for videos to be saved.
+     */
+    recordVideo?: {
+      /**
+       * Path to the directory to put videos into.
+       */
+      dir: string;
+
+      /**
+       * Optional dimensions of the recorded videos. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of each page will be scaled down if necessary to fit the specified size.
+       */
+      size?: {
+        /**
+         * Video frame width.
+         */
+        width: number;
+
+        /**
+         * Video frame height.
+         */
+        height: number;
+      };
     };
   }): Promise<Page>;
 
@@ -23010,6 +23439,19 @@ export interface Mouse {
 }
 
 /**
+ * The Touchscreen class operates in main-frame CSS pixels relative to the top-left corner of the viewport. Methods on the
+ * touchscreen can only be used in browser contexts that have been intialized with `hasTouch` set to true.
+ */
+export interface Touchscreen {
+  /**
+   * Dispatches a `touchstart` and `touchend` event with a single touch at the position (`x`,`y`).
+   * @param x 
+   * @param y 
+   */
+  tap(x: number, y: number): Promise<void>;
+}
+
+/**
  * Whenever the page sends a request for a network resource the following sequence of events are emitted by Page:
  * 
  * `'request'` emitted when the request is issued by the page.
@@ -23112,6 +23554,64 @@ export interface Request {
    * @returns A matching Response object, or `null` if the response was not received due to error.
    */
   response(): Promise<null|Response>;
+
+  /**
+   * Returns resource timing information for given request. Most of the timing values become available upon the response, `responseEnd` becomes available when request finishes. Find more information at Resource Timing API.
+   * ```js
+   * const [request] = await Promise.all([
+   *   page.waitForEvent('requestfinished'),
+   *   page.goto(httpsServer.EMPTY_PAGE)
+   * ]);
+   * console.log(request.timing());
+   * ```
+   */
+  timing(): {
+    /**
+     * Request start time in milliseconds elapsed since January 1, 1970 00:00:00 UTC
+     */
+    startTime: number;
+
+    /**
+     * Time immediately before the browser starts the domain name lookup for the resource. The value is given in milliseconds relative to `startTime`, -1 if not available.
+     */
+    domainLookupStart: number;
+
+    /**
+     * Time immediately after the browser starts the domain name lookup for the resource. The value is given in milliseconds relative to `startTime`, -1 if not available.
+     */
+    domainLookupEnd: number;
+
+    /**
+     * Time immediately before the user agent starts establishing the connection to the server to retrieve the resource. The value is given in milliseconds relative to `startTime`, -1 if not available.
+     */
+    connectStart: number;
+
+    /**
+     * Time immediately before the browser starts the handshake process to secure the current connection. The value is given in milliseconds relative to `startTime`, -1 if not available.
+     */
+    secureConnectionStart: number;
+
+    /**
+     * Time immediately before the user agent starts establishing the connection to the server to retrieve the resource. The value is given in milliseconds relative to `startTime`, -1 if not available.
+     */
+    connectEnd: number;
+
+    /**
+     * Time immediately before the browser starts requesting the resource from the server, cache, or local resource. The value is given in milliseconds relative to `startTime`, -1 if not available.
+     */
+    requestStart: number;
+
+    /**
+     * Time immediately after the browser starts requesting the resource from the server, cache, or local resource. The value is given in milliseconds relative to `startTime`, -1 if not available.
+     */
+    responseStart: number;
+
+    /**
+     * Time immediately after the browser receives the last byte of the resource or immediately before the transport connection is closed, whichever comes first. The value is given in milliseconds relative to `startTime`, -1 if not available.
+     * };
+     */
+    responseEnd: number;
+  };
 
   /**
    * @returns URL of the request.
@@ -23286,7 +23786,7 @@ export interface Route {
    *   route.continue({headers});
    * });
    * ```
-   * @param overrides Optional request overrides, which can be one of the following:
+   * @param overrides Optional request overrides, can override following properties:
    */
   continue(overrides?: {
     /**
@@ -23354,6 +23854,222 @@ export interface Route {
    * @returns A request to be routed.
    */
   request(): Request;
+}
+
+/**
+ * The WebSocket class represents websocket connections in the page.
+ */
+export interface WebSocket {
+  /**
+   * Fired when the websocket closes.
+   */
+  on(event: 'close', listener: () => void): this;
+
+  /**
+   * Fired when the websocket recieves a frame.
+   */
+  on(event: 'framereceived', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket sends a frame.
+   */
+  on(event: 'framesent', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket has an error.
+   */
+  on(event: 'socketerror', listener: (string: String) => void): this;
+
+  /**
+   * Fired when the websocket closes.
+   */
+  once(event: 'close', listener: () => void): this;
+
+  /**
+   * Fired when the websocket recieves a frame.
+   */
+  once(event: 'framereceived', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket sends a frame.
+   */
+  once(event: 'framesent', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket has an error.
+   */
+  once(event: 'socketerror', listener: (string: String) => void): this;
+
+  /**
+   * Fired when the websocket closes.
+   */
+  addListener(event: 'close', listener: () => void): this;
+
+  /**
+   * Fired when the websocket recieves a frame.
+   */
+  addListener(event: 'framereceived', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket sends a frame.
+   */
+  addListener(event: 'framesent', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket has an error.
+   */
+  addListener(event: 'socketerror', listener: (string: String) => void): this;
+
+  /**
+   * Fired when the websocket closes.
+   */
+  removeListener(event: 'close', listener: () => void): this;
+
+  /**
+   * Fired when the websocket recieves a frame.
+   */
+  removeListener(event: 'framereceived', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket sends a frame.
+   */
+  removeListener(event: 'framesent', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket has an error.
+   */
+  removeListener(event: 'socketerror', listener: (string: String) => void): this;
+
+  /**
+   * Fired when the websocket closes.
+   */
+  off(event: 'close', listener: () => void): this;
+
+  /**
+   * Fired when the websocket recieves a frame.
+   */
+  off(event: 'framereceived', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket sends a frame.
+   */
+  off(event: 'framesent', listener: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => void): this;
+
+  /**
+   * Fired when the websocket has an error.
+   */
+  off(event: 'socketerror', listener: (string: String) => void): this;
+
+  /**
+   * Indicates that the web socket has been closed.
+   */
+  isClosed(): boolean;
+
+  /**
+   * Contains the URL of the WebSocket.
+   */
+  url(): string;
+
+  /**
+   * Fired when the websocket closes.
+   */
+  waitForEvent(event: 'close', optionsOrPredicate?: { predicate?: () => boolean, timeout?: number } | (() => boolean)): Promise<void>;
+
+  /**
+   * Fired when the websocket recieves a frame.
+   */
+  waitForEvent(event: 'framereceived', optionsOrPredicate?: { predicate?: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => boolean, timeout?: number } | ((data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => boolean)): Promise<{
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}>;
+
+  /**
+   * Fired when the websocket sends a frame.
+   */
+  waitForEvent(event: 'framesent', optionsOrPredicate?: { predicate?: (data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => boolean, timeout?: number } | ((data: {
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}) => boolean)): Promise<{
+  /**
+   * frame payload
+   */
+  payload: string|Buffer;
+}>;
+
+  /**
+   * Fired when the websocket has an error.
+   */
+  waitForEvent(event: 'socketerror', optionsOrPredicate?: { predicate?: (string: String) => boolean, timeout?: number } | ((string: String) => boolean)): Promise<String>;
+
 }
 
 export interface BrowserServer {
@@ -23868,12 +24584,37 @@ export interface BrowserContextOptions {
   logger?: Logger;
 
   /**
-   * Enables video recording for all pages to `videosPath` folder. If not specified, videos are not recorded.
+   * Network proxy settings to use with this context. Note that browser needs to be launched with the global proxy for this option to work. If all contexts override the proxy, global proxy will be never used and can be any string, for example `launch({ proxy: { server: 'per-context' } })`.
+   */
+  proxy?: {
+    /**
+     * Proxy to be used for all requests. HTTP and SOCKS proxies are supported, for example `http://myproxy.com:3128` or `socks5://myproxy.com:3128`. Short form `myproxy.com:3128` is considered an HTTP proxy.
+     */
+    server: string;
+
+    /**
+     * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+     */
+    bypass?: string;
+
+    /**
+     * Optional username to use if HTTP proxy requires authentication.
+     */
+    username?: string;
+
+    /**
+     * Optional password to use if HTTP proxy requires authentication.
+     */
+    password?: string;
+  };
+
+  /**
+   * **NOTE** Use `recordVideo` instead, it takes precedence over `videosPath`. Enables video recording for all pages to `videosPath` directory. If not specified, videos are not recorded. Make sure to await `browserContext.close` for videos to be saved.
    */
   videosPath?: string;
 
   /**
-   * Specifies dimensions of the automatically recorded video. Can only be used if `videosPath` is set. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of the page will be scaled down if necessary to fit specified size.
+   * **NOTE** Use `recordVideo` instead, it takes precedence over `videoSize`. Specifies dimensions of the automatically recorded video. Can only be used if `videosPath` is set. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of the page will be scaled down if necessary to fit specified size.
    */
   videoSize?: {
     /**
@@ -23885,6 +24626,46 @@ export interface BrowserContextOptions {
      * Video frame height.
      */
     height: number;
+  };
+
+  /**
+   * Enables HAR recording for all pages into `recordHar.path` file. If not specified, the HAR is not recorded. Make sure to await `browserContext.close` for the HAR to be saved.
+   */
+  recordHar?: {
+    /**
+     * Optional setting to control whether to omit request content from the HAR. Defaults to `false`.
+     */
+    omitContent?: boolean;
+
+    /**
+     * Path on the filesystem to write the HAR file to.
+     */
+    path: string;
+  };
+
+  /**
+   * Enables video recording for all pages into `recordVideo.dir` directory. If not specified videos are not recorded. Make sure to await `browserContext.close` for videos to be saved.
+   */
+  recordVideo?: {
+    /**
+     * Path to the directory to put videos into.
+     */
+    dir: string;
+
+    /**
+     * Optional dimensions of the recorded videos. If not specified the size will be equal to `viewport`. If `viewport` is not configured explicitly the video size defaults to 1280x720. Actual picture of each page will be scaled down if necessary to fit the specified size.
+     */
+    size?: {
+      /**
+       * Video frame width.
+       */
+      width: number;
+
+      /**
+       * Video frame height.
+       */
+      height: number;
+    };
   };
 }
 
@@ -23970,7 +24751,7 @@ export interface LaunchOptions {
   };
 
   /**
-   * If specified, accepted downloads are downloaded into this folder. Otherwise, temporary folder is created and is deleted when browser is closed.
+   * If specified, accepted downloads are downloaded into this directory. Otherwise, temporary directory is created and is deleted when browser is closed.
    */
   downloadsPath?: string;
 
