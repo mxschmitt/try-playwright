@@ -38,6 +38,7 @@ type server struct {
 	amqpConnection           *amqp.Connection
 	amqpChannel              *amqp.Channel
 	amqpReplyQueue           amqp.Queue
+	amqpErrorChan            chan *amqp.Error
 	replies                  map[string]chan []byte
 	repliesLock              sync.Mutex
 }
@@ -74,6 +75,8 @@ func newServer() (*server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to queue: %w", err)
 	}
+	amqpErrorChan := make(chan *amqp.Error, 1)
+	amqpConnection.NotifyClose(amqpErrorChan)
 	amqpChannel, err := amqpConnection.Channel()
 	if err != nil {
 		return nil, fmt.Errorf("could not open channel: %w", err)
@@ -109,6 +112,7 @@ func newServer() (*server, error) {
 		amqpConnection:           amqpConnection,
 		amqpChannel:              amqpChannel,
 		amqpReplyQueue:           amqpReplyQueue,
+		amqpErrorChan:            amqpErrorChan,
 		replies:                  make(map[string]chan []byte),
 	}
 
@@ -338,7 +342,13 @@ func main() {
 			log.Fatalf("could not listen: %v", err)
 		}
 	}()
-	<-stop
+	select {
+	case signal := <-stop:
+		log.Printf("received stop signal: %s", signal)
+	case err := <-s.amqpErrorChan:
+		log.Printf("received amqp error: %v", err)
+	}
+	log.Println("shutting down server gracefully")
 	if err := s.Stop(); err != nil {
 		log.Fatalf("could not stop: %v", err)
 	}
