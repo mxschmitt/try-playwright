@@ -163,7 +163,10 @@ func main() {
 			log.Fatalf("could not listen: %v", err)
 		}
 	}()
-	<-stop
+	signal := <-stop
+	log.Printf("received stop signal: %s", signal)
+	log.Println("shutting down server gracefully")
+
 	if err := s.Stop(); err != nil {
 		log.Fatalf("could not stop: %v", err)
 	}
