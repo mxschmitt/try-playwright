@@ -10,7 +10,7 @@ header *.tff Cache-Control max-age=86400
 
 log
 
-tls /cert.pem /key.pem
+tls internal
 
 reverse_proxy /service/control/* control:8080
 reverse_proxy /file-uploads/* minio:9000 {
