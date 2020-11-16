@@ -152,6 +152,7 @@ type runPayload struct {
 
 type workerResponsePayload struct {
 	Success  bool   `json:"success"`
+	Error    string `json:"error"`
 	Version  string `json:"version"`
 	Duration int64  `json:"duration"`
 	Files    []struct {

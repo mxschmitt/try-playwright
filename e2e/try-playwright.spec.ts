@@ -151,4 +151,28 @@ describe("should handle platform core related features", test => {
       timeout: 40 * 1000
     })
   })
+  it("should handle uncaughtException correctly", async ({ page }) => {
+    await page.goto(ROOT_URL, { waitUntil: "networkidle" });
+    await page.click(".monaco-editor")
+    await page.keyboard.press("Meta+KeyA")
+    await page.keyboard.type(`// @ts-check
+const playwright = require("playwright");
+
+(async () => {
+  const browser = await playwright.chromium.launch();
+  const page = await browser.newPage();
+  page.route("**/*", () => {
+    throw new Error("foobar!")`)
+    await page.keyboard.press("ArrowDown")
+    await page.keyboard.type(`
+     await page.goto("https://example.com")
+  await browser.close();`)
+    await page.keyboard.press("ArrowDown")
+    await page.keyboard.press("ArrowDown")
+    await page.keyboard.type("();")
+    await page.click("text='Run'")
+    await page.waitForSelector("text='Error: foobar!'", {
+      timeout: 5 * 1000
+    })
+  })
 })

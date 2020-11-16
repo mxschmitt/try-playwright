@@ -30,8 +30,8 @@ const QUEUE_NAME = 'rpc_queue';
     try {
       response = await runUntrustedCode(payload?.code)
     } catch (error) {
-      response = { success: false, error: error.toString() }
-      console.log("Errored request", error)
+      response = { success: false, error: String(error) }
+      console.log(`Errored request: ${error}`)
       Sentry.captureException(error)
     }
     channel.sendToQueue(msg.properties.replyTo,

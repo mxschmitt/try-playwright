@@ -67,12 +67,24 @@ export const runUntrustedCode = async (code: string): Promise<SuccessExecutionRe
     setTimeout,
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  let unhandledRejectionPromiseReject: ((reason: string) => void) = () => { }
+  const unhandledRejectionPromise = new Promise((resolve, reject) => unhandledRejectionPromiseReject = reject)
+  const uncaughtExceptionHandler = (err: Error) => {
+    unhandledRejectionPromiseReject(err.message)
+  }
+  process.once('uncaughtException', uncaughtExceptionHandler);
+
   const vm = new VM({
     timeout: 30 * 1000,
     sandbox,
   })
 
-  await vm.run(code);
+  await Promise.race([
+    unhandledRejectionPromise,
+    vm.run(code)
+  ]);
+  process.removeListener("uncaughtException", uncaughtExceptionHandler)
 
   const files = await getFiles()
 
