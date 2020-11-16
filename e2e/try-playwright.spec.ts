@@ -171,8 +171,6 @@ const playwright = require("playwright");
     await page.keyboard.press("ArrowDown")
     await page.keyboard.type("();")
     await page.click("text='Run'")
-    await page.waitForSelector("text='Error: foobar!'", {
-      timeout: 5 * 1000
-    })
+    await page.waitForSelector("text='Error: foobar!'")
   })
 })
