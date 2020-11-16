@@ -152,7 +152,8 @@ describe("should handle platform core related features", test => {
     })
   })
   it("should handle uncaughtException correctly", async ({ page }) => {
-    await page.goto(ROOT_URL, { waitUntil: "networkidle" });
+    await page.goto(ROOT_URL);
+    await page.waitForTimeout(200)
     await page.evaluate(() => {
       // @ts-ignore
       window.monacoEditorModel.setValue(`// @ts-check
