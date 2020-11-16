@@ -168,7 +168,7 @@ const playwright = require("playwright");
   await browser.close();
 })();`)
     })
-    await page.waitForTimeout(100)
+    await page.waitForTimeout(200)
     await page.click("text='Run'")
     await page.waitForSelector("text='Error: foobar!'")
   })
