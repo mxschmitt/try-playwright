@@ -54,6 +54,8 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         editor.getModel()?.updateOptions({
             tabSize: 2
         })
+        // @ts-ignore
+        window.monacoEditorModel = editor.getModel()
         editor.onKeyDown((event: monacoEditor.IKeyboardEvent) => {
             if (event.keyCode === monacoEditor.KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
