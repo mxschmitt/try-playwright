@@ -1,6 +1,6 @@
 @media screen and (max-width: 420px) {
   .hideSmallScreens {
-    display: none;
+    display: none !important;
   }
 }
 
