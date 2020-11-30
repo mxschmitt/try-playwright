@@ -4,3 +4,4 @@ node_modules/
 data/
 *.sqlite
 *.pem
+.eslintcache
