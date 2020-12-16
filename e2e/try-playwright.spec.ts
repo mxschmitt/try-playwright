@@ -60,7 +60,9 @@ describe('Examples', () => {
     const imageNames = await getFileNames(page)
     expect(imageNames).toEqual(["document.pdf"])
   })
-  it("4: should be able to record a video", async ({ page }) => {
+  it("4: should be able to record a video", test => {
+    test.slow();
+  }, async ({ page }) => {
     await executeExample(page, 4)
     const videoCount = await getVideoCount(page)
     expect(videoCount).toBe(1)
