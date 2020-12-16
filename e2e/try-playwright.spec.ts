@@ -62,6 +62,7 @@ describe('Examples', () => {
   })
   it("4: should be able to record a video", test => {
     test.slow();
+    test.flaky();
   }, async ({ page }) => {
     await executeExample(page, 4)
     const videoCount = await getVideoCount(page)
