@@ -30,6 +30,10 @@ import (
 
 const ID_LENGTH = 7
 
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
+
 type server struct {
 	server                   *http.Server
 	etcdClient               *clientv3.Client
