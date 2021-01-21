@@ -57,6 +57,14 @@ jobs:
       run: npm run lint
     - name: Build
       run: npm run build
+  lint-go:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v2
+      with:
+        version: v1.35
   build:
     #needs: test
     runs-on: ubuntu-latest
