@@ -6,9 +6,17 @@ import { v4 as uuidv4 } from 'uuid'
 import { saveVideo, PageVideoCapture } from 'playwright-video'
 import playwright, { Browser, WebKitBrowser, ChromiumBrowser, FirefoxBrowser, Page as PageType, LaunchOptions, BrowserContextOptions, BrowserContext } from 'playwright'
 // @ts-ignore
-import { Playwright } from 'playwright/lib/server/playwright'
+import { Playwright as PlaywrightImpl } from 'playwright/lib/server/playwright'
+// @ts-ignore
+import { Connection } from 'playwright/lib/client/connection';
 // @ts-ignore
 import { Page } from 'playwright/lib/client/page';
+// @ts-ignore
+import { BrowserServerLauncherImpl } from 'playwright/lib/browserServerImpl';
+// @ts-ignore
+import { DispatcherConnection } from 'playwright/lib/dispatchers/dispatcher';
+// @ts-ignore
+import { PlaywrightDispatcher } from 'playwright/lib/dispatchers/playwrightDispatcher';
 // @ts-ignore
 import playwrightBrowsers from 'playwright/browsers.json';
 // @ts-ignore
@@ -141,8 +149,35 @@ const preBrowserLaunch = async (browser: Browser, id: string, assetDir: string):
 
 const pwDirname = path.join(__dirname, "..", "node_modules", "playwright")
 
+/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/no-non-null-assertion */
+const setupInProcess = () => {
+  const playwright = new PlaywrightImpl(pwDirname, playwrightBrowsers["browsers"]);
+
+  const clientConnection = new Connection();
+  const dispatcherConnection = new DispatcherConnection();
+
+  // Dispatch synchronously at first.
+  dispatcherConnection.onmessage = (message: any): any => clientConnection.dispatch(message);
+  clientConnection.onmessage = (message: any): any => dispatcherConnection.dispatch(message);
+
+  // Initialize Playwright channel.
+  new PlaywrightDispatcher(dispatcherConnection.rootDispatcher(), playwright);
+  const playwrightAPI = clientConnection.getObjectWithKnownName('Playwright') as typeof playwright;
+  playwrightAPI.chromium._serverLauncher = new BrowserServerLauncherImpl(playwright.chromium);
+  playwrightAPI.firefox._serverLauncher = new BrowserServerLauncherImpl(playwright.firefox);
+  playwrightAPI.webkit._serverLauncher = new BrowserServerLauncherImpl(playwright.webkit);
+
+  // Switch to async dispatch after we got Playwright object.
+  dispatcherConnection.onmessage = (message: any): any => setImmediate(() => clientConnection.dispatch(message));
+  clientConnection.onmessage = (message: any): any => setImmediate(() => dispatcherConnection.dispatch(message));
+
+  (playwrightAPI as any)._toImpl = (x: any) => dispatcherConnection._dispatchers.get(x._guid)!._object;
+  return playwrightAPI;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any,@typescript-eslint/no-non-null-assertion */
+
 export const getPlaywright = (id: string, assetDir: string): typeof playwright => {
-  const pw: typeof playwright = setupInProcess(new Playwright(pwDirname, playwrightBrowsers["browsers"]))
+  const pw: typeof playwright = setupInProcess()
   const originalChromiumLaunch = pw.chromium.launch
   pw.chromium.launch = async (options: LaunchOptions = {}): Promise<ChromiumBrowser> => {
     const browser = await originalChromiumLaunch.apply(pw.chromium, [options])

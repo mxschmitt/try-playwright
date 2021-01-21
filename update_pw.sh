@@ -38,7 +38,8 @@ function update_playwright_types {
     cat worker/node_modules/@types/node/globals.d.ts > $TYPES_FILE
     echo "declare module 'playwright' {" >> $TYPES_FILE
     cat worker/node_modules/playwright/types/protocol.d.ts >> $TYPES_FILE
-    cat worker/node_modules/playwright/types/types.d.ts | tail -n +21 >> $TYPES_FILE
+    cat worker/node_modules/playwright/types/structs.d.ts | tail -n +19 >> $TYPES_FILE
+    cat worker/node_modules/playwright/types/types.d.ts | tail -n +22 >> $TYPES_FILE
     echo "$CUSTOM_SUFFIX" >> $TYPES_FILE
 }
 
