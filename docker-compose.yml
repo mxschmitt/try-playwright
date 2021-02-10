@@ -2,6 +2,7 @@ version: "3"
 services:
   minio:
     image: minio/minio
+    restart: always
     command: server /data
     environment:
       - MINIO_ACCESS_KEY
@@ -58,6 +59,7 @@ services:
       - mongo
   etcd:
     image: docker.io/bitnami/etcd:3-debian-10
+    restart: always
     environment:
       - ALLOW_NONE_AUTHENTICATION=yes
       - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
@@ -65,10 +67,12 @@ services:
       - etcd_data:/bitnami/etcd
   rabbitmq:
     image: rabbitmq:3
+    restart: always
     volumes:
       - "rabbitmq_data:/var/lib/rabbitmq"
   mongo:
     image: mongo
+    restart: always
     # will be injected via the .env file
     environment:
       - MONGO_INITDB_ROOT_USERNAME
