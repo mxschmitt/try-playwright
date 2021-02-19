@@ -18,7 +18,9 @@ const TODO_NAME = "Bake a cake";
     slowMo: 100
   });
   const context = await browser.newContext({
-    videosPath: 'videos/'
+    recordVideo: {
+      dir: 'videos/'
+    }
   });
   const page = await context.newPage();
 

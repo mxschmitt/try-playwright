@@ -47,8 +47,6 @@ export const runUntrustedCode = async (code: string): Promise<SuccessExecutionRe
   const sandbox = {
     require: (packageName: string): unknown => {
       switch (packageName) {
-        case "playwright-video":
-          return getPlaywrightVideo(browserId)
         case "playwright":
         case "playwright-core":
         case "playwright-chromium":

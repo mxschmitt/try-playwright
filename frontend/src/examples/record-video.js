@@ -4,7 +4,9 @@ const { chromium } = require("playwright");
 (async () => {
   const browser = await chromium.launch();
   const context = await browser.newContext({
-    videosPath: 'videos/'
+    recordVideo: {
+      dir: 'videos/'
+    }
   });
   const page = await context.newPage();
 
