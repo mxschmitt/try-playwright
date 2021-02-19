@@ -2,7 +2,7 @@ import { VM } from 'vm2'
 import tmp from 'tmp'
 import { v4 as uuidv4 } from 'uuid'
 
-import { getPlaywright, getPlaywrightVideo, registerFileListener } from "./playwright"
+import { getPlaywright, registerFileListener } from "./playwright"
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJson = require("../package.json")

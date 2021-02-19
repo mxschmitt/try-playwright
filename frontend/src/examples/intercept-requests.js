@@ -1,5 +1,5 @@
 // @ts-check
-const playwright = require("playwright");
+const playwright = require('playwright');
 
 (async () => {
   const browser = await playwright.webkit.launch();
