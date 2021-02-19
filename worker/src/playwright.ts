@@ -3,7 +3,6 @@ import fs from 'fs'
 import os from 'os'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import { saveVideo, PageVideoCapture } from 'playwright-video'
 import playwright, { Browser, WebKitBrowser, ChromiumBrowser, FirefoxBrowser, Page as PageType, LaunchOptions, BrowserContextOptions, BrowserContext } from 'playwright'
 // @ts-ignore
 import { Playwright as PlaywrightImpl } from 'playwright/lib/server/playwright'
@@ -133,8 +132,11 @@ Page.prototype._pdf = async function (this: PageType, options?: Parameters<typeo
 const preBrowserLaunch = async (browser: Browser, id: string, assetDir: string): Promise<void> => {
   const originalNewContext = browser.newContext
   browser.newContext = async (contextOptions: BrowserContextOptions = {}): Promise<BrowserContext> => {
-    if (contextOptions.videosPath) {
-      contextOptions.videosPath = assetDir
+    if (contextOptions.recordVideo) {
+      contextOptions.recordVideo = {
+        ...contextOptions.recordVideo,
+        dir: assetDir
+      }
     }
     const context = await originalNewContext.apply(browser, [contextOptions])
     return context
@@ -200,13 +202,4 @@ export const getPlaywright = (id: string, assetDir: string): typeof playwright =
   }
 
   return pw
-}
-
-export const getPlaywrightVideo = (browserId: string): unknown => {
-  return {
-    saveVideo: (page: Page, path: string): Promise<PageVideoCapture> => {
-      const publicPath = emitNewFile(browserId, path)
-      return saveVideo(page, publicPath)
-    }
-  }
 }

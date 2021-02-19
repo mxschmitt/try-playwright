@@ -1,5 +1,5 @@
 // @ts-check
-const playwright = require("playwright");
+const playwright = require('playwright');
 
 (async () => {
   // Try to add 'firefox' to the list ↓

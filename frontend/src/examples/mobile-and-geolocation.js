@@ -1,5 +1,5 @@
 // @ts-check
-const playwright = require("playwright");
+const playwright = require('playwright');
 
 (async () => {
   const { webkit, devices } = playwright;
@@ -13,7 +13,7 @@ const playwright = require("playwright");
   });
   const page = await context.newPage();
   await page.goto('https://maps.google.com');
-  await page.click(".ml-my-location-fab button");
+  await page.click('.ml-my-location-fab button');
   await page.waitForRequest(/.*preview\/pwa/);
   await page.screenshot({ path: 'colosseum-iphone.png' });
   await browser.close();

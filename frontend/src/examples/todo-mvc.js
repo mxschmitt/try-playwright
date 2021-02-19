@@ -1,5 +1,5 @@
 // @ts-check
-const playwright = require("playwright");
+const playwright = require('playwright');
 
 /**
  * Helper function which will compare val1 with val2.
@@ -11,40 +11,42 @@ const expect = (val1, val2) => {
   }
 }
 
-const TODO_NAME = "Bake a cake";
+const TODO_NAME = 'Bake a cake';
 
 (async () => {
   const browser = await playwright.chromium.launch({
     slowMo: 100
   });
   const context = await browser.newContext({
-    videosPath: 'videos/'
+    recordVideo: {
+      dir: 'videos/'
+    }
   });
   const page = await context.newPage();
 
-  await page.goto("http://todomvc.com/examples/react/");
+  await page.goto('http://todomvc.com/examples/react/');
 
   // Helper function to get the amount of todos on the page
-  const getCountOfTodos = () => page.$$eval("ul.todo-list > li", el => el.length)
+  const getCountOfTodos = () => page.$$eval('ul.todo-list > li', el => el.length)
 
   // Initially there should be 0 entries
   expect(await getCountOfTodos(), 0)
 
   // Adding a todo entry (click in the input, enter the todo title and press the Enter key)
-  await page.click("input.new-todo");
-  await page.type("input.new-todo", TODO_NAME);
-  await page.press("input.new-todo", "Enter");
+  await page.click('input.new-todo');
+  await page.type('input.new-todo', TODO_NAME);
+  await page.press('input.new-todo', 'Enter');
 
   // After adding 1 there should be 1 entry in the list
   expect(await getCountOfTodos(), 1)
 
   // Here we get the text in the first todo item to see if it's the same which the user has entered
-  const textContentOfFirstTodoEntry = await page.$eval("ul.todo-list > li:nth-child(1) label", el => el.textContent)
+  const textContentOfFirstTodoEntry = await page.$eval('ul.todo-list > li:nth-child(1) label', el => el.textContent)
   expect(textContentOfFirstTodoEntry, TODO_NAME)
 
   // The todo list should be persistent. Here we reload the page and see if the entry is still there
   await page.reload({
-    waitUntil: "networkidle"
+    waitUntil: 'networkidle'
   });
   expect(await getCountOfTodos(), 1)
 

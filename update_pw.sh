@@ -25,10 +25,6 @@ declare module 'playwright-webkit' {
     export * from 'playwright';
 }
 
-declare module 'playwright-video' {
-    export const saveVideo: (page: import('playwright').Page, savePath: string) => Promise<({ stop: (() => Promise<void>) })>;
-}
-
 EOM
 
 set -e
