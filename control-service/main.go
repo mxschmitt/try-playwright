@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,18 +19,27 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
-	"github.com/streadway/amqp"
 	"go.etcd.io/etcd/clientv3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const ID_LENGTH = 7
+const K8_NAMESPACE_NAME = "default"
+const MAX_TIMEOUT = 30
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
+}
+
+type workerPayload struct {
+	Code string `json:"code"`
 }
 
 type server struct {
@@ -39,12 +47,10 @@ type server struct {
 	etcdClient               *clientv3.Client
 	mongoClient              *mongo.Client
 	mongoExecutionCollection *mongo.Collection
-	amqpConnection           *amqp.Connection
-	amqpChannel              *amqp.Channel
-	amqpReplyQueue           amqp.Queue
-	amqpErrorChan            chan *amqp.Error
-	replies                  map[string]chan []byte
+	k8ClientSet              *kubernetes.Clientset
+	replies                  map[string]chan *workerResponsePayload
 	repliesLock              sync.Mutex
+	payloads                 payloadStorage
 }
 
 func newServer() (*server, error) {
@@ -75,65 +81,29 @@ func newServer() (*server, error) {
 		return nil, fmt.Errorf("could not connect to etcd: %w", err)
 	}
 
-	amqpConnection, err := amqp.Dial(os.Getenv("AMQP_URL"))
+	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, fmt.Errorf("could not connect to queue: %w", err)
+		return nil, fmt.Errorf("could not create k8 in cluster config: %w", err)
 	}
-	amqpErrorChan := make(chan *amqp.Error, 1)
-	amqpConnection.NotifyClose(amqpErrorChan)
-	amqpChannel, err := amqpConnection.Channel()
+	k8ClientSet, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("could not open channel: %w", err)
-	}
-	amqpReplyQueue, err := amqpChannel.QueueDeclare(
-		"",    // name
-		false, // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // noWait
-		nil,   // arguments
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to declare a queue: %w", err)
+		return nil, fmt.Errorf("could not create k8 clientset: %w", err)
 	}
 
-	msgs, err := amqpChannel.Consume(
-		amqpReplyQueue.Name, // queue
-		"",                  // consumer
-		true,                // auto-ack
-		false,               // exclusive
-		false,               // no-local
-		false,               // no-wait
-		nil,                 // args
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to register a consumer: %w", err)
-	}
 	s := &server{
 		etcdClient:               etcdClient,
 		mongoClient:              mongoClient,
 		mongoExecutionCollection: mongoClient.Database("try-playwright").Collection("executions"),
-		amqpConnection:           amqpConnection,
-		amqpChannel:              amqpChannel,
-		amqpReplyQueue:           amqpReplyQueue,
-		amqpErrorChan:            amqpErrorChan,
-		replies:                  make(map[string]chan []byte),
+		replies:                  make(map[string]chan *workerResponsePayload),
+		payloads:                 newInMemoryPayloadStorage(),
+		k8ClientSet:              k8ClientSet,
 	}
-
-	go func() {
-		for d := range msgs {
-			s.repliesLock.Lock()
-			reply, ok := s.replies[d.CorrelationId]
-			s.repliesLock.Unlock()
-			if ok {
-				reply <- d.Body
-			}
-		}
-	}()
 
 	router := httprouter.New()
 	router.GET("/service/control/health", s.handleHealth)
 	router.HEAD("/service/control/health", s.handleHealth)
+	router.GET("/service/control/worker/payload/:id", handleRequestError(s.handleWorkerGetPayload))
+	router.POST("/service/control/worker/payload/:id", handleRequestError(s.handleWorkerStoreResponse))
 	router.POST("/service/control/run", handleRequestError(s.handleRun))
 	router.GET("/service/control/share/get/:id", handleRequestError(s.handleShareGet))
 	router.POST("/service/control/share/create", handleRequestError(s.handleShareCreate))
@@ -200,42 +170,30 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
-	corrId := uuid.New().String()
 
-	reply := make(chan []byte, 1)
-	s.repliesLock.Lock()
-	s.replies[corrId] = reply
-	s.repliesLock.Unlock()
-
-	msgBody, err := json.Marshal(map[string]string{
-		"code": req.Code,
-	})
+	log.Printf("Creating job")
+	job, err := newWorkerJob(s, req.Code)
 	if err != nil {
-		return nil, fmt.Errorf("could not encode msg payload: %w", err)
+		return nil, fmt.Errorf("could not create new worker job: %w", err)
 	}
 
+	log.Printf("Job %s created", job.id)
 	start := time.Now()
-	if err := s.amqpChannel.Publish(
-		"",          // exchange
-		"rpc_queue", // routing key
-		false,       // mandatory
-		false,       // immediate
-		amqp.Publishing{
-			ContentType:   "text/plain",
-			CorrelationId: corrId,
-			ReplyTo:       s.amqpReplyQueue.Name,
-			Body:          msgBody,
-		}); err != nil {
-		return nil, fmt.Errorf("could not publish message: %w", err)
-	}
-	var payload workerResponsePayload
+
+	var payload *workerResponsePayload
+	timeout := false
 	select {
-	case result := <-reply:
-		if err := json.NewDecoder(bytes.NewBuffer(result)).Decode(&payload); err != nil {
-			return nil, fmt.Errorf("could not decode worker response: %w", err)
-		}
+	case payload = <-job.reply:
 		payload.Duration = time.Since(start).Milliseconds()
-	case <-time.After(30 * time.Second):
+	case <-time.After(MAX_TIMEOUT * time.Second):
+		timeout = false
+	}
+
+	if err := job.cleanup(); err != nil {
+		log.Printf("could not cleanup worker: %v", err)
+	}
+
+	if timeout {
 		return &Response{
 			StatusCode: http.StatusRequestTimeout,
 			Body: map[string]string{
@@ -243,10 +201,6 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 			},
 		}, nil
 	}
-
-	s.repliesLock.Lock()
-	delete(s.replies, corrId)
-	s.repliesLock.Unlock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -269,6 +223,68 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	return &Response{
 		Body: payload,
 	}, nil
+}
+
+type payloadStorage interface {
+	SavePayload(id string, payload *workerPayload) error
+	GetPayload(id string) (payload *workerPayload, exists bool)
+}
+
+type inMemoryPayloadStorage struct {
+	payloads     map[string]*workerPayload
+	payloadsLock sync.Mutex
+}
+
+func newInMemoryPayloadStorage() *inMemoryPayloadStorage {
+	return &inMemoryPayloadStorage{
+		payloads: make(map[string]*workerPayload),
+	}
+}
+
+func (s *inMemoryPayloadStorage) SavePayload(id string, payload *workerPayload) error {
+	s.payloadsLock.Lock()
+	s.payloads[id] = payload
+	s.payloadsLock.Unlock()
+	return nil
+}
+
+func (s *inMemoryPayloadStorage) GetPayload(id string) (*workerPayload, bool) {
+	s.payloadsLock.Lock()
+	defer s.payloadsLock.Unlock()
+	payload, exists := s.payloads[id]
+	return payload, exists
+}
+
+func (s *server) handleWorkerGetPayload(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
+	payloadId := params.ByName("id")
+	payload, existsPayload := s.payloads.GetPayload(payloadId)
+	if !existsPayload {
+		return nil, fmt.Errorf("payload %s does not exist", payloadId)
+	}
+	return &Response{
+		Body:       payload,
+		StatusCode: http.StatusOK,
+	}, nil
+}
+
+func (s *server) handleWorkerStoreResponse(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
+	payloadId := params.ByName("id")
+
+	var requestBody *workerResponsePayload
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	s.repliesLock.Lock()
+	reply, ok := s.replies[payloadId]
+	s.repliesLock.Unlock()
+
+	if !ok {
+		return nil, fmt.Errorf("payload %s does not exist", payloadId)
+	}
+	reply <- requestBody
+
+	return nil, nil
 }
 
 func (s *server) handleShareGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
@@ -320,6 +336,85 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprout
 	w.WriteHeader(http.StatusOK)
 }
 
+type workerJob struct {
+	id     string
+	pod    *v1.Pod
+	server *server
+	reply  chan *workerResponsePayload
+}
+
+func newWorkerJob(server *server, code string) (*workerJob, error) {
+	w := &workerJob{
+		server: server,
+		id:     uuid.New().String(),
+		reply:  make(chan *workerResponsePayload, 1),
+	}
+
+	server.repliesLock.Lock()
+	server.replies[w.id] = w.reply
+	server.repliesLock.Unlock()
+
+	if err := server.payloads.SavePayload(w.id, &workerPayload{
+		Code: code,
+	}); err != nil {
+		return nil, fmt.Errorf("could not save payload: %w", err)
+	}
+
+	if err := w.createWorkerPod(); err != nil {
+		return nil, fmt.Errorf("could not create pod: %w", err)
+	}
+
+	return w, nil
+}
+
+func (w *workerJob) createWorkerPod() error {
+	var err error
+	w.pod, err = w.server.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).Create(context.Background(), &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "worker-",
+			Labels: map[string]string{
+				"pod-name": "nginx",
+			},
+		},
+		Spec: v1.PodSpec{
+			RestartPolicy: v1.RestartPolicy(v1.PullNever),
+			Containers: []v1.Container{
+				{
+					Name:  "worker",
+					Image: "ghcr.io/mxschmitt/try-playwright/worker:a1",
+					Env: []v1.EnvVar{
+						{
+							Name:  "JOB_ID",
+							Value: w.id,
+						},
+						{
+							Name:  "FILE_SERVICE_URL",
+							Value: "http://file:8080",
+						},
+					},
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("could not create pod: %w", err)
+	}
+	return nil
+}
+
+func (w *workerJob) cleanup() error {
+	// if err := w.server.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).
+	// 	Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{}); err != nil {
+	// 	return fmt.Errorf("could not delete pod: %w", err)
+	// }
+
+	w.server.repliesLock.Lock()
+	delete(w.server.replies, w.id)
+	w.server.repliesLock.Unlock()
+
+	return nil
+}
+
 func (s *server) ListenAndServe() error {
 	return s.server.ListenAndServe()
 }
@@ -347,12 +442,8 @@ func main() {
 			log.Fatalf("could not listen: %v", err)
 		}
 	}()
-	select {
-	case signal := <-stop:
-		log.Printf("received stop signal: %s", signal)
-	case err := <-s.amqpErrorChan:
-		log.Printf("received amqp error: %v", err)
-	}
+	signal := <-stop
+	log.Printf("received stop signal: %s", signal)
 	log.Println("shutting down server gracefully")
 	if err := s.Stop(); err != nil {
 		log.Fatalf("could not stop: %v", err)

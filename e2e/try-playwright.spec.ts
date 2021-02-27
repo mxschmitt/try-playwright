@@ -14,7 +14,7 @@ fixtures.contextOptions.override(async ({ contextOptions }, runTest) => {
 });
 const { it, describe } = fixtures.build();
 
-const ROOT_URL = process.env.ROOT_TEST_URL || "https://localhost"
+const ROOT_URL = process.env.ROOT_TEST_URL || "http://localhost:8080"
 
 const executeExample = async (page: Page, nth: number): Promise<void> => {
   await page.goto(ROOT_URL, { waitUntil: "networkidle" });

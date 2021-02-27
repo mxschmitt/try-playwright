@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: file
+  name: file
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: file
+  template:
+    metadata:
+      labels:
+        io.kompose.service: file
+    spec:
+      containers:
+        - env:
+            - name: FILE_HTTP_PORT
+              value: "8080"
+            - name: MINIO_ENDPOINT
+              value: minio:9000
+            - name: MINIO_ACCESS_KEY
+              value: "minio"
+            - name: MINIO_SECRET_KEY
+              value: "R9gGSFb4QkZH8LzzS8SECsG66JNX"
+          image: ghcr.io/mxschmitt/try-playwright/file-service:latest
+          name: file
+      restartPolicy: Always

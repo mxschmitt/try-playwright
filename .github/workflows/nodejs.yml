@@ -7,33 +7,33 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      SITE_ADDRESS: https://localhost
-      MINIO_ACCESS_KEY: AKIAIOSFODNN7EXAMPLE
-      MINIO_SECRET_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-      AMQP_URL: amqp://rabbitmq:5672?heartbeat=5s
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: foobar
+    timeout-minutes: 30
     steps:
     - uses: microsoft/playwright-github-action@v1
-    - uses: actions/checkout@v2
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
         node-version: 14.x
+    - uses: actions/checkout@v2
+    - name: Install k3s
+      run: |
+        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker" sh -
+        mkdir -p ~/.kube
+        cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+    - name: Build Docker image control microservice
+      run: docker build . -f control-service/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/control-service:a1
+    - name: Build Docker image worker microservice
+      run: docker build . -f worker/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker:a1
     - name: Install dependencies
       run: npm ci
       working-directory: e2e
-    - name: Pull Docker images
-      run: docker-compose pull
-    - name: Build Docker images
-      run: docker-compose build
-    - name: Start Docker containers
-      run: docker-compose up -d
+    - run: kubectl apply -f k8/
     - name: Run e2e tests
       working-directory: e2e
       run: |
-        npx wait-on https://localhost/service/control/health
+        kubectl wait --for=condition=ready pod -l io.kompose.service=frontend
+        kubectl port-forward service/frontend 8080:80 > /dev/null &
+        npx wait-on http://localhost:8080/service/control/health
         sleep 10
         npm run test
   lint:
