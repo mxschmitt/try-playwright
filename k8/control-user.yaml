@@ -10,9 +10,9 @@ metadata:
   name: control-role
   namespace: default
 rules:
-- apiGroups: [ "" ]
-  resources: [ "pods", "services"]
-  verbs: [ "get", "list", "watch", "create", "delete"]
+- apiGroups: [ "batch" ]
+  resources: ["jobs"]
+  verbs: ["watch", "create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

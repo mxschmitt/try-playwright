@@ -48,7 +48,7 @@ require (
 	k8s.io/apimachinery v0.19.0-beta.2
 	k8s.io/client-go v0.19.0-beta.2
 	k8s.io/klog/v2 v2.4.0 // indirect
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
+	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 )
 
 replace github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.5

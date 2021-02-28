@@ -24,10 +24,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	batchV1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 )
 
 const ID_LENGTH = 7
@@ -43,14 +46,17 @@ type workerPayload struct {
 }
 
 type server struct {
-	server                   *http.Server
+	server *http.Server
+
 	etcdClient               *clientv3.Client
 	mongoClient              *mongo.Client
 	mongoExecutionCollection *mongo.Collection
 	k8ClientSet              *kubernetes.Clientset
-	replies                  map[string]chan *workerResponsePayload
-	repliesLock              sync.Mutex
-	payloads                 payloadStorage
+
+	repliesMu sync.Mutex
+	replies   map[string]chan bool
+	payloads  *payloadStorage
+	responses *responseStorage
 }
 
 func newServer() (*server, error) {
@@ -90,14 +96,48 @@ func newServer() (*server, error) {
 		return nil, fmt.Errorf("could not create k8 clientset: %w", err)
 	}
 
+	watcher, err := k8ClientSet.BatchV1().Jobs(K8_NAMESPACE_NAME).Watch(context.Background(), metav1.ListOptions{
+		LabelSelector: "pod-name=worker",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not create job watcher: %w", err)
+	}
+
 	s := &server{
 		etcdClient:               etcdClient,
 		mongoClient:              mongoClient,
 		mongoExecutionCollection: mongoClient.Database("try-playwright").Collection("executions"),
-		replies:                  make(map[string]chan *workerResponsePayload),
-		payloads:                 newInMemoryPayloadStorage(),
+		replies:                  make(map[string]chan bool),
+		payloads:                 newPayloadStorage(etcdClient),
+		responses:                newResponseStorage(etcdClient),
 		k8ClientSet:              k8ClientSet,
 	}
+
+	go func() {
+		eventsChan := watcher.ResultChan()
+		for {
+			event := <-eventsChan
+			if event.Type != watch.Modified {
+				continue
+			}
+			job, ok := event.Object.(*batchV1.Job)
+			if !ok {
+				continue
+			}
+			if job.Status.Succeeded != 1 {
+				continue
+			}
+			jobId := job.Labels["job-id"]
+			s.repliesMu.Lock()
+			reply, ok := s.replies[jobId]
+			s.repliesMu.Unlock()
+			if !ok {
+				continue
+			}
+			reply <- true
+			log.Printf("finished job %s", jobId)
+		}
+	}()
 
 	router := httprouter.New()
 	router.GET("/service/control/health", s.handleHealth)
@@ -225,41 +265,11 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	}, nil
 }
 
-type payloadStorage interface {
-	SavePayload(id string, payload *workerPayload) error
-	GetPayload(id string) (payload *workerPayload, exists bool)
-}
-
-type inMemoryPayloadStorage struct {
-	payloads     map[string]*workerPayload
-	payloadsLock sync.Mutex
-}
-
-func newInMemoryPayloadStorage() *inMemoryPayloadStorage {
-	return &inMemoryPayloadStorage{
-		payloads: make(map[string]*workerPayload),
-	}
-}
-
-func (s *inMemoryPayloadStorage) SavePayload(id string, payload *workerPayload) error {
-	s.payloadsLock.Lock()
-	s.payloads[id] = payload
-	s.payloadsLock.Unlock()
-	return nil
-}
-
-func (s *inMemoryPayloadStorage) GetPayload(id string) (*workerPayload, bool) {
-	s.payloadsLock.Lock()
-	defer s.payloadsLock.Unlock()
-	payload, exists := s.payloads[id]
-	return payload, exists
-}
-
 func (s *server) handleWorkerGetPayload(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
 	payloadId := params.ByName("id")
-	payload, existsPayload := s.payloads.GetPayload(payloadId)
-	if !existsPayload {
-		return nil, fmt.Errorf("payload %s does not exist", payloadId)
+	payload, err := s.payloads.GetPayloadOneShot(payloadId)
+	if err != nil {
+		return nil, fmt.Errorf("could not get payload: %w", err)
 	}
 	return &Response{
 		Body:       payload,
@@ -270,19 +280,14 @@ func (s *server) handleWorkerGetPayload(w http.ResponseWriter, r *http.Request, 
 func (s *server) handleWorkerStoreResponse(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
 	payloadId := params.ByName("id")
 
-	var requestBody *workerResponsePayload
-	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 
-	s.repliesLock.Lock()
-	reply, ok := s.replies[payloadId]
-	s.repliesLock.Unlock()
-
-	if !ok {
-		return nil, fmt.Errorf("payload %s does not exist", payloadId)
+	if err := s.responses.SavePayload(payloadId, body); err != nil {
+		return nil, fmt.Errorf("could not save etcd value: %w", err)
 	}
-	reply <- requestBody
 
 	return nil, nil
 }
@@ -333,12 +338,18 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprout
 		http.Error(w, "could not ping MongoDB", http.StatusInternalServerError)
 		return
 	}
+	for _, endpoint := range s.etcdClient.Endpoints() {
+		if _, err := s.etcdClient.Status(context.Background(), endpoint); err != nil {
+			http.Error(w, "could not check etcd status", http.StatusInternalServerError)
+			return
+		}
+	}
 	w.WriteHeader(http.StatusOK)
 }
 
 type workerJob struct {
 	id     string
-	pod    *v1.Pod
+	job    *batchV1.Job
 	server *server
 	reply  chan *workerResponsePayload
 }
@@ -350,9 +361,22 @@ func newWorkerJob(server *server, code string) (*workerJob, error) {
 		reply:  make(chan *workerResponsePayload, 1),
 	}
 
-	server.repliesLock.Lock()
-	server.replies[w.id] = w.reply
-	server.repliesLock.Unlock()
+	replyWrapper := make(chan bool, 1)
+	server.repliesMu.Lock()
+	server.replies[w.id] = replyWrapper
+	server.repliesMu.Unlock()
+
+	go func() {
+		<-replyWrapper
+		server.repliesMu.Lock()
+		data, err := server.responses.GetPayloadOneShot(w.id)
+		if err != nil {
+			log.Printf("could not read response from storage: %v", err)
+			return
+		}
+		server.repliesMu.Unlock()
+		w.reply <- data
+	}()
 
 	if err := server.payloads.SavePayload(w.id, &workerPayload{
 		Code: code,
@@ -369,27 +393,40 @@ func newWorkerJob(server *server, code string) (*workerJob, error) {
 
 func (w *workerJob) createWorkerPod() error {
 	var err error
-	w.pod, err = w.server.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).Create(context.Background(), &v1.Pod{
+	w.job, err = w.server.k8ClientSet.BatchV1().Jobs(K8_NAMESPACE_NAME).Create(context.Background(), &batchV1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "worker-",
 			Labels: map[string]string{
-				"pod-name": "nginx",
+				"pod-name": "worker",
+				"job-id":   w.id,
 			},
 		},
-		Spec: v1.PodSpec{
-			RestartPolicy: v1.RestartPolicy(v1.PullNever),
-			Containers: []v1.Container{
-				{
-					Name:  "worker",
-					Image: "ghcr.io/mxschmitt/try-playwright/worker:a1",
-					Env: []v1.EnvVar{
+		Spec: batchV1.JobSpec{
+			ActiveDeadlineSeconds: pointer.Int64Ptr(30),
+			BackoffLimit:          pointer.Int32Ptr(0),
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "worker-",
+					Labels: map[string]string{
+						"pod-name": "nginx",
+					},
+				},
+				Spec: v1.PodSpec{
+					RestartPolicy: v1.RestartPolicy(v1.PullNever),
+					Containers: []v1.Container{
 						{
-							Name:  "JOB_ID",
-							Value: w.id,
-						},
-						{
-							Name:  "FILE_SERVICE_URL",
-							Value: "http://file:8080",
+							Name:  "worker",
+							Image: "ghcr.io/mxschmitt/try-playwright/worker.slim",
+							Env: []v1.EnvVar{
+								{
+									Name:  "JOB_ID",
+									Value: w.id,
+								},
+								{
+									Name:  "FILE_SERVICE_URL",
+									Value: "http://file:8080",
+								},
+							},
 						},
 					},
 				},
@@ -397,20 +434,20 @@ func (w *workerJob) createWorkerPod() error {
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("could not create pod: %w", err)
+		return fmt.Errorf("could not create job: %w", err)
 	}
 	return nil
 }
 
 func (w *workerJob) cleanup() error {
-	// if err := w.server.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).
-	// 	Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{}); err != nil {
+	// if err := w.server.k8ClientSet.BatchV1().Jobs(K8_NAMESPACE_NAME).
+	// 	Delete(context.Background(), w.job.Name, metav1.DeleteOptions{}); err != nil {
 	// 	return fmt.Errorf("could not delete pod: %w", err)
 	// }
 
-	w.server.repliesLock.Lock()
+	w.server.repliesMu.Lock()
 	delete(w.server.replies, w.id)
-	w.server.repliesLock.Unlock()
+	w.server.repliesMu.Unlock()
 
 	return nil
 }
