@@ -1,25 +1,21 @@
-import * as fs from 'fs'
-import * as os from 'os'
 import * as Sentry from '@sentry/node'
 import amqp from 'amqplib';
 
 import { runUntrustedCode } from './utils';
 
-const QUEUE_NAME = `rpc_queue_${os.hostname()}`;
-
 (async (): Promise<void> => {
-  if (process.env.NODE_ENV === "production" && process.env.WORKER_NODE_SENTRY_DSN) {
-    Sentry.init({ dsn: process.env.WORKER_NODE_SENTRY_DSN });
+  const { WORKER_NODE_SENTRY_DSN, WORKER_ID, NODE_ENV, AMQP_URL } = process.env
+  const QUEUE_NAME = `rpc_queue_${WORKER_ID}`;
+
+  if (NODE_ENV === "production" && WORKER_NODE_SENTRY_DSN) {
+    Sentry.init({ dsn: WORKER_NODE_SENTRY_DSN });
   }
-  const queueConnection = await amqp.connect(process.env.AMQP_URL as string)
+  const queueConnection = await amqp.connect(AMQP_URL!)
   const channel = await queueConnection.createChannel()
 
-  await channel.assertQueue(QUEUE_NAME, {
-    autoDelete: true
-  });
   await channel.prefetch(1);
-  await fs.promises.writeFile("/tmp/worker-ready", '')
-  console.log(`Worker ${os.hostname()} is consuming`)
+
+  console.log(`Worker ${WORKER_ID} is consuming`)
 
   await channel.consume(QUEUE_NAME, async (msg) => {
     if (!msg)

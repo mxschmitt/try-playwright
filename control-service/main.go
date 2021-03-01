@@ -68,7 +68,7 @@ func newServer() (*server, error) {
 
 	amqpConnection, err := amqp.Dial(os.Getenv("AMQP_URL"))
 	if err != nil {
-		return nil, fmt.Errorf("could not connect to queue: %w", err)
+		return nil, fmt.Errorf("could not connect to amqp: %w", err)
 	}
 	amqpErrorChan := make(chan *amqp.Error, 1)
 	amqpConnection.NotifyClose(amqpErrorChan)
@@ -85,7 +85,7 @@ func newServer() (*server, error) {
 		nil,   // arguments
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to declare a queue: %w", err)
+		return nil, fmt.Errorf("Failed to declare reply queue: %w", err)
 	}
 
 	workers, err := newWorkers(WORKER_COUNT, k8ClientSet, amqpReplyQueue.Name, amqpChannel)
@@ -155,14 +155,15 @@ func handleRequestError(cb func(http.ResponseWriter, *http.Request, httprouter.P
 			return
 		}
 
-		if response != nil {
-			w.Header().Set("Content-Type", "application/json")
-			if response.StatusCode != 0 {
-				w.WriteHeader(response.StatusCode)
-			}
-			if err := json.NewEncoder(w).Encode(response.Body); err != nil {
-				http.Error(w, fmt.Sprintf("could encode response: %v", err), http.StatusInternalServerError)
-			}
+		if response == nil {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if response.StatusCode != 0 {
+			w.WriteHeader(response.StatusCode)
+		}
+		if err := json.NewEncoder(w).Encode(response.Body); err != nil {
+			http.Error(w, fmt.Sprintf("could encode response: %v", err), http.StatusInternalServerError)
 		}
 	}
 }
@@ -175,7 +176,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 
 	log.Printf("Obtaining worker job")
 	worker := s.workers.Get()
-	log.Printf("Obtained worker: %s", worker.getPodName())
+	log.Printf("Obtained worker: %s", worker.id)
 	log.Println("Publishing job")
 	if err := worker.Publish(req.Code); err != nil {
 		return nil, fmt.Errorf("could not create new worker job: %w", err)
@@ -308,8 +309,12 @@ func main() {
 			log.Fatalf("could not listen: %v", err)
 		}
 	}()
-	signal := <-stop
-	log.Printf("received stop signal: %s", signal)
+	select {
+	case signal := <-stop:
+		log.Printf("received stop signal: %s", signal)
+	case err := <-s.amqpErrorChan:
+		log.Printf("received amqp error: %v", err)
+	}
 	log.Println("shutting down server gracefully")
 	if err := s.Stop(); err != nil {
 		log.Fatalf("could not stop: %v", err)

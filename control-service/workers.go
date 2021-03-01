@@ -3,17 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"sync"
-	"time"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -62,7 +59,6 @@ func (w *Workers) consumeReplies() error {
 			log.Printf("received rpc callback, corr id: %v", d.CorrelationId)
 			w.repliesMu.Lock()
 			replyChan, ok := w.replies[d.CorrelationId]
-			spew.Dump(w.replies)
 			w.repliesMu.Unlock()
 			if !ok {
 				log.Printf("no reply channel exists for worker %s", d.CorrelationId)
@@ -93,7 +89,7 @@ func (w *Workers) AddWorkers(amount int) error {
 func (w *Workers) Get() *Worker {
 	log.Println("trying to get a worker")
 	worker := <-w.workers
-	log.Printf("obtained worker %s", worker.getPodName())
+	log.Printf("obtained worker %s", worker.id)
 	return worker
 }
 
@@ -108,21 +104,37 @@ func (w *Workers) Cleanup() error {
 }
 
 type Worker struct {
+	id      string
 	workers *Workers
 	pod     *v1.Pod
 }
 
 func newWorker(workers *Workers) (*Worker, error) {
 	w := &Worker{
+		id:      uuid.New().String(),
 		workers: workers,
 	}
+
+	w.workers.repliesMu.Lock()
+	w.workers.replies[w.id] = make(chan *workerResponsePayload, 1)
+	w.workers.repliesMu.Unlock()
+
+	_, err := w.workers.amqpChannel.QueueDeclare(
+		fmt.Sprintf("rpc_queue_%s", w.id), // name
+		false,                             // durable
+		true,                              // delete when unused
+		false,                             // exclusive
+		false,                             // noWait
+		nil,                               // arguments
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not declare worker queue: %w", err)
+	}
+
 	if err := w.createPod(); err != nil {
 		return nil, fmt.Errorf("could not create pod: %w", err)
 	}
 
-	w.workers.repliesMu.Lock()
-	w.workers.replies[w.getPodName()] = make(chan *workerResponsePayload, 1)
-	w.workers.repliesMu.Unlock()
 	return w, nil
 }
 
@@ -143,15 +155,12 @@ func (w *Worker) createPod() error {
 					Image: "ghcr.io/mxschmitt/try-playwright/worker:a1",
 					Env: []v1.EnvVar{
 						{
+							Name:  "WORKER_ID",
+							Value: w.id,
+						},
+						{
 							Name:  "AMQP_URL",
 							Value: "amqp://rabbitmq:5672?heartbeat=5s",
-						},
-					},
-					LivenessProbe: &v1.Probe{
-						Handler: v1.Handler{
-							Exec: &v1.ExecAction{
-								Command: []string{"bash", "-c", `bash -c "[ -f /tmp/worker-ready ]"`},
-							},
 						},
 					},
 				},
@@ -161,14 +170,7 @@ func (w *Worker) createPod() error {
 	if err != nil {
 		return fmt.Errorf("could not create pod: %w", err)
 	}
-	if err := waitForPodRunning(w.workers.k8ClientSet, K8_NAMESPACE_NAME, w.pod.Name, 10*time.Second); err != nil {
-		return fmt.Errorf("could not wait for pod running: %w", err)
-	}
 	return nil
-}
-
-func (w *Worker) getPodName() string {
-	return w.pod.Name
 }
 
 func (w *Worker) Publish(code string) error {
@@ -179,13 +181,13 @@ func (w *Worker) Publish(code string) error {
 		return fmt.Errorf("could not marshal json: %v", err)
 	}
 	if err := w.workers.amqpChannel.Publish(
-		"", // exchange
-		fmt.Sprintf("rpc_queue_%s", w.getPodName()), // routing key
-		false, // mandatory
-		false, // immediate
+		"",                                // exchange
+		fmt.Sprintf("rpc_queue_%s", w.id), // routing key
+		false,                             // mandatory
+		false,                             // immediate
 		amqp.Publishing{
 			ContentType:   "application/json",
-			CorrelationId: w.getPodName(),
+			CorrelationId: w.id,
 			ReplyTo:       w.workers.amqpReplyQueueName,
 			Body:          msgBody,
 		}); err != nil {
@@ -200,39 +202,15 @@ func (w *Worker) Cleanup() error {
 		return fmt.Errorf("could not delete pod: %w", err)
 	}
 	w.workers.repliesMu.Lock()
-	delete(w.workers.replies, w.getPodName())
+	delete(w.workers.replies, w.id)
 	w.workers.repliesMu.Unlock()
+
 	return nil
 }
 
 func (w *Worker) Subscribe() <-chan *workerResponsePayload {
 	w.workers.repliesMu.Lock()
-	ch := w.workers.replies[w.getPodName()]
+	ch := w.workers.replies[w.id]
 	w.workers.repliesMu.Unlock()
 	return ch
-}
-
-// return a condition function that indicates whether the given pod is
-// currently running
-func isPodRunning(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
-		log.Printf("check if pod is already running, status: %s", pod.Status.Phase)
-		switch pod.Status.Phase {
-		case v1.PodRunning:
-			return true, nil
-		case v1.PodFailed, v1.PodSucceeded:
-			return false, errors.New("pod ran to completion")
-		}
-		return false, nil
-	}
-}
-
-// Poll up to timeout seconds for pod to enter running state.
-// Returns an error if the pod never enters the running state.
-func waitForPodRunning(c kubernetes.Interface, namespace, podName string, timeout time.Duration) error {
-	return wait.PollImmediate(time.Second, timeout, isPodRunning(c, podName, namespace))
 }
