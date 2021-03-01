@@ -36,7 +36,7 @@ func newWorkers(workerCount int, k8ClientSet kubernetes.Interface, amqpReplyQueu
 	}
 
 	if err := w.AddWorkers(workerCount); err != nil {
-		return nil, fmt.Errorf("could not consume replies: %w", err)
+		return nil, fmt.Errorf("could not add initial workers: %w", err)
 	}
 	return w, nil
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/julienschmidt/httprouter"
@@ -182,14 +183,18 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 
-	log.Printf("Obtaining worker job")
+	log.Printf("Obtaining worker")
 	worker := s.workers.Get()
-	log.Printf("Obtained worker: %s", worker.id)
-	log.Println("Publishing job")
+
+	logger := log.WithFields(log.Fields{
+		"worker-id": worker.id,
+	})
+	logger.Info("Obtained worker")
+	logger.Info("Publishing job")
 	if err := worker.Publish(req.Code); err != nil {
 		return nil, fmt.Errorf("could not create new worker job: %w", err)
 	}
-	log.Println("Published message")
+	logger.Println("Published message")
 
 	start := time.Now()
 
@@ -198,26 +203,26 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	select {
 	case payload = <-worker.Subscribe():
 		payload.Duration = time.Since(start).Milliseconds()
-		log.Println("Received response")
+		logger.Println("Received response successfully")
 	case <-time.After(MAX_TIMEOUT * time.Second):
-		log.Println("reached timeout")
+		logger.Println("Got timeout!")
 		timeout = true
 	}
 
 	go func() {
-		log.Println("doing cleanup")
+		logger.Println("Starting worker cleanup")
 		if err := worker.Cleanup(); err != nil {
-			log.Printf("could not cleanup worker: %v", err)
+			logger.Printf("could not cleanup worker: %v", err)
 			return
 		}
-		log.Println("did cleanup")
+		logger.Println("Finished worker cleanup")
 
-		log.Println("doing recreate")
+		logger.Println("Adding new worker")
 		if err := s.workers.AddWorkers(1); err != nil {
-			log.Printf("could not create new worker: %v", err)
+			logger.Printf("could not create new worker: %v", err)
 			return
 		}
-		log.Println("did recreate")
+		logger.Println("Added new worker successfully")
 	}()
 
 	if timeout {
@@ -328,7 +333,7 @@ func main() {
 	if err := s.Stop(); err != nil {
 		log.Fatalf("could not stop: %v", err)
 	}
-	log.Println("successfully shut down server gracefully")
+	log.Println("successfully shutdown server gracefully")
 }
 
 func generateRandom(n int) string {
