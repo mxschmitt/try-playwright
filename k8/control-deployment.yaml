@@ -23,6 +23,8 @@ spec:
               value: etcd:2379
             - name: MONGO_DB_URI
               value: mongodb://mongo:27017
+            - name: AMQP_URL
+              value: amqp://rabbitmq:5672?heartbeat=5s
           image: ghcr.io/mxschmitt/try-playwright/control-service:a1
           name: control
           imagePullPolicy: IfNotPresent

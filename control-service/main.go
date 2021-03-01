@@ -11,52 +11,34 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
+	"github.com/streadway/amqp"
 	"go.etcd.io/etcd/clientv3"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
-	batchV1 "k8s.io/api/batch/v1"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 )
 
 const ID_LENGTH = 7
 const K8_NAMESPACE_NAME = "default"
 const MAX_TIMEOUT = 30
+const WORKER_COUNT = 4
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
-type workerPayload struct {
-	Code string `json:"code"`
-}
-
 type server struct {
 	server *http.Server
 
-	etcdClient               *clientv3.Client
-	mongoClient              *mongo.Client
-	mongoExecutionCollection *mongo.Collection
-	k8ClientSet              *kubernetes.Clientset
+	etcdClient *clientv3.Client
 
-	repliesMu sync.Mutex
-	replies   map[string]chan bool
-	payloads  *payloadStorage
-	responses *responseStorage
+	amqpErrorChan chan *amqp.Error
+
+	workers *Workers
 }
 
 func newServer() (*server, error) {
@@ -65,18 +47,6 @@ func newServer() (*server, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not init Sentry: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_DB_URI")))
-	if err != nil {
-		return nil, fmt.Errorf("could not connect to MongoDB database: %w", err)
-	}
-	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	if err = mongoClient.Ping(ctx, readpref.Primary()); err != nil {
-		return nil, fmt.Errorf("could not ping MongoDB: %w", err)
 	}
 
 	etcdClient, err := clientv3.New(clientv3.Config{
@@ -96,54 +66,47 @@ func newServer() (*server, error) {
 		return nil, fmt.Errorf("could not create k8 clientset: %w", err)
 	}
 
-	watcher, err := k8ClientSet.BatchV1().Jobs(K8_NAMESPACE_NAME).Watch(context.Background(), metav1.ListOptions{
-		LabelSelector: "pod-name=worker",
-	})
+	amqpConnection, err := amqp.Dial(os.Getenv("AMQP_URL"))
 	if err != nil {
-		return nil, fmt.Errorf("could not create job watcher: %w", err)
+		return nil, fmt.Errorf("could not connect to queue: %w", err)
+	}
+	amqpErrorChan := make(chan *amqp.Error, 1)
+	amqpConnection.NotifyClose(amqpErrorChan)
+	amqpChannel, err := amqpConnection.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("could not open channel: %w", err)
+	}
+	amqpReplyQueue, err := amqpChannel.QueueDeclare(
+		"",    // name
+		false, // durable
+		false, // delete when unused
+		true,  // exclusive
+		false, // noWait
+		nil,   // arguments
+	)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to declare a queue: %w", err)
+	}
+
+	workers, err := newWorkers(WORKER_COUNT, k8ClientSet, amqpReplyQueue.Name, amqpChannel)
+	if err != nil {
+		return nil, fmt.Errorf("could not create new workers: %w", err)
 	}
 
 	s := &server{
-		etcdClient:               etcdClient,
-		mongoClient:              mongoClient,
-		mongoExecutionCollection: mongoClient.Database("try-playwright").Collection("executions"),
-		replies:                  make(map[string]chan bool),
-		payloads:                 newPayloadStorage(etcdClient),
-		responses:                newResponseStorage(etcdClient),
-		k8ClientSet:              k8ClientSet,
+		etcdClient:    etcdClient,
+		amqpErrorChan: amqpErrorChan,
+		workers:       workers,
 	}
 
-	go func() {
-		eventsChan := watcher.ResultChan()
-		for {
-			event := <-eventsChan
-			if event.Type != watch.Modified {
-				continue
-			}
-			job, ok := event.Object.(*batchV1.Job)
-			if !ok {
-				continue
-			}
-			if job.Status.Succeeded != 1 {
-				continue
-			}
-			jobId := job.Labels["job-id"]
-			s.repliesMu.Lock()
-			reply, ok := s.replies[jobId]
-			s.repliesMu.Unlock()
-			if !ok {
-				continue
-			}
-			reply <- true
-			log.Printf("finished job %s", jobId)
-		}
-	}()
+	s.initializeHttpServer()
+	return s, nil
+}
 
+func (s *server) initializeHttpServer() {
 	router := httprouter.New()
 	router.GET("/service/control/health", s.handleHealth)
 	router.HEAD("/service/control/health", s.handleHealth)
-	router.GET("/service/control/worker/payload/:id", handleRequestError(s.handleWorkerGetPayload))
-	router.POST("/service/control/worker/payload/:id", handleRequestError(s.handleWorkerStoreResponse))
 	router.POST("/service/control/run", handleRequestError(s.handleRun))
 	router.GET("/service/control/share/get/:id", handleRequestError(s.handleShareGet))
 	router.POST("/service/control/share/create", handleRequestError(s.handleShareCreate))
@@ -157,7 +120,6 @@ func newServer() (*server, error) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	s.server = &http.Server{Handler: router, Addr: fmt.Sprintf(":%s", os.Getenv("CONTROL_HTTP_PORT"))}
-	return s, nil
 }
 
 type runPayload struct {
@@ -211,27 +173,42 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 
-	log.Printf("Creating job")
-	job, err := newWorkerJob(s, req.Code)
-	if err != nil {
+	log.Printf("Obtaining worker job")
+	worker := s.workers.Get()
+	log.Printf("Obtained worker: %s", worker.getPodName())
+	log.Println("Publishing job")
+	if err := worker.Publish(req.Code); err != nil {
 		return nil, fmt.Errorf("could not create new worker job: %w", err)
 	}
+	log.Println("Published message")
 
-	log.Printf("Job %s created", job.id)
 	start := time.Now()
 
 	var payload *workerResponsePayload
 	timeout := false
 	select {
-	case payload = <-job.reply:
+	case payload = <-worker.Subscribe():
 		payload.Duration = time.Since(start).Milliseconds()
+		log.Println("Received response")
 	case <-time.After(MAX_TIMEOUT * time.Second):
 		timeout = false
 	}
 
-	if err := job.cleanup(); err != nil {
-		log.Printf("could not cleanup worker: %v", err)
-	}
+	go func() {
+		log.Println("doing cleanup")
+		if err := worker.Cleanup(); err != nil {
+			log.Printf("could not cleanup worker: %v", err)
+			return
+		}
+		log.Println("did cleanup")
+
+		log.Println("doing recreate")
+		if err := s.workers.AddWorkers(1); err != nil {
+			log.Printf("could not create new worker: %v", err)
+			return
+		}
+		log.Println("did recreate")
+	}()
 
 	if timeout {
 		return &Response{
@@ -242,18 +219,6 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		}, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if _, err := s.mongoExecutionCollection.InsertOne(ctx, bson.M{
-		"userAgent":         r.Header.Get("User-Agent"),
-		"ip":                readUserIP(r),
-		"code":              req.Code,
-		"executionDuration": payload.Duration,
-		"language":          "js",
-		"createdAt":         time.Now(),
-	}); err != nil {
-		return nil, fmt.Errorf("could not insert MongoDB record: %w", err)
-	}
 	if !payload.Success {
 		return &Response{
 			StatusCode: http.StatusBadRequest,
@@ -263,33 +228,6 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	return &Response{
 		Body: payload,
 	}, nil
-}
-
-func (s *server) handleWorkerGetPayload(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
-	payloadId := params.ByName("id")
-	payload, err := s.payloads.GetPayloadOneShot(payloadId)
-	if err != nil {
-		return nil, fmt.Errorf("could not get payload: %w", err)
-	}
-	return &Response{
-		Body:       payload,
-		StatusCode: http.StatusOK,
-	}, nil
-}
-
-func (s *server) handleWorkerStoreResponse(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
-	payloadId := params.ByName("id")
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode request body: %w", err)
-	}
-
-	if err := s.responses.SavePayload(payloadId, body); err != nil {
-		return nil, fmt.Errorf("could not save etcd value: %w", err)
-	}
-
-	return nil, nil
 }
 
 func (s *server) handleShareGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
@@ -334,10 +272,6 @@ func (s *server) handleShareCreate(w http.ResponseWriter, r *http.Request, _ htt
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	if err := s.mongoClient.Ping(context.Background(), readpref.Primary()); err != nil {
-		http.Error(w, "could not ping MongoDB", http.StatusInternalServerError)
-		return
-	}
 	for _, endpoint := range s.etcdClient.Endpoints() {
 		if _, err := s.etcdClient.Status(context.Background(), endpoint); err != nil {
 			http.Error(w, "could not check etcd status", http.StatusInternalServerError)
@@ -347,121 +281,16 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprout
 	w.WriteHeader(http.StatusOK)
 }
 
-type workerJob struct {
-	id     string
-	job    *batchV1.Job
-	server *server
-	reply  chan *workerResponsePayload
-}
-
-func newWorkerJob(server *server, code string) (*workerJob, error) {
-	w := &workerJob{
-		server: server,
-		id:     uuid.New().String(),
-		reply:  make(chan *workerResponsePayload, 1),
-	}
-
-	replyWrapper := make(chan bool, 1)
-	server.repliesMu.Lock()
-	server.replies[w.id] = replyWrapper
-	server.repliesMu.Unlock()
-
-	go func() {
-		<-replyWrapper
-		server.repliesMu.Lock()
-		data, err := server.responses.GetPayloadOneShot(w.id)
-		if err != nil {
-			log.Printf("could not read response from storage: %v", err)
-			return
-		}
-		server.repliesMu.Unlock()
-		w.reply <- data
-	}()
-
-	if err := server.payloads.SavePayload(w.id, &workerPayload{
-		Code: code,
-	}); err != nil {
-		return nil, fmt.Errorf("could not save payload: %w", err)
-	}
-
-	if err := w.createWorkerPod(); err != nil {
-		return nil, fmt.Errorf("could not create pod: %w", err)
-	}
-
-	return w, nil
-}
-
-func (w *workerJob) createWorkerPod() error {
-	var err error
-	w.job, err = w.server.k8ClientSet.BatchV1().Jobs(K8_NAMESPACE_NAME).Create(context.Background(), &batchV1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "worker-",
-			Labels: map[string]string{
-				"pod-name": "worker",
-				"job-id":   w.id,
-			},
-		},
-		Spec: batchV1.JobSpec{
-			ActiveDeadlineSeconds: pointer.Int64Ptr(30),
-			BackoffLimit:          pointer.Int32Ptr(0),
-			Template: v1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "worker-",
-					Labels: map[string]string{
-						"pod-name": "nginx",
-					},
-				},
-				Spec: v1.PodSpec{
-					RestartPolicy: v1.RestartPolicy(v1.PullNever),
-					Containers: []v1.Container{
-						{
-							Name:  "worker",
-							Image: "ghcr.io/mxschmitt/try-playwright/worker.slim",
-							Env: []v1.EnvVar{
-								{
-									Name:  "JOB_ID",
-									Value: w.id,
-								},
-								{
-									Name:  "FILE_SERVICE_URL",
-									Value: "http://file:8080",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("could not create job: %w", err)
-	}
-	return nil
-}
-
-func (w *workerJob) cleanup() error {
-	// if err := w.server.k8ClientSet.BatchV1().Jobs(K8_NAMESPACE_NAME).
-	// 	Delete(context.Background(), w.job.Name, metav1.DeleteOptions{}); err != nil {
-	// 	return fmt.Errorf("could not delete pod: %w", err)
-	// }
-
-	w.server.repliesMu.Lock()
-	delete(w.server.replies, w.id)
-	w.server.repliesMu.Unlock()
-
-	return nil
-}
-
 func (s *server) ListenAndServe() error {
 	return s.server.ListenAndServe()
 }
 
 func (s *server) Stop() error {
-	if err := s.mongoClient.Disconnect(context.Background()); err != nil {
-		return fmt.Errorf("could not disconnect from MongoDB: %w", err)
-	}
 	if err := s.server.Shutdown(context.Background()); err != nil {
 		return fmt.Errorf("could not shutdown server: %w", err)
+	}
+	if err := s.workers.Cleanup(); err != nil {
+		return fmt.Errorf("could not cleanup workers: %w", err)
 	}
 	return s.etcdClient.Close()
 }
@@ -475,7 +304,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		if err := s.ListenAndServe(); err != nil {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("could not listen: %v", err)
 		}
 	}()
@@ -485,6 +314,7 @@ func main() {
 	if err := s.Stop(); err != nil {
 		log.Fatalf("could not stop: %v", err)
 	}
+	log.Println("successfully shut down server gracefully")
 }
 
 func generateRandom(n int) string {
@@ -494,13 +324,4 @@ func generateRandom(n int) string {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 	return string(b)
-}
-
-func readUserIP(r *http.Request) string {
-	forwardedIPAddresses := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
-	IPAddress := r.RemoteAddr
-	if len(forwardedIPAddresses) > 0 {
-		IPAddress = forwardedIPAddresses[0]
-	}
-	return IPAddress
 }
