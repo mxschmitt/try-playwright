@@ -87,10 +87,7 @@ func (w *Workers) AddWorkers(amount int) error {
 }
 
 func (w *Workers) Get() *Worker {
-	log.Println("trying to get a worker")
-	worker := <-w.workers
-	log.Printf("obtained worker %s", worker.id)
-	return worker
+	return <-w.workers
 }
 
 func (w *Workers) Cleanup() error {

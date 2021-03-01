@@ -22,16 +22,9 @@ spec:
             - /data
           image: minio/minio
           name: minio
-          volumeMounts:
-            - mountPath: /data
-              name: minio-data
           env:
             - name: MINIO_ACCESS_KEY
               value: "minio"
             - name: MINIO_SECRET_KEY
               value: "R9gGSFb4QkZH8LzzS8SECsG66JNX"
       restartPolicy: Always
-      volumes:
-        - name: minio-data
-          persistentVolumeClaim:
-            claimName: minio-data

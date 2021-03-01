@@ -19,11 +19,4 @@ spec:
       containers:
         - image: rabbitmq:3
           name: rabbitmq
-          volumeMounts:
-            - mountPath: /var/lib/rabbitmq
-              name: rabbitmq-data
       restartPolicy: Always
-      volumes:
-        - name: rabbitmq-data
-          persistentVolumeClaim:
-            claimName: rabbitmq-data

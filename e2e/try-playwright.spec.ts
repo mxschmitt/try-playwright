@@ -117,7 +117,7 @@ describe("Share functionality", () => {
     await page.waitForTimeout(500)
     expect(page.url()).toBe(`${ROOT_URL}/?e=page-screenshot`)
   })
-  it("should not generate share URL for predefined example", async ({ page }) => {
+  it("should generate share URL", async ({ page }) => {
     await page.goto(ROOT_URL, { waitUntil: "networkidle" });
 
     await page.click(".monaco-editor")

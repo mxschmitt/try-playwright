@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -25,7 +26,6 @@ import (
 const ID_LENGTH = 7
 const K8_NAMESPACE_NAME = "default"
 const MAX_TIMEOUT = 30
-const WORKER_COUNT = 4
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -87,8 +87,16 @@ func newServer() (*server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to declare reply queue: %w", err)
 	}
+	workerCount := 4
+	workerCountEnv := os.Getenv("WORKER_COUNT")
+	if workerCountEnv != "" {
+		workerCount, err = strconv.Atoi(workerCountEnv)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse worker count from 'WORKER_COUNT' env var: %w", err)
+		}
+	}
 
-	workers, err := newWorkers(WORKER_COUNT, k8ClientSet, amqpReplyQueue.Name, amqpChannel)
+	workers, err := newWorkers(workerCount, k8ClientSet, amqpReplyQueue.Name, amqpChannel)
 	if err != nil {
 		return nil, fmt.Errorf("could not create new workers: %w", err)
 	}
@@ -192,7 +200,8 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		payload.Duration = time.Since(start).Milliseconds()
 		log.Println("Received response")
 	case <-time.After(MAX_TIMEOUT * time.Second):
-		timeout = false
+		log.Println("reached timeout")
+		timeout = true
 	}
 
 	go func() {
@@ -213,7 +222,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 
 	if timeout {
 		return &Response{
-			StatusCode: http.StatusRequestTimeout,
+			StatusCode: http.StatusGatewayTimeout,
 			Body: map[string]string{
 				"error": "Timeout!",
 			},
