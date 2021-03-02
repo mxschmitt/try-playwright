@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: etcd
+  name: etcd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: etcd
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: etcd
+    spec:
+      containers:
+        - env:
+            - name: ALLOW_NONE_AUTHENTICATION
+              value: "yes"
+            - name: ETCD_LISTEN_CLIENT_URLS
+              value: http://0.0.0.0:2379
+          image: docker.io/bitnami/etcd:3-debian-10
+          name: etcd
+          volumeMounts:
+            - mountPath: /bitnami/etcd
+              name: etcd-data
+      restartPolicy: Always
+      volumes:
+        - name: etcd-data
+          persistentVolumeClaim:
+            claimName: etcd-data
+      securityContext:
+        runAsUser: 1001
+        fsGroup: 1001
+

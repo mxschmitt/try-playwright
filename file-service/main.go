@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
@@ -159,7 +160,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		if err := s.ListenAndServe(); err != nil {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("could not listen: %v", err)
 		}
 	}()

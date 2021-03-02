@@ -1,50 +1,45 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
-	"sync"
+	"strconv"
 	"syscall"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/getsentry/sentry-go"
-	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.com/streadway/amqp"
 	"go.etcd.io/etcd/clientv3"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const ID_LENGTH = 7
+const K8_NAMESPACE_NAME = "default"
+const MAX_TIMEOUT = 30
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 type server struct {
-	server                   *http.Server
-	etcdClient               *clientv3.Client
-	mongoClient              *mongo.Client
-	mongoExecutionCollection *mongo.Collection
-	amqpConnection           *amqp.Connection
-	amqpChannel              *amqp.Channel
-	amqpReplyQueue           amqp.Queue
-	amqpErrorChan            chan *amqp.Error
-	replies                  map[string]chan []byte
-	repliesLock              sync.Mutex
+	server *http.Server
+
+	etcdClient *clientv3.Client
+
+	amqpErrorChan chan *amqp.Error
+
+	workers *Workers
 }
 
 func newServer() (*server, error) {
@@ -55,18 +50,6 @@ func newServer() (*server, error) {
 		return nil, fmt.Errorf("could not init Sentry: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_DB_URI")))
-	if err != nil {
-		return nil, fmt.Errorf("could not connect to MongoDB database: %w", err)
-	}
-	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	if err = mongoClient.Ping(ctx, readpref.Primary()); err != nil {
-		return nil, fmt.Errorf("could not ping MongoDB: %w", err)
-	}
-
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{os.Getenv("ETCD_ENDPOINT")},
 		DialTimeout: 5 * time.Second,
@@ -75,9 +58,18 @@ func newServer() (*server, error) {
 		return nil, fmt.Errorf("could not connect to etcd: %w", err)
 	}
 
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, fmt.Errorf("could not create k8 in cluster config: %w", err)
+	}
+	k8ClientSet, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("could not create k8 clientset: %w", err)
+	}
+
 	amqpConnection, err := amqp.Dial(os.Getenv("AMQP_URL"))
 	if err != nil {
-		return nil, fmt.Errorf("could not connect to queue: %w", err)
+		return nil, fmt.Errorf("could not connect to amqp: %w", err)
 	}
 	amqpErrorChan := make(chan *amqp.Error, 1)
 	amqpConnection.NotifyClose(amqpErrorChan)
@@ -94,43 +86,33 @@ func newServer() (*server, error) {
 		nil,   // arguments
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to declare a queue: %w", err)
+		return nil, fmt.Errorf("Failed to declare reply queue: %w", err)
 	}
-
-	msgs, err := amqpChannel.Consume(
-		amqpReplyQueue.Name, // queue
-		"",                  // consumer
-		true,                // auto-ack
-		false,               // exclusive
-		false,               // no-local
-		false,               // no-wait
-		nil,                 // args
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to register a consumer: %w", err)
-	}
-	s := &server{
-		etcdClient:               etcdClient,
-		mongoClient:              mongoClient,
-		mongoExecutionCollection: mongoClient.Database("try-playwright").Collection("executions"),
-		amqpConnection:           amqpConnection,
-		amqpChannel:              amqpChannel,
-		amqpReplyQueue:           amqpReplyQueue,
-		amqpErrorChan:            amqpErrorChan,
-		replies:                  make(map[string]chan []byte),
-	}
-
-	go func() {
-		for d := range msgs {
-			s.repliesLock.Lock()
-			reply, ok := s.replies[d.CorrelationId]
-			s.repliesLock.Unlock()
-			if ok {
-				reply <- d.Body
-			}
+	workerCount := 4
+	workerCountEnv := os.Getenv("WORKER_COUNT")
+	if workerCountEnv != "" {
+		workerCount, err = strconv.Atoi(workerCountEnv)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse worker count from 'WORKER_COUNT' env var: %w", err)
 		}
-	}()
+	}
 
+	workers, err := newWorkers(workerCount, k8ClientSet, amqpReplyQueue.Name, amqpChannel)
+	if err != nil {
+		return nil, fmt.Errorf("could not create new workers: %w", err)
+	}
+
+	s := &server{
+		etcdClient:    etcdClient,
+		amqpErrorChan: amqpErrorChan,
+		workers:       workers,
+	}
+
+	s.initializeHttpServer()
+	return s, nil
+}
+
+func (s *server) initializeHttpServer() {
 	router := httprouter.New()
 	router.GET("/service/control/health", s.handleHealth)
 	router.HEAD("/service/control/health", s.handleHealth)
@@ -147,7 +129,6 @@ func newServer() (*server, error) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	s.server = &http.Server{Handler: router, Addr: fmt.Sprintf(":%s", os.Getenv("CONTROL_HTTP_PORT"))}
-	return s, nil
 }
 
 type runPayload struct {
@@ -183,14 +164,15 @@ func handleRequestError(cb func(http.ResponseWriter, *http.Request, httprouter.P
 			return
 		}
 
-		if response != nil {
-			w.Header().Set("Content-Type", "application/json")
-			if response.StatusCode != 0 {
-				w.WriteHeader(response.StatusCode)
-			}
-			if err := json.NewEncoder(w).Encode(response.Body); err != nil {
-				http.Error(w, fmt.Sprintf("could encode response: %v", err), http.StatusInternalServerError)
-			}
+		if response == nil {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if response.StatusCode != 0 {
+			w.WriteHeader(response.StatusCode)
+		}
+		if err := json.NewEncoder(w).Encode(response.Body); err != nil {
+			http.Error(w, fmt.Sprintf("could encode response: %v", err), http.StatusInternalServerError)
 		}
 	}
 }
@@ -200,66 +182,58 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
-	corrId := uuid.New().String()
 
-	reply := make(chan []byte, 1)
-	s.repliesLock.Lock()
-	s.replies[corrId] = reply
-	s.repliesLock.Unlock()
+	log.Printf("Obtaining worker")
+	worker := s.workers.Get()
 
-	msgBody, err := json.Marshal(map[string]string{
-		"code": req.Code,
+	logger := log.WithFields(log.Fields{
+		"worker-id": worker.id,
 	})
-	if err != nil {
-		return nil, fmt.Errorf("could not encode msg payload: %w", err)
+	logger.Info("Obtained worker")
+	logger.Info("Publishing job")
+	if err := worker.Publish(req.Code); err != nil {
+		return nil, fmt.Errorf("could not create new worker job: %w", err)
 	}
+	logger.Println("Published message")
 
 	start := time.Now()
-	if err := s.amqpChannel.Publish(
-		"",          // exchange
-		"rpc_queue", // routing key
-		false,       // mandatory
-		false,       // immediate
-		amqp.Publishing{
-			ContentType:   "text/plain",
-			CorrelationId: corrId,
-			ReplyTo:       s.amqpReplyQueue.Name,
-			Body:          msgBody,
-		}); err != nil {
-		return nil, fmt.Errorf("could not publish message: %w", err)
-	}
-	var payload workerResponsePayload
+
+	var payload *workerResponsePayload
+	timeout := false
 	select {
-	case result := <-reply:
-		if err := json.NewDecoder(bytes.NewBuffer(result)).Decode(&payload); err != nil {
-			return nil, fmt.Errorf("could not decode worker response: %w", err)
-		}
+	case payload = <-worker.Subscribe():
 		payload.Duration = time.Since(start).Milliseconds()
-	case <-time.After(30 * time.Second):
+		logger.Println("Received response successfully")
+	case <-time.After(MAX_TIMEOUT * time.Second):
+		logger.Println("Got timeout!")
+		timeout = true
+	}
+
+	go func() {
+		logger.Println("Starting worker cleanup")
+		if err := worker.Cleanup(); err != nil {
+			logger.Printf("could not cleanup worker: %v", err)
+			return
+		}
+		logger.Println("Finished worker cleanup")
+
+		logger.Println("Adding new worker")
+		if err := s.workers.AddWorkers(1); err != nil {
+			logger.Printf("could not create new worker: %v", err)
+			return
+		}
+		logger.Println("Added new worker successfully")
+	}()
+
+	if timeout {
 		return &Response{
-			StatusCode: http.StatusRequestTimeout,
+			StatusCode: http.StatusGatewayTimeout,
 			Body: map[string]string{
 				"error": "Timeout!",
 			},
 		}, nil
 	}
 
-	s.repliesLock.Lock()
-	delete(s.replies, corrId)
-	s.repliesLock.Unlock()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if _, err := s.mongoExecutionCollection.InsertOne(ctx, bson.M{
-		"userAgent":         r.Header.Get("User-Agent"),
-		"ip":                readUserIP(r),
-		"code":              req.Code,
-		"executionDuration": payload.Duration,
-		"language":          "js",
-		"createdAt":         time.Now(),
-	}); err != nil {
-		return nil, fmt.Errorf("could not insert MongoDB record: %w", err)
-	}
 	if !payload.Success {
 		return &Response{
 			StatusCode: http.StatusBadRequest,
@@ -313,9 +287,11 @@ func (s *server) handleShareCreate(w http.ResponseWriter, r *http.Request, _ htt
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	if err := s.mongoClient.Ping(context.Background(), readpref.Primary()); err != nil {
-		http.Error(w, "could not ping MongoDB", http.StatusInternalServerError)
-		return
+	for _, endpoint := range s.etcdClient.Endpoints() {
+		if _, err := s.etcdClient.Status(context.Background(), endpoint); err != nil {
+			http.Error(w, "could not check etcd status", http.StatusInternalServerError)
+			return
+		}
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -325,11 +301,11 @@ func (s *server) ListenAndServe() error {
 }
 
 func (s *server) Stop() error {
-	if err := s.mongoClient.Disconnect(context.Background()); err != nil {
-		return fmt.Errorf("could not disconnect from MongoDB: %w", err)
-	}
 	if err := s.server.Shutdown(context.Background()); err != nil {
 		return fmt.Errorf("could not shutdown server: %w", err)
+	}
+	if err := s.workers.Cleanup(); err != nil {
+		return fmt.Errorf("could not cleanup workers: %w", err)
 	}
 	return s.etcdClient.Close()
 }
@@ -343,7 +319,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		if err := s.ListenAndServe(); err != nil {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("could not listen: %v", err)
 		}
 	}()
@@ -357,6 +333,7 @@ func main() {
 	if err := s.Stop(); err != nil {
 		log.Fatalf("could not stop: %v", err)
 	}
+	log.Println("successfully shutdown server gracefully")
 }
 
 func generateRandom(n int) string {
@@ -366,13 +343,4 @@ func generateRandom(n int) string {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 	return string(b)
-}
-
-func readUserIP(r *http.Request) string {
-	forwardedIPAddresses := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
-	IPAddress := r.RemoteAddr
-	if len(forwardedIPAddresses) > 0 {
-		IPAddress = forwardedIPAddresses[0]
-	}
-	return IPAddress
 }

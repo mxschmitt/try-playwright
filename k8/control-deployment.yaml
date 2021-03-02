@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: control
+  name: control
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: control
+  template:
+    metadata:
+      labels:
+        io.kompose.service: control
+    spec:
+      serviceAccountName: control-user
+      containers:
+        - env:
+            - name: WORKER_COUNT
+              value: "8"
+            - name: CONTROL_HTTP_PORT
+              value: "8080"
+            - name: ETCD_ENDPOINT
+              value: etcd:2379
+            - name: AMQP_URL
+              value: amqp://rabbitmq:5672?heartbeat=5s
+          image: ghcr.io/mxschmitt/try-playwright/control-service:a1
+          name: control
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
