@@ -62,12 +62,12 @@ func (w *Workers) consumeReplies() error {
 			w.repliesMu.Unlock()
 			if !ok {
 				log.Printf("no reply channel exists for worker %s", d.CorrelationId)
-				return
+				continue
 			}
 			var reply *workerResponsePayload
 			if err := json.Unmarshal(d.Body, &reply); err != nil {
 				log.Printf("could not unmarshal reply json: %v", err)
-				return
+				continue
 			}
 			replyChan <- reply
 		}

@@ -19,8 +19,10 @@ const ROOT_URL = process.env.ROOT_TEST_URL || "http://localhost:8080"
 const executeExample = async (page: Page, nth: number): Promise<void> => {
   await page.goto(ROOT_URL, { waitUntil: "networkidle" });
   await page.click(`.rs-panel-group > .rs-panel:nth-child(${nth})`);
-  await page.click('text="Run"');
-  await page.waitForResponse(resp => resp.url().endsWith("/service/control/run"))
+  await Promise.all([
+    page.waitForResponse("**/service/control/run"),
+    page.click('text="Run"'),
+  ])
 }
 
 const getImageCount = async (page: Page): Promise<number> => {
