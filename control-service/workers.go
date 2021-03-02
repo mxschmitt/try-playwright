@@ -87,8 +87,8 @@ func (w *Workers) AddWorkers(amount int) error {
 	return nil
 }
 
-func (w *Workers) Get() *Worker {
-	return <-w.workers
+func (w *Workers) GetCh() <-chan *Worker {
+	return w.workers
 }
 
 func (w *Workers) Cleanup() error {
