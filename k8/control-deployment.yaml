@@ -17,6 +17,8 @@ spec:
       serviceAccountName: control-user
       containers:
         - env:
+            - name: WORKER_COUNT
+              value: "8"
             - name: CONTROL_HTTP_PORT
               value: "8080"
             - name: ETCD_ENDPOINT
