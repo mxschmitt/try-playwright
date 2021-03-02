@@ -28,15 +28,15 @@ jobs:
       run: npm ci
       working-directory: e2e
     - run: kubectl apply -f k8/
-    - uses: mxschmitt/action-tmate@v3
     - name: Run e2e tests
       working-directory: e2e
       run: |
         kubectl wait --for=condition=ready pod -l io.kompose.service=frontend
-        kubectl port-forward service/frontend 8080:80 > /dev/null &
-        npx wait-on http://localhost:8080/service/control/health
+        FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+        FRONTEND_URL="http://localhost:$FRONTEND_PORT"
+        npx wait-on "$FRONTEND_URL/service/control/health"
         sleep 10
-        npm run test
+        ROOT_TEST_URL=$FRONTEND_URL npm run test
   lint:
     runs-on: ubuntu-latest
     strategy:
