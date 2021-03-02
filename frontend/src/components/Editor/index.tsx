@@ -65,6 +65,10 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
                 }
             }
         });
+
+        // @ts-ignore
+        editor._standaloneKeybindingService.addDynamicKeybinding("-expandLineSelection",null,() => {});
+      
         monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
         monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
             diagnosticCodesToIgnore: [80001, 7044]
