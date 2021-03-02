@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
 	"github.com/streadway/amqp"
@@ -55,17 +56,17 @@ func (w *Workers) consumeReplies() error {
 		return fmt.Errorf("Failed to register a consumer: %w", err)
 	}
 	go func() {
-		for d := range msgs {
-			log.Printf("received rpc callback, corr id: %v", d.CorrelationId)
+		for msg := range msgs {
+			log.Printf("received rpc callback, corr id: %v", msg.CorrelationId)
 			w.repliesMu.Lock()
-			replyChan, ok := w.replies[d.CorrelationId]
+			replyChan, ok := w.replies[msg.CorrelationId]
 			w.repliesMu.Unlock()
 			if !ok {
-				log.Printf("no reply channel exists for worker %s", d.CorrelationId)
+				log.Printf("no reply channel exists for worker %s", msg.CorrelationId)
 				continue
 			}
 			var reply *workerResponsePayload
-			if err := json.Unmarshal(d.Body, &reply); err != nil {
+			if err := json.Unmarshal(msg.Body, &reply); err != nil {
 				log.Printf("could not unmarshal reply json: %v", err)
 				continue
 			}
@@ -145,7 +146,7 @@ func (w *Worker) createPod() error {
 			},
 		},
 		Spec: v1.PodSpec{
-			RestartPolicy: v1.RestartPolicy(v1.PullNever),
+			RestartPolicy: v1.RestartPolicy(v1.RestartPolicyNever),
 			Containers: []v1.Container{
 				{
 					Name:  "worker",
