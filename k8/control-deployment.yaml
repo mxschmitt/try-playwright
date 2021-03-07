@@ -27,5 +27,5 @@ spec:
               value: amqp://rabbitmq:5672?heartbeat=5s
           image: ghcr.io/mxschmitt/try-playwright/control-service:a1
           name: control
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
       restartPolicy: Always

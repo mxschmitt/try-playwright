@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: microsoft/playwright-github-action@v1
     - name: Use Node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v2
       with:
         node-version: 14.x
     - uses: actions/checkout@v2
@@ -37,6 +37,9 @@ jobs:
         npx wait-on "$FRONTEND_URL/service/control/health"
         sleep 10
         ROOT_TEST_URL=$FRONTEND_URL npm run test
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
   lint:
     runs-on: ubuntu-latest
     strategy:

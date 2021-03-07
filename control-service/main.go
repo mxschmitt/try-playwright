@@ -177,6 +177,13 @@ func handleRequestError(cb func(http.ResponseWriter, *http.Request, httprouter.P
 	}
 }
 
+var timeoutResponse = &Response{
+	StatusCode: http.StatusGatewayTimeout,
+	Body: map[string]string{
+		"error": "Timeout!",
+	},
+}
+
 func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.Params) (*Response, error) {
 	var req *runPayload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -184,12 +191,18 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	}
 
 	log.Printf("Obtaining worker")
-	worker := s.workers.Get()
+	var worker *Worker
+	select {
+	case worker = <-s.workers.GetCh():
+	case <-time.After(MAX_TIMEOUT * time.Second):
+		log.Println("Got Worker timeout, was not able to get a worker!")
+		return timeoutResponse, nil
+	}
 
 	logger := log.WithFields(log.Fields{
 		"worker-id": worker.id,
 	})
-	logger.Info("Obtained worker")
+	logger.Info("Obtained worker successfully")
 	logger.Info("Publishing job")
 	if err := worker.Publish(req.Code); err != nil {
 		return nil, fmt.Errorf("could not create new worker job: %w", err)
@@ -205,7 +218,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		payload.Duration = time.Since(start).Milliseconds()
 		logger.Println("Received response successfully")
 	case <-time.After(MAX_TIMEOUT * time.Second):
-		logger.Println("Got timeout!")
+		logger.Println("Got execution timeout!")
 		timeout = true
 	}
 
@@ -226,12 +239,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	}()
 
 	if timeout {
-		return &Response{
-			StatusCode: http.StatusGatewayTimeout,
-			Body: map[string]string{
-				"error": "Timeout!",
-			},
-		}, nil
+		return timeoutResponse, nil
 	}
 
 	if !payload.Success {
