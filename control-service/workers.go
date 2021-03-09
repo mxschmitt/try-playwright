@@ -13,6 +13,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 )
 
 type Workers struct {
@@ -196,7 +197,9 @@ func (w *Worker) Publish(code string) error {
 
 func (w *Worker) Cleanup() error {
 	if err := w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).
-		Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{}); err != nil {
+		Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{
+			GracePeriodSeconds: pointer.Int64Ptr(0),
+		}); err != nil {
 		return fmt.Errorf("could not delete pod: %w", err)
 	}
 	w.workers.repliesMu.Lock()

@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install k3s
       run: |
-        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker" sh -
+        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker --no-deploy traefik" sh -
         mkdir -p ~/.kube
         cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
     - name: Build Docker image control microservice
@@ -27,6 +27,8 @@ jobs:
     - name: Install dependencies
       run: npm ci
       working-directory: e2e
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
     - run: kubectl apply -f k8/
     - name: Run e2e tests
       working-directory: e2e
