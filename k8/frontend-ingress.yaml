@@ -8,10 +8,10 @@ metadata:
 spec:
   tls:
     - hosts:
-      - beta-try.playwright.tech
+      - try.playwright.tech
       secretName: try-playwright-cf-tls-cert
   rules:
-    - host: beta-try.playwright.tech
+    - host: try.playwright.tech
       http:
         paths:
         - path: /
