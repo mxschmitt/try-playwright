@@ -191,7 +191,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	case <-time.After(WORKER_TIMEOUT * time.Second):
 		log.Println("Got Worker timeout, was not able to get a worker!")
 		return &Response{
-			StatusCode: http.StatusGatewayTimeout,
+			StatusCode: http.StatusServiceUnavailable,
 			Body: map[string]string{
 				"error": "Timeout in getting a worker!",
 			},
@@ -239,7 +239,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 
 	if timeout {
 		return &Response{
-			StatusCode: http.StatusGatewayTimeout,
+			StatusCode: http.StatusServiceUnavailable,
 			Body: map[string]string{
 				"error": "Execution timeout!",
 			},

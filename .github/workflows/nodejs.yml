@@ -35,6 +35,7 @@ jobs:
         FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}')
         FRONTEND_URL="http://localhost:$FRONTEND_PORT"
         npx wait-on "$FRONTEND_URL/service/control/health"
+        echo "Host: $FRONTEND_URL"
         ROOT_TEST_URL=$FRONTEND_URL npm run test
     - name: Setup tmate session
       if: ${{ failure() }}
