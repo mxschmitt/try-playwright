@@ -26,7 +26,7 @@ import (
 
 const ID_LENGTH = 7
 const K8_NAMESPACE_NAME = "default"
-const WORKER_TIMEOUT = 30
+const WORKER_TIMEOUT = 10
 const EXECUTION_TIMEOUT = 30
 
 func init() {
@@ -45,7 +45,7 @@ type server struct {
 
 func newServer() (*server, error) {
 	err := sentry.Init(sentry.ClientOptions{
-		Dsn: os.Getenv("CONTORL_SERVICE_SENTRY_DSN"),
+		Dsn: os.Getenv("CONTROL_SERVICE_SENTRY_DSN"),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not init Sentry: %w", err)
@@ -241,7 +241,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 		return &Response{
 			StatusCode: http.StatusGatewayTimeout,
 			Body: map[string]string{
-				"error": "Exection timeout!",
+				"error": "Execution timeout!",
 			},
 		}, nil
 	}

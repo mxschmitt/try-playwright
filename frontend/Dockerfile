@@ -17,5 +17,4 @@ FROM caddy:2.2.1-alpine
 
 COPY frontend/Caddyfile /etc/caddy/Caddyfile
 
-ENV SITE_ADDRESS=try.playwright.tech
 COPY --from=client-builder /frontend/build /frontend

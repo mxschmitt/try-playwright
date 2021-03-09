@@ -18,7 +18,7 @@ export const runCode = async (code: string): Promise<SuccessExecutionResponse> =
       const error = await resp.json()
       throw new Error(error.error)
     }
-    throw new Error("Execution was not successfull, please try again in a few minutes.")
+    throw new Error("Execution was not successful, please try again in a few minutes.")
   }
   return await resp.json()
 }

@@ -24,7 +24,7 @@ const ShareButton: React.FunctionComponent = () => {
                     return
                 }
                 Notification.error({
-                    title: "Creating of a Share link was not successfull",
+                    title: "Creating of a Share link was not successful",
                 });
                 return
             }

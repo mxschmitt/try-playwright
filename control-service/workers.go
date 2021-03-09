@@ -161,6 +161,10 @@ func (w *Worker) createPod() error {
 							Name:  "AMQP_URL",
 							Value: "amqp://rabbitmq:5672?heartbeat=5s",
 						},
+						{
+							Name:  "WORKER_NODE_SENTRY_DSN",
+							Value: "https://b700ea8b8e884318b9e97dddadb20804@o359550.ingest.sentry.io/3480980",
+						},
 					},
 				},
 			},

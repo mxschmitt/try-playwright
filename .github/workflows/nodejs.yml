@@ -27,17 +27,14 @@ jobs:
     - name: Install dependencies
       run: npm ci
       working-directory: e2e
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
     - run: kubectl apply -f k8/
     - name: Run e2e tests
       working-directory: e2e
       run: |
         kubectl wait --for=condition=ready pod -l io.kompose.service=frontend
-        FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+        FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}')
         FRONTEND_URL="http://localhost:$FRONTEND_PORT"
         npx wait-on "$FRONTEND_URL/service/control/health"
-        sleep 10
         ROOT_TEST_URL=$FRONTEND_URL npm run test
     - name: Setup tmate session
       if: ${{ failure() }}
