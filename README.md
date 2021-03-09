@@ -5,7 +5,7 @@
 
 > Interactive playground for [Playwright](https://github.com/microsoft/playwright) to run examples directly from your browser
 
-## Setting up an environment with k3s
+## Setting up an Try Playwright environment with [k3s](https://k3s.io)
 
 ```sh
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--no-deploy traefik" sh -
@@ -14,4 +14,5 @@ apt install -y git
 git clone https://github.com/mxschmitt/try-playwright.git
 openssl req -x509 -nodes -days 730 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=beta.try.playwright.tech/O=beta.try.playwright.tech"
 kubectl create secret tls try-playwright-cf-tls-cert --key=tls.key --cert=tls.crt
+kubectl apply -f k8/
 ```

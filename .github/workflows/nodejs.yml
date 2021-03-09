@@ -31,11 +31,11 @@ jobs:
     - name: Run e2e tests
       working-directory: e2e
       run: |
-        kubectl wait --timeout 1m --for=condition=ready pod -l io.kompose.service=frontend
+        kubectl wait --timeout 2m --for=condition=ready pod -l io.kompose.service=frontend
         FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}')
         FRONTEND_URL="http://localhost:$FRONTEND_PORT"
-        npx wait-on "$FRONTEND_URL/service/control/health"
         echo "Host: $FRONTEND_URL"
+        npx wait-on "$FRONTEND_URL/service/control/health"
         ROOT_TEST_URL=$FRONTEND_URL npm run test
     - name: Setup tmate session
       if: ${{ failure() }}
