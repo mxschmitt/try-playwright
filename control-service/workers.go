@@ -13,6 +13,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 )
 
 type Workers struct {
@@ -160,6 +161,10 @@ func (w *Worker) createPod() error {
 							Name:  "AMQP_URL",
 							Value: "amqp://rabbitmq:5672?heartbeat=5s",
 						},
+						{
+							Name:  "WORKER_NODE_SENTRY_DSN",
+							Value: "https://b700ea8b8e884318b9e97dddadb20804@o359550.ingest.sentry.io/3480980",
+						},
 					},
 				},
 			},
@@ -196,7 +201,9 @@ func (w *Worker) Publish(code string) error {
 
 func (w *Worker) Cleanup() error {
 	if err := w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).
-		Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{}); err != nil {
+		Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{
+			GracePeriodSeconds: pointer.Int64Ptr(0),
+		}); err != nil {
 		return fmt.Errorf("could not delete pod: %w", err)
 	}
 	w.workers.repliesMu.Lock()

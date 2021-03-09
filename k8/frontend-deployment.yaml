@@ -4,9 +4,6 @@ metadata:
   labels:
     io.kompose.service: frontend
   name: frontend
-  annotations:
-    service.beta.kubernetes.io/do-loadbalancer-protocol: "http"
-    service.beta.kubernetes.io/do-loadbalancer-size-slug: "lb-small"
 spec:
   replicas: 1
   selector:
@@ -21,9 +18,5 @@ spec:
         - image: ghcr.io/mxschmitt/try-playwright/frontend:latest
           name: frontend
           ports:
-            - containerPort: 80
-            - containerPort: 443
-          env:
-            - name: SITE_ADDRESS
-              value: ":80"
+            - containerPort: 8080
       restartPolicy: Always

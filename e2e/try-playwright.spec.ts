@@ -151,7 +151,7 @@ describe("should handle platform core related features", test => {
     await page.keyboard.type("();")
 
     await page.click("text='Run'")
-    await page.waitForSelector("text='Error: Timeout!'", {
+    await page.waitForSelector("text='Error: Execution timeout!'", {
       timeout: 40 * 1000
     })
   })

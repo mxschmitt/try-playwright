@@ -26,7 +26,8 @@ import (
 
 const ID_LENGTH = 7
 const K8_NAMESPACE_NAME = "default"
-const MAX_TIMEOUT = 30
+const WORKER_TIMEOUT = 10
+const EXECUTION_TIMEOUT = 30
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -44,7 +45,7 @@ type server struct {
 
 func newServer() (*server, error) {
 	err := sentry.Init(sentry.ClientOptions{
-		Dsn: os.Getenv("CONTORL_SERVICE_SENTRY_DSN"),
+		Dsn: os.Getenv("CONTROL_SERVICE_SENTRY_DSN"),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not init Sentry: %w", err)
@@ -177,13 +178,6 @@ func handleRequestError(cb func(http.ResponseWriter, *http.Request, httprouter.P
 	}
 }
 
-var timeoutResponse = &Response{
-	StatusCode: http.StatusGatewayTimeout,
-	Body: map[string]string{
-		"error": "Timeout!",
-	},
-}
-
 func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.Params) (*Response, error) {
 	var req *runPayload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -194,9 +188,14 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	var worker *Worker
 	select {
 	case worker = <-s.workers.GetCh():
-	case <-time.After(MAX_TIMEOUT * time.Second):
+	case <-time.After(WORKER_TIMEOUT * time.Second):
 		log.Println("Got Worker timeout, was not able to get a worker!")
-		return timeoutResponse, nil
+		return &Response{
+			StatusCode: http.StatusServiceUnavailable,
+			Body: map[string]string{
+				"error": "Timeout in getting a worker!",
+			},
+		}, nil
 	}
 
 	logger := log.WithFields(log.Fields{
@@ -217,7 +216,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	case payload = <-worker.Subscribe():
 		payload.Duration = time.Since(start).Milliseconds()
 		logger.Println("Received response successfully")
-	case <-time.After(MAX_TIMEOUT * time.Second):
+	case <-time.After(EXECUTION_TIMEOUT * time.Second):
 		logger.Println("Got execution timeout!")
 		timeout = true
 	}
@@ -239,7 +238,12 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	}()
 
 	if timeout {
-		return timeoutResponse, nil
+		return &Response{
+			StatusCode: http.StatusServiceUnavailable,
+			Body: map[string]string{
+				"error": "Execution timeout!",
+			},
+		}, nil
 	}
 
 	if !payload.Success {

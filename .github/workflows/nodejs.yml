@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install k3s
       run: |
-        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker" sh -
+        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker --no-deploy traefik" sh -
         mkdir -p ~/.kube
         cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
     - name: Build Docker image control microservice
@@ -31,11 +31,11 @@ jobs:
     - name: Run e2e tests
       working-directory: e2e
       run: |
-        kubectl wait --for=condition=ready pod -l io.kompose.service=frontend
-        FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+        kubectl wait --timeout 2m --for=condition=ready pod -l io.kompose.service=frontend
+        FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}')
         FRONTEND_URL="http://localhost:$FRONTEND_PORT"
+        echo "Host: $FRONTEND_URL"
         npx wait-on "$FRONTEND_URL/service/control/health"
-        sleep 10
         ROOT_TEST_URL=$FRONTEND_URL npm run test
     - name: Setup tmate session
       if: ${{ failure() }}
