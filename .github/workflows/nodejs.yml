@@ -31,7 +31,7 @@ jobs:
     - name: Run e2e tests
       working-directory: e2e
       run: |
-        kubectl wait --for=condition=ready pod -l io.kompose.service=frontend
+        kubectl wait --timeout 1m --for=condition=ready pod -l io.kompose.service=frontend
         FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}')
         FRONTEND_URL="http://localhost:$FRONTEND_PORT"
         npx wait-on "$FRONTEND_URL/service/control/health"
