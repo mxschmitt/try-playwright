@@ -1,11 +1,11 @@
 FROM mcr.microsoft.com/playwright:v1.9.1-focal
 
-RUN apt-get remove -y python3.8 python3-pip git ssh xvfb && \
-    apt-get autoremove -y
-
 RUN apt-get remove -y nodejs && \
     curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
     apt-get install -y nodejs
+
+RUN apt-get remove -y python3.8 python3-pip git ssh xvfb curl && \
+    apt-get autoremove -y
 
 RUN rm -rf /var/lib/apt/lists/*
 
