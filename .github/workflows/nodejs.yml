@@ -21,9 +21,13 @@ jobs:
         mkdir -p ~/.kube
         cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
     - name: Build Docker image control microservice
-      run: docker build . -f control-service/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/control-service:a1
+      run: docker build . -f control-service/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/control-service:latest
     - name: Build Docker image worker microservice
-      run: docker build . -f worker/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker:a1
+      run: docker build . -f worker/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker:latest
+    - name: Build Docker image file-service microservice
+      run: docker build . -f file-service/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/file-service:latest
+    - name: Build Docker image frontend microservice
+      run: docker build . -f frontend/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/frontend:latest
     - name: Install dependencies
       run: npm ci
       working-directory: e2e

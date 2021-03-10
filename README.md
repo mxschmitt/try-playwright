@@ -5,7 +5,7 @@
 
 > Interactive playground for [Playwright](https://github.com/microsoft/playwright) to run examples directly from your browser
 
-## Setting up an Try Playwright environment with [k3s](https://k3s.io)
+## Setting up a Try Playwright environment with [k3s](https://k3s.io)
 
 ```sh
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--no-deploy traefik" sh -
