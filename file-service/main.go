@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -16,19 +14,21 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/getsentry/sentry-go"
+
+	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/google/uuid"
-	"github.com/julienschmidt/httprouter"
+	"github.com/labstack/echo/v4"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 type server struct {
-	server      *http.Server
+	server      *echo.Echo
 	minioClient *minio.Client
 }
 
-const bucketName = "file-uploads"
+const BUCKET_NAME = "file-uploads"
 
 func newServer() (*server, error) {
 	err := sentry.Init(sentry.ClientOptions{
@@ -44,17 +44,17 @@ func newServer() (*server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not init minio client: %w", err)
 	}
-	err = minioClient.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{})
+	err = minioClient.MakeBucket(context.Background(), BUCKET_NAME, minio.MakeBucketOptions{})
 	if err != nil {
 		// Check to see if we already own this bucket (which happens if you run this twice)
-		exists, errBucketExists := minioClient.BucketExists(context.Background(), bucketName)
+		exists, errBucketExists := minioClient.BucketExists(context.Background(), BUCKET_NAME)
 		if errBucketExists == nil && exists {
-			log.Printf("We already own %s\n", bucketName)
+			log.Printf("We already own %s\n", BUCKET_NAME)
 		} else {
 			return nil, fmt.Errorf("could not check if bucket exists: %w", err)
 		}
 	} else {
-		log.Printf("Successfully created bucket %s\n", bucketName)
+		log.Printf("Successfully created bucket %s\n", BUCKET_NAME)
 		config := lifecycle.NewConfiguration()
 		config.Rules = []lifecycle.Rule{
 			{
@@ -65,7 +65,7 @@ func newServer() (*server, error) {
 				},
 			},
 		}
-		if err := minioClient.SetBucketLifecycle(context.Background(), bucketName, config); err != nil {
+		if err := minioClient.SetBucketLifecycle(context.Background(), BUCKET_NAME, config); err != nil {
 			return nil, fmt.Errorf("could not set bucket lifecycle rule: %w", err)
 		}
 	}
@@ -73,20 +73,11 @@ func newServer() (*server, error) {
 		minioClient: minioClient,
 	}
 
-	router := httprouter.New()
-	router.GET("/api/v1/health", s.handleHealth)
-	router.HEAD("/api/v1/health", s.handleHealth)
-	router.POST("/api/v1/file/upload", s.handleUploadImage)
-	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, err interface{}) {
-		if exception, ok := err.(string); ok {
-			sentry.CaptureException(errors.New(exception))
-		}
-		if exception, ok := err.(error); ok {
-			sentry.CaptureException(exception)
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	s.server = &http.Server{Addr: fmt.Sprintf(":%s", os.Getenv("FILE_HTTP_PORT")), Handler: router}
+	s.server = echo.New()
+	s.server.Use(sentryecho.New(sentryecho.Options{}))
+	s.server.GET("/api/v1/health", s.handleHealth)
+	s.server.HEAD("/api/v1/health", s.handleHealth)
+	s.server.POST("/api/v1/file/upload", s.handleUploadImage)
 	return s, nil
 }
 
@@ -96,34 +87,29 @@ type publicFile struct {
 	Extension string `json:"extension"`
 }
 
-func (s *server) handleUploadImage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *server) handleUploadImage(c echo.Context) error {
 	// Maximum of 10MB
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		http.Error(w, fmt.Sprintf("could not parse form: %v", err), http.StatusBadRequest)
-		return
+	if err := c.Request().ParseMultipartForm(10 << 20); err != nil {
+		return fmt.Errorf("could not parse form: %w", err)
 	}
 	outFiles := []publicFile{}
-	for _, files := range r.MultipartForm.File {
+	for _, files := range c.Request().MultipartForm.File {
 		for i := range files {
 			file, err := files[i].Open()
 			if err != nil {
-				http.Error(w, fmt.Sprintf("could not open file: %v", err), http.StatusInternalServerError)
-				return
+				return fmt.Errorf("could not open file: %w", err)
 			}
 			defer file.Close()
-			id := uuid.New().String()
 			fileExtension := filepath.Ext(files[i].Filename)
-			objectName := id + fileExtension
-			if _, err := s.minioClient.PutObject(context.Background(), bucketName, objectName, file, files[i].Size, minio.PutObjectOptions{
+			objectName := uuid.New().String() + fileExtension
+			if _, err := s.minioClient.PutObject(context.Background(), BUCKET_NAME, objectName, file, files[i].Size, minio.PutObjectOptions{
 				ContentType: files[i].Header.Get("Content-Type"),
 			}); err != nil {
-				http.Error(w, fmt.Sprintf("could not put object: %v", err), http.StatusInternalServerError)
-				return
+				return fmt.Errorf("could not put object: %w", err)
 			}
-			publicURL, err := s.minioClient.PresignedGetObject(context.Background(), bucketName, objectName, time.Minute*10, url.Values{})
+			publicURL, err := s.minioClient.PresignedGetObject(context.Background(), BUCKET_NAME, objectName, time.Minute*10, url.Values{})
 			if err != nil {
-				http.Error(w, fmt.Sprintf("could not generate public URL: %v", err), http.StatusInternalServerError)
-				return
+				return fmt.Errorf("could not generate public URL: %w", err)
 			}
 			outFiles = append(outFiles, publicFile{
 				Extension: fileExtension,
@@ -132,19 +118,15 @@ func (s *server) handleUploadImage(w http.ResponseWriter, r *http.Request, _ htt
 			})
 		}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(outFiles); err != nil {
-		http.Error(w, fmt.Sprintf("could not decode response json: %v", err), http.StatusInternalServerError)
-		return
-	}
+	return c.JSON(http.StatusCreated, outFiles)
 }
 
-func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	w.WriteHeader(http.StatusOK)
+func (s *server) handleHealth(c echo.Context) error {
+	return c.String(http.StatusOK, "OK")
 }
 
 func (s *server) ListenAndServe() error {
-	return s.server.ListenAndServe()
+	return s.server.Start(fmt.Sprintf(":%s", os.Getenv("FILE_HTTP_PORT")))
 }
 
 func (s *server) Stop() error {

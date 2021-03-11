@@ -18,7 +18,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.9.5 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
-	github.com/julienschmidt/httprouter v1.3.0
+	github.com/labstack/echo/v4 v4.2.1
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/minio/md5-simd v1.1.1 // indirect
 	github.com/minio/minio-go/v7 v7.0.7
@@ -40,7 +40,6 @@ require (
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
 	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
 	golang.org/x/text v0.3.5 // indirect
-	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	google.golang.org/genproto v0.0.0-20200122232147-0452cf42e150 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect

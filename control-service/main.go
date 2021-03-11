@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -14,27 +13,31 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/labstack/echo/v4"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/julienschmidt/httprouter"
+	sentryecho "github.com/getsentry/sentry-go/echo"
+
 	"github.com/streadway/amqp"
 	"go.etcd.io/etcd/clientv3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-const ID_LENGTH = 7
-const K8_NAMESPACE_NAME = "default"
-const WORKER_TIMEOUT = 10
-const EXECUTION_TIMEOUT = 30
+const (
+	SNIPPET_ID_LENGTH = 7
+	K8_NAMESPACE_NAME = "default"
+	WORKER_TIMEOUT    = 10
+	EXECUTION_TIMEOUT = 30
+)
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 type server struct {
-	server *http.Server
+	server *echo.Echo
 
 	etcdClient *clientv3.Client
 
@@ -114,25 +117,16 @@ func newServer() (*server, error) {
 }
 
 func (s *server) initializeHttpServer() {
-	router := httprouter.New()
-	router.GET("/service/control/health", s.handleHealth)
-	router.HEAD("/service/control/health", s.handleHealth)
-	router.POST("/service/control/run", handleRequestError(s.handleRun))
-	router.GET("/service/control/share/get/:id", handleRequestError(s.handleShareGet))
-	router.POST("/service/control/share/create", handleRequestError(s.handleShareCreate))
-	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, err interface{}) {
-		if exception, ok := err.(string); ok {
-			sentry.CaptureException(errors.New(exception))
-		}
-		if exception, ok := err.(error); ok {
-			sentry.CaptureException(exception)
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	s.server = &http.Server{Handler: router, Addr: fmt.Sprintf(":%s", os.Getenv("CONTROL_HTTP_PORT"))}
+	s.server = echo.New()
+	s.server.Use(sentryecho.New(sentryecho.Options{}))
+	s.server.GET("/service/control/health", s.handleHealth)
+	s.server.HEAD("/service/control/health", s.handleHealth)
+	s.server.POST("/service/control/run", s.handleRun)
+	s.server.GET("/service/control/share/get/:id", s.handleShareGet)
+	s.server.POST("/service/control/share/create", s.handleShareCreate)
 }
 
-type runPayload struct {
+type runRequestPayload struct {
 	Code string `json:"code"`
 }
 
@@ -152,36 +146,10 @@ type workerResponsePayload struct {
 	} `json:"logs"`
 }
 
-type Response struct {
-	Body       interface{}
-	StatusCode int
-}
-
-func handleRequestError(cb func(http.ResponseWriter, *http.Request, httprouter.Params) (*Response, error)) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-		response, err := cb(w, r, params)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if response == nil {
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		if response.StatusCode != 0 {
-			w.WriteHeader(response.StatusCode)
-		}
-		if err := json.NewEncoder(w).Encode(response.Body); err != nil {
-			http.Error(w, fmt.Sprintf("could encode response: %v", err), http.StatusInternalServerError)
-		}
-	}
-}
-
-func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.Params) (*Response, error) {
-	var req *runPayload
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, fmt.Errorf("could not decode request body: %w", err)
+func (s *server) handleRun(c echo.Context) error {
+	var req *runRequestPayload
+	if err := c.Bind(&req); err != nil {
+		return fmt.Errorf("could not decode request body: %w", err)
 	}
 
 	log.Printf("Obtaining worker")
@@ -190,12 +158,9 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	case worker = <-s.workers.GetCh():
 	case <-time.After(WORKER_TIMEOUT * time.Second):
 		log.Println("Got Worker timeout, was not able to get a worker!")
-		return &Response{
-			StatusCode: http.StatusServiceUnavailable,
-			Body: map[string]string{
-				"error": "Timeout in getting a worker!",
-			},
-		}, nil
+		return c.JSON(http.StatusServiceUnavailable, echo.Map{
+			"error": "Timeout in getting a worker!",
+		})
 	}
 
 	logger := log.WithFields(log.Fields{
@@ -204,7 +169,7 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	logger.Info("Obtained worker successfully")
 	logger.Info("Publishing job")
 	if err := worker.Publish(req.Code); err != nil {
-		return nil, fmt.Errorf("could not create new worker job: %w", err)
+		return fmt.Errorf("could not create new worker job: %w", err)
 	}
 	logger.Println("Published message")
 
@@ -238,78 +203,64 @@ func (s *server) handleRun(w http.ResponseWriter, r *http.Request, _ httprouter.
 	}()
 
 	if timeout {
-		return &Response{
-			StatusCode: http.StatusServiceUnavailable,
-			Body: map[string]string{
-				"error": "Execution timeout!",
-			},
-		}, nil
+		return c.JSON(http.StatusServiceUnavailable, echo.Map{
+			"error": "Execution timeout!",
+		})
 	}
 
 	if !payload.Success {
-		return &Response{
-			StatusCode: http.StatusBadRequest,
-			Body:       payload,
-		}, nil
+		return c.JSON(http.StatusBadRequest, payload)
 	}
-	return &Response{
-		Body: payload,
-	}, nil
+	return c.JSON(http.StatusOK, payload)
 }
 
-func (s *server) handleShareGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) (*Response, error) {
-	id := params.ByName("id")
+func (s *server) handleShareGet(c echo.Context) error {
+	id := c.Param("id")
 	resp, err := s.etcdClient.Get(context.Background(), id)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch share: %w", err)
+		return fmt.Errorf("could not fetch share: %w", err)
 	}
 	if resp.Count == 0 {
-		return nil, fmt.Errorf("no share found")
+		return fmt.Errorf("no share found")
 	}
-	if _, err := w.Write(resp.Kvs[0].Value); err != nil {
-		return nil, fmt.Errorf("could not write share: %w", err)
-	}
-	return nil, nil
+	return c.Blob(http.StatusOK, "application/json", resp.Kvs[0].Value)
 }
 
-func (s *server) handleShareCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) (*Response, error) {
-	code, err := ioutil.ReadAll(http.MaxBytesReader(w, r.Body, 1024))
+func (s *server) handleShareCreate(c echo.Context) error {
+	code, err := ioutil.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1024))
 	if err != nil {
-		return nil, fmt.Errorf("could read request body: %w", err)
+		return fmt.Errorf("could read request body: %w", err)
 	}
 	for retryCount := 0; retryCount <= 3; retryCount++ {
-		id := generateRandom(ID_LENGTH)
+		id := generateRandomString(SNIPPET_ID_LENGTH)
 		resp, err := s.etcdClient.Get(context.Background(), id)
 		if err != nil {
-			return nil, fmt.Errorf("could not fetch share: %w", err)
+			return fmt.Errorf("could not fetch share: %w", err)
 		}
 		if resp.Count == 0 {
 			_, err = s.etcdClient.Put(context.Background(), id, string(code))
 			if err != nil {
-				return nil, fmt.Errorf("could not save share: %w", err)
+				return fmt.Errorf("could not save share: %w", err)
 			}
-			return &Response{
-				Body: map[string]string{
-					"key": id,
-				},
-			}, nil
+			return c.JSON(http.StatusCreated, echo.Map{
+				"key": id,
+			})
 		}
 	}
-	return nil, errors.New("could not generate a key")
+	return errors.New("could not generate a key")
 }
 
-func (s *server) handleHealth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *server) handleHealth(c echo.Context) error {
 	for _, endpoint := range s.etcdClient.Endpoints() {
 		if _, err := s.etcdClient.Status(context.Background(), endpoint); err != nil {
-			http.Error(w, "could not check etcd status", http.StatusInternalServerError)
-			return
+			return fmt.Errorf("could not check etcd status: %w", err)
 		}
 	}
-	w.WriteHeader(http.StatusOK)
+	return c.String(http.StatusOK, "OK")
 }
 
 func (s *server) ListenAndServe() error {
-	return s.server.ListenAndServe()
+	return s.server.Start(fmt.Sprintf(":%s", os.Getenv("CONTROL_HTTP_PORT")))
 }
 
 func (s *server) Stop() error {
@@ -348,7 +299,7 @@ func main() {
 	log.Println("successfully shutdown server gracefully")
 }
 
-func generateRandom(n int) string {
+func generateRandomString(n int) string {
 	var letterRunes = []rune("abcdefghijklmnopqrstuvpxyz1234567890")
 	b := make([]rune, n)
 	for i := range b {
