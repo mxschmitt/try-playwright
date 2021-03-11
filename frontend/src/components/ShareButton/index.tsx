@@ -1,4 +1,4 @@
-import React, { useEffect, useContext } from 'react'
+import { useEffect, useContext } from 'react'
 import { IconButton, Icon, Notification } from 'rsuite'
 import * as clipboard from 'clipboard-polyfill'
 import { CodeContext } from '../CodeContext'

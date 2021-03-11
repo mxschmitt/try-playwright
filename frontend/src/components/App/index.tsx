@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import { useState, useContext, useRef } from 'react';
 import { Col, Grid, IconButton, Icon, Loader, Panel, Notification } from 'rsuite'
 
 import { runCode, trackEvent } from '../../utils'
@@ -14,17 +14,6 @@ const App: React.FunctionComponent = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<SuccessExecutionResponse | null>(null)
   const handleExecutionRef = useRef<() => Promise<void>>()
-
-  // Store the code which was entered if the user is leaving the page
-  useEffect((): (() => void) => {
-    const handler = (): void => {
-      if (window.localStorage) {
-        window.localStorage.setItem("code", code)
-      }
-    }
-    window.addEventListener("unload", handler)
-    return (): void => window.removeEventListener("unload", handler)
-  })
 
   const handleExecution = async (): Promise<void> => {
     setLoading(true)
