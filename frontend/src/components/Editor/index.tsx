@@ -1,6 +1,6 @@
 
 
-import React, { useEffect, useContext, useRef } from 'react'
+import { useEffect, useContext, useRef } from 'react'
 import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
@@ -68,7 +68,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
 
         // @ts-ignore
         editor._standaloneKeybindingService.addDynamicKeybinding("-expandLineSelection",null,() => {});
-      
+
         monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
         monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
             diagnosticCodesToIgnore: [80001, 7044]

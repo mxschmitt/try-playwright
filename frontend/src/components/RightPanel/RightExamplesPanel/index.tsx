@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { PanelGroup, Panel } from 'rsuite'
 
 import { Examples } from '../../../constants'
