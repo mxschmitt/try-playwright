@@ -7,13 +7,13 @@
   "author": "Max Schmitt <max@schmitt.mx>",
   "license": "MIT",
   "dependencies": {
-    "@sentry/node": "^6.2.1",
+    "@sentry/node": "^6.2.2",
     "amqplib": "^0.7.1",
     "form-data": "^4.0.0",
     "mime-types": "^2.1.29",
     "node-fetch": "^2.6.1",
-    "playwright": "^1.9.1",
-    "playwright-core": "^1.9.1",
+    "playwright": "^1.9.2",
+    "playwright-core": "^1.9.2",
     "tmp": "^0.2.1",
     "typescript": "^4.2.3",
     "uuid": "^8.3.2",
@@ -27,7 +27,7 @@
     "lint": "eslint src/"
   },
   "devDependencies": {
-    "@sentry/types": "6.2.1",
+    "@sentry/types": "6.2.2",
     "@types/amqplib": "^0.5.17",
     "@types/mime-types": "2.1.0",
     "@types/node": "14.14.33",

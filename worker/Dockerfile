@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.9.1-focal
+FROM mcr.microsoft.com/playwright:v1.9.2-focal
 
 RUN apt-get remove -y nodejs && \
     curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
