@@ -13,6 +13,7 @@ spec:
     metadata:
       labels:
         io.kompose.service: file
+        reachable-by-worker: "true"
     spec:
       containers:
         - env:

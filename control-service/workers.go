@@ -143,15 +143,16 @@ func (w *Worker) createPod() error {
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "worker-",
 			Labels: map[string]string{
-				"pod-name": "nginx",
+				"role": "worker",
 			},
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy: v1.RestartPolicy(v1.RestartPolicyNever),
 			Containers: []v1.Container{
 				{
-					Name:  "worker",
-					Image: "ghcr.io/mxschmitt/try-playwright/worker:latest",
+					Name:            "worker",
+					Image:           "ghcr.io/mxschmitt/try-playwright/worker:latest",
+					ImagePullPolicy: v1.PullIfNotPresent,
 					Env: []v1.EnvVar{
 						{
 							Name:  "WORKER_ID",

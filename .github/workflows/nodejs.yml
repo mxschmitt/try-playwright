@@ -6,7 +6,7 @@ on:
     branches: [ master ]
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 60
     steps:
     - uses: microsoft/playwright-github-action@v1
@@ -45,7 +45,7 @@ jobs:
       if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
@@ -67,7 +67,7 @@ jobs:
       run: npm run build
   build:
     #needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     if: github.event_name == 'push'
     strategy:
       fail-fast: false
