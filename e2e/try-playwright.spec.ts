@@ -177,4 +177,25 @@ const playwright = require("playwright");
     await page.click("text='Run'")
     await page.waitForSelector("text='Error: foobar!'")
   })
+  it("should prevent access to the control microservice from inside the worker", async ({ page }) => {
+    await page.goto(ROOT_URL);
+    await page.waitForTimeout(200)
+    await page.evaluate(() => {
+      // @ts-ignore
+      window.monacoEditorModel.setValue(`// @ts-check
+const playwright = require('playwright');
+
+(async () => {
+  const browser = await playwright.chromium.launch();
+  const page = await browser.newPage();
+  await page.goto('http://control:8080/service/control/health');
+  await browser.close();
+})();`)
+    })
+    await page.waitForTimeout(200)
+    await Promise.all([
+      page.waitForSelector("text=ERR_CONNECTION_REFUSED"),
+      page.click("text='Run'")
+    ])
+  })
 })
