@@ -34,6 +34,9 @@ const (
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
+	log.SetFormatter(&log.TextFormatter{
+		TimestampFormat: time.StampMilli,
+	})
 }
 
 type server struct {
@@ -163,9 +166,8 @@ func (s *server) handleRun(c echo.Context) error {
 		})
 	}
 
-	logger := log.WithFields(log.Fields{
-		"worker-id": worker.id,
-	})
+	logger := log.WithField("worker-id", worker.id)
+	logger.Infof("Received code: '%s'", req.Code)
 	logger.Info("Obtained worker successfully")
 	logger.Info("Publishing job")
 	if err := worker.Publish(req.Code); err != nil {
