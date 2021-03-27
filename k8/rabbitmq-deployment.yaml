@@ -9,8 +9,6 @@ spec:
   selector:
     matchLabels:
       io.kompose.service: rabbitmq
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:

@@ -8,18 +8,6 @@ spec:
       role: worker
   egress:
   - to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-        except:
-        - 10.0.0.0/8
-        - 192.168.0.0/16
-        - 172.16.0.0/20
     - podSelector:
         matchLabels:
           reachable-by-worker: "true"
-  - to:
-    ports:
-    - protocol: TCP
-      port: 53
-    - protocol: UDP
-      port: 53

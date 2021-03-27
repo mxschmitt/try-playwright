@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.kompose.service: squid
+  name: squid
+spec:
+  ports:
+    - port: 3128
+      targetPort: 3128
+  selector:
+    io.kompose.service: squid

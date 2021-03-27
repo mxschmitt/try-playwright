@@ -166,6 +166,10 @@ func (w *Worker) createPod() error {
 							Name:  "WORKER_NODE_SENTRY_DSN",
 							Value: "https://b700ea8b8e884318b9e97dddadb20804@o359550.ingest.sentry.io/3480980",
 						},
+						{
+							Name:  "HTTP_PROXY",
+							Value: "http://squid:3129",
+						},
 					},
 				},
 			},
