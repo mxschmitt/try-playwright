@@ -6,7 +6,8 @@ metadata:
   name: squid
 spec:
   ports:
-    - port: 3128
+    - name: "3128"
+      port: 3128
       targetPort: 3128
   selector:
     io.kompose.service: squid

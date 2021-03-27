@@ -151,7 +151,7 @@ func (w *Worker) createPod() error {
 			Containers: []v1.Container{
 				{
 					Name:            "worker",
-					Image:           "ghcr.io/mxschmitt/try-playwright/worker:a1",
+					Image:           "ghcr.io/mxschmitt/try-playwright/worker:latest",
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Env: []v1.EnvVar{
 						{

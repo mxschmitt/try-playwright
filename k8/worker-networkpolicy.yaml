@@ -11,3 +11,9 @@ spec:
     - podSelector:
         matchLabels:
           reachable-by-worker: "true"
+  - to:
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
