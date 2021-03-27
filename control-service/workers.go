@@ -151,7 +151,7 @@ func (w *Worker) createPod() error {
 			Containers: []v1.Container{
 				{
 					Name:            "worker",
-					Image:           "ghcr.io/mxschmitt/try-playwright/worker:latest",
+					Image:           "ghcr.io/mxschmitt/try-playwright/worker:a1",
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Env: []v1.EnvVar{
 						{
@@ -167,8 +167,8 @@ func (w *Worker) createPod() error {
 							Value: "https://b700ea8b8e884318b9e97dddadb20804@o359550.ingest.sentry.io/3480980",
 						},
 						{
-							Name:  "HTTP_PROXY",
-							Value: "http://squid:3129",
+							Name:  "WORKER_HTTP_PROXY",
+							Value: "http://squid:3128",
 						},
 					},
 				},
