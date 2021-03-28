@@ -188,13 +188,14 @@ const playwright = require('playwright');
 (async () => {
   const browser = await playwright.chromium.launch();
   const page = await browser.newPage();
-  await page.goto('http://control:8080/service/control/health');
+  const response = await page.goto('http://control:8080/service/control/health');
+  console.log(\`Status: \${response.status()}\`)
   await browser.close();
 })();`)
     })
     await page.waitForTimeout(200)
     await Promise.all([
-      page.waitForSelector("text=ERR_CONNECTION_REFUSED"),
+      page.waitForSelector("text=Status: 500"),
       page.click("text='Run'")
     ])
   })
