@@ -34,8 +34,6 @@ jobs:
       run: npm ci
       working-directory: e2e
     - run: kubectl apply -f k8/
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
     - name: Run e2e tests
       working-directory: e2e
       run: |
