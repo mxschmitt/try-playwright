@@ -178,25 +178,34 @@ const setupInProcess = () => {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any,@typescript-eslint/no-non-null-assertion */
 
+const addProxyOptions = (options: LaunchOptions): LaunchOptions => {
+  return {
+    ...options,
+    proxy: {
+      server: process.env.WORKER_HTTP_PROXY!
+    }
+  }
+}
+
 export const getPlaywright = (id: string, assetDir: string): typeof playwright => {
   const pw: typeof playwright = setupInProcess()
   const originalChromiumLaunch = pw.chromium.launch
-  pw.chromium.launch = async (options: LaunchOptions = {}): Promise<ChromiumBrowser> => {
-    const browser = await originalChromiumLaunch.apply(pw.chromium, [options])
+  pw.chromium.launch = async (options: LaunchOptions): Promise<ChromiumBrowser> => {
+    const browser = await originalChromiumLaunch.apply(pw.chromium, [addProxyOptions(options)])
     await preBrowserLaunch(browser, id, assetDir)
     return browser
   }
 
   const originalWebKitLaunch = pw.webkit.launch
-  pw.webkit.launch = async (options: LaunchOptions = {}): Promise<WebKitBrowser> => {
-    const browser = await originalWebKitLaunch.apply(pw.webkit, [options])
+  pw.webkit.launch = async (options: LaunchOptions): Promise<WebKitBrowser> => {
+    const browser = await originalWebKitLaunch.apply(pw.webkit, [addProxyOptions(options)])
     await preBrowserLaunch(browser, id, assetDir)
     return browser
   }
 
   const originalFirefoxLaunch = pw.firefox.launch
-  pw.firefox.launch = async (options: LaunchOptions = {}): Promise<FirefoxBrowser> => {
-    const browser = await originalFirefoxLaunch.apply(pw.firefox, [options])
+  pw.firefox.launch = async (options: LaunchOptions): Promise<FirefoxBrowser> => {
+    const browser = await originalFirefoxLaunch.apply(pw.firefox, [addProxyOptions(options)])
     await preBrowserLaunch(browser, id, assetDir)
     return browser
   }
