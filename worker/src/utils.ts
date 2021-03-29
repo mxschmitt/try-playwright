@@ -1,20 +1,13 @@
 import { VM } from 'vm2'
 import tmp from 'tmp'
-import { v4 as uuidv4 } from 'uuid'
 
 import { getPlaywright, registerFileListener } from "./playwright"
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const packageJson = require("../package.json")
-
-const PLAYWRIGHT_VERSION = packageJson.dependencies["playwright"]
+const PLAYWRIGHT_VERSION = (process.env.npm_package_dependencies_playwright || "").replace(/[\^|=]/, "")
 
 export const runUntrustedCode = async (code: string): Promise<SuccessExecutionResponse> => {
   if (!code) {
     throw new Error("no code specified")
-  }
-  if (code.match(/file:/g)) {
-    throw new Error('Its not allowed to access local files');
   }
 
   code = `
@@ -38,11 +31,9 @@ export const runUntrustedCode = async (code: string): Promise<SuccessExecutionRe
     })
   }
 
-  const browserId = uuidv4()
-
   const assetDir = tmp.dirSync();
 
-  const getFiles = registerFileListener(browserId, assetDir.name)
+  const getFiles = registerFileListener(assetDir.name)
 
   const sandbox = {
     require: (packageName: string): unknown => {
@@ -52,7 +43,7 @@ export const runUntrustedCode = async (code: string): Promise<SuccessExecutionRe
         case "playwright-chromium":
         case "playwright-firefox":
         case "playwright-webkit":
-          return getPlaywright(browserId, assetDir.name)
+          return getPlaywright(assetDir.name)
         default:
           throw new Error(`Package ${packageName} not recognized`)
       }
@@ -82,7 +73,6 @@ export const runUntrustedCode = async (code: string): Promise<SuccessExecutionRe
     unhandledRejectionPromise,
     vm.run(code)
   ]);
-  process.removeListener("uncaughtException", uncaughtExceptionHandler)
 
   const files = await getFiles()
 
