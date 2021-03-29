@@ -19,7 +19,7 @@ const RightOutputPanel: React.FunctionComponent<RightOutputPanelProps> = ({ resp
                 </React.Fragment>)}</code>
                 {resp.files.length > 0 && <h4>Files</h4>}
                 {resp.files.map((file, idx) => <ResponseFile file={file} key={idx} />)}
-                <p>Duration of {resp.duration} ms with Playwright version {resp.version.replace(/[\^|=]/, "")}.</p>
+                <p>Duration of {resp.duration} ms with Playwright version {resp.version}.</p>
             </>}
         </>
     )
