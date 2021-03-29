@@ -22,8 +22,10 @@ jobs:
         cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
     - name: Build Docker image control microservice
       run: docker build . -f control-service/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/control-service:latest
-    - name: Build Docker image worker microservice
-      run: docker build . -f worker/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker:latest
+    - name: Build Docker image worker-python
+      run: docker build . -f worker-python/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-python:latest
+    - name: Build Docker image worker-javascript
+      run: docker build . -f worker-javascript/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-javascript:latest
     - name: Build Docker image file-service microservice
       run: docker build . -f file-service/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/file-service:latest
     - name: Build Docker image frontend microservice
@@ -51,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        folder: [frontend, worker]
+        folder: [frontend]
     defaults:
       run:
         working-directory: ${{ matrix.folder }}

@@ -12,9 +12,9 @@ const RightOutputPanel: React.FunctionComponent<RightOutputPanelProps> = ({ resp
     return (
         <>
             {resp && <>
-                {resp.logs.length > 0 && <h4>Logs</h4>}
-                <code className={styles.logsWrapper}>{resp.logs.map((entry, idx) => <React.Fragment key={idx}>
-                    {entry.args.join(" ")}
+                {resp.output.length > 0 && <h4>Logs</h4>}
+                <code className={styles.logsWrapper}>{resp.output.split("\n").map((entry, idx) => <React.Fragment key={idx}>
+                    {entry}
                     <br />
                 </React.Fragment>)}</code>
                 {resp.files.length > 0 && <h4>Files</h4>}

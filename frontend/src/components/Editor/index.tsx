@@ -10,6 +10,7 @@ import styles from './index.module.css'
 
 // eslint-disable-next-line import/no-webpack-loader-syntax
 import staticTypes from '!!raw-loader!./types.txt';
+import { determineLanguage } from '../../utils';
 
 const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
     minimap: {
@@ -80,7 +81,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         <div className={styles.monacoEditorWrapper}>
             <MonacoEditor
                 onChange={onChange}
-                language="javascript"
+                language={determineLanguage()}
                 theme={darkMode ? "custom-dark" : "vs"}
                 value={code}
                 options={MONACO_OPTIONS}
