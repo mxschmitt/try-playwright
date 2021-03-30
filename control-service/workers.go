@@ -21,6 +21,7 @@ var WORKER_TO_DOCKER_IMAGE = map[workertypes.WorkerLanguage]string{
 	workertypes.WorkerLanguageJavaScript: "ghcr.io/mxschmitt/try-playwright/worker-javascript:latest",
 	workertypes.WorkerLanguageJava:       "ghcr.io/mxschmitt/try-playwright/worker-java:latest",
 	workertypes.WorkerLanguagePython:     "ghcr.io/mxschmitt/try-playwright/worker-python:latest",
+	workertypes.WorkerLanguageCSharp:     "ghcr.io/mxschmitt/try-playwright/worker-csharp:latest",
 }
 
 type Workers struct {

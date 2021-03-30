@@ -26,4 +26,5 @@ const (
 	WorkerLanguageJavaScript WorkerLanguage = "javascript"
 	WorkerLanguageJava       WorkerLanguage = "java"
 	WorkerLanguagePython     WorkerLanguage = "python"
+	WorkerLanguageCSharp     WorkerLanguage = "csharp"
 )

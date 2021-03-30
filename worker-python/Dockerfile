@@ -15,10 +15,10 @@ RUN apt-get remove -y git ssh xvfb curl && \
 
 WORKDIR /home/pwuser/
 
-COPY --from=builder /app /app
-
 RUN pip install playwright==1.10.0
 
 USER pwuser
+
+COPY --from=builder /app /app
 
 ENTRYPOINT [ "/app" ]

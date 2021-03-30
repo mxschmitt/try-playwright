@@ -104,10 +104,13 @@ func newServer() (*server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not create new JavaScript workers: %w", err)
 	}
-
 	workersMap[workertypes.WorkerLanguageJava], err = newWorkers(workertypes.WorkerLanguageJava, workerCount, k8ClientSet, amqpChannel)
 	if err != nil {
 		return nil, fmt.Errorf("could not create new Java workers: %w", err)
+	}
+	workersMap[workertypes.WorkerLanguageCSharp], err = newWorkers(workertypes.WorkerLanguageCSharp, workerCount, k8ClientSet, amqpChannel)
+	if err != nil {
+		return nil, fmt.Errorf("could not create new C# workers: %w", err)
 	}
 
 	s := &server{

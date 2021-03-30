@@ -15,12 +15,12 @@ RUN apt-get remove -y python3.8 python3-pip git ssh xvfb curl && \
 
 WORKDIR /home/pwuser/
 
-COPY --from=builder /app /app
-
 RUN npm install -g playwright@1.10
 
 USER pwuser
 
 ENV NODE_PATH=/usr/lib/node_modules
+
+COPY --from=builder /app /app
 
 ENTRYPOINT [ "/app" ]
