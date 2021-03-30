@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -11,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/h2non/filetype"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/getsentry/sentry-go"
@@ -99,11 +102,22 @@ func (s *server) handleUploadImage(c echo.Context) error {
 			if err != nil {
 				return fmt.Errorf("could not open file: %w", err)
 			}
+			fileContent, err := ioutil.ReadAll(file)
+			if err != nil {
+				return fmt.Errorf("could not read file: %w", err)
+			}
 			defer file.Close()
+			mimeType, err := filetype.Match(fileContent)
+			if err != nil {
+				return fmt.Errorf("could not detect mime-type: %w", err)
+			}
+			if mimeType.MIME.Value != "application/pdf" && mimeType.MIME.Value != "image/png" && mimeType.MIME.Value != "video/webm" {
+				return fmt.Errorf("not allowed mime-type: %s", files[i].Filename)
+			}
 			fileExtension := filepath.Ext(files[i].Filename)
 			objectName := uuid.New().String() + fileExtension
-			if _, err := s.minioClient.PutObject(context.Background(), BUCKET_NAME, objectName, file, files[i].Size, minio.PutObjectOptions{
-				ContentType: files[i].Header.Get("Content-Type"),
+			if _, err := s.minioClient.PutObject(context.Background(), BUCKET_NAME, objectName, bytes.NewBuffer(fileContent), files[i].Size, minio.PutObjectOptions{
+				ContentType: mimeType.MIME.Value,
 			}); err != nil {
 				return fmt.Errorf("could not put object: %w", err)
 			}

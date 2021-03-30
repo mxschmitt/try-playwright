@@ -28,5 +28,6 @@ spec:
             - name: FILE_SERVICE_SENTRY_DSN
               value: https://3911972a34944ec5bd8b681a252d4f1d@o359550.ingest.sentry.io/5479804
           image: ghcr.io/mxschmitt/try-playwright/file-service:latest
+          imagePullPolicy: IfNotPresent
           name: file
       restartPolicy: Always

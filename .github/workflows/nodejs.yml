@@ -26,6 +26,8 @@ jobs:
       run: docker build . -f worker-python/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-python:latest
     - name: Build Docker image worker-javascript
       run: docker build . -f worker-javascript/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-javascript:latest
+    - name: Build Docker image worker-java
+      run: docker build . -f worker-java/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-java:latest
     - name: Build Docker image worker-csharp
       run: docker build . -f worker-csharp/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-csharp:latest
     - name: Build Docker image file-service microservice
