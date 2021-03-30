@@ -24,5 +24,6 @@ type WorkerLanguage string
 
 const (
 	WorkerLanguageJavaScript WorkerLanguage = "javascript"
+	WorkerLanguageJava       WorkerLanguage = "java"
 	WorkerLanguagePython     WorkerLanguage = "python"
 )

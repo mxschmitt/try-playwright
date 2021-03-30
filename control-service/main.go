@@ -105,6 +105,11 @@ func newServer() (*server, error) {
 		return nil, fmt.Errorf("could not create new JavaScript workers: %w", err)
 	}
 
+	workersMap[workertypes.WorkerLanguageJava], err = newWorkers(workertypes.WorkerLanguageJava, workerCount, k8ClientSet, amqpChannel)
+	if err != nil {
+		return nil, fmt.Errorf("could not create new Java workers: %w", err)
+	}
+
 	s := &server{
 		etcdClient:    etcdClient,
 		amqpErrorChan: amqpErrorChan,
@@ -128,10 +133,14 @@ func (s *server) initializeHttpServer() {
 func (s *server) handleRun(c echo.Context) error {
 	var req *workertypes.WorkerRequestPayload
 	if err := c.Bind(&req); err != nil {
-		return fmt.Errorf("could not decode request body: %w", err)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "could not decode request body",
+		})
 	}
-	if req.Language != "python" && req.Language != "javascript" {
-		return fmt.Errorf("could not recognize language: %v", req.Language)
+	if _, ok := WORKER_TO_DOCKER_IMAGE[req.Language]; !ok {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "could not recognize language",
+		})
 	}
 
 	log.Printf("Obtaining worker")

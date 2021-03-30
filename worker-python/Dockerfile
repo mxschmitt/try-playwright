@@ -13,8 +13,7 @@ FROM mcr.microsoft.com/playwright:v1.10.0-focal
 RUN apt-get remove -y git ssh xvfb curl && \
     apt-get autoremove -y
 
-RUN mkdir -p /home/pwuser/worker
-WORKDIR /home/pwuser/worker
+WORKDIR /home/pwuser/
 
 COPY --from=builder /app /app
 

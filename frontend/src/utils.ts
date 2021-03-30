@@ -64,7 +64,7 @@ export const determineCode = async (setCode: ((code: string) => void)): Promise<
   setCode(Examples[0].code)
 }
 
-const allowedLanguages = ["javascript", "python"]
+const allowedLanguages = ["javascript", "java", "python"]
 
 export const determineLanguage = (): string => {
   const params = new URLSearchParams(window.location.search)

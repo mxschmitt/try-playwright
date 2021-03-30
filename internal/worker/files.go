@@ -18,11 +18,7 @@ type filesCollector struct {
 	files   []string
 }
 
-func newFilesCollector() (*filesCollector, error) {
-	tmpDir, err := os.MkdirTemp("", "try-pw")
-	if err != nil {
-		return nil, fmt.Errorf("could not create tmp dir: %w", err)
-	}
+func newFilesCollector(tmpDir string) (*filesCollector, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("could not create new fs watcher: %w", err)

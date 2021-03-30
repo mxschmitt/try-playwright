@@ -19,4 +19,5 @@ spec:
           name: frontend
           ports:
             - containerPort: 8080
+          imagePullPolicy: IfNotPresent
       restartPolicy: Always

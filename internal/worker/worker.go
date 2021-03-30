@@ -22,6 +22,7 @@ type executionHandler func(worker *Worker, code string) error
 type Worker struct {
 	channel *amqp.Channel
 	handler executionHandler
+	TmpDir  string
 	output  *bytes.Buffer
 	files   []string
 }
@@ -62,7 +63,7 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 	if err != nil {
 		return fmt.Errorf("could not lookup path: %w", err)
 	}
-	collector, err := newFilesCollector()
+	collector, err := newFilesCollector(w.TmpDir)
 	if err != nil {
 		return fmt.Errorf("could not create file collector: %w", err)
 	}
@@ -172,9 +173,15 @@ func (w *Worker) uploadFiles() ([]workertypes.File, error) {
 }
 
 func NewWorker(handler executionHandler) *Worker {
+	tmpDir, err := os.MkdirTemp("", "try-pw")
+	if err != nil {
+		log.Fatalf("could not create tmp dir: %v", err)
+		return nil
+	}
 	return &Worker{
 		handler: handler,
 		output:  new(bytes.Buffer),
 		files:   make([]string, 0),
+		TmpDir:  tmpDir,
 	}
 }
