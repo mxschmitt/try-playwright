@@ -86,7 +86,7 @@ describe('Examples', () => {
     const allStartsWithHttpOrHttpsProtocol = logStatements.every(entry => entry.startsWith("http://") || entry.startsWith("https://"))
     expect(allStartsWithHttpOrHttpsProtocol).toBe(true)
   })
-  it("7: should be able to intercept and modify network requests", async ({ page }) => {
+  it.skip("7: should be able to intercept and modify network requests", async ({ page }) => {
     await executeExample(page, 7)
     const imageCount = await getImageCount(page)
     expect(imageCount).toBe(1)
@@ -175,7 +175,7 @@ const playwright = require("playwright");
     })
     await page.waitForTimeout(200)
     await page.click("text='Run'")
-    await page.waitForSelector("text='Error: foobar!'")
+    await page.waitForSelector("text=Error: foobar!")
   })
   it("should prevent access to the control microservice from inside the worker", async ({ page }) => {
     await page.goto(ROOT_URL);
