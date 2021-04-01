@@ -2,39 +2,32 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/mxschmitt/try-playwright/internal/worker"
 )
 
+var projectDir = "/home/pwuser/project/"
+var findClassRegexp = regexp.MustCompile(`class (\w+) `)
+
 func handler(w *worker.Worker, code string) error {
-	basePath := filepath.Join(w.TmpDir, "src", "main", "java", "org", "example")
+	w.TmpDir = projectDir
+	basePath := filepath.Join(projectDir, "src", "main", "java", "org", "example")
 	if err := os.MkdirAll(basePath, 0755); err != nil {
 		return fmt.Errorf("could not create execution sub folder: %v", err)
 	}
-
-	if err := copyFile("/home/pwuser/pom.xml", filepath.Join(w.TmpDir, "pom.xml")); err != nil {
-		return fmt.Errorf("could not copy pom.xml: %v", err)
+	matches := findClassRegexp.FindStringSubmatch(code)
+	if len(matches) < 2 {
+		return fmt.Errorf("could not determine class name")
 	}
-	if err := os.WriteFile(filepath.Join(basePath, "Execution.java"), []byte(code), 0644); err != nil {
+	className := matches[1]
+	fmt.Println("got class name", matches)
+	if err := os.WriteFile(filepath.Join(basePath, fmt.Sprintf("%s.java", className)), []byte(code), 0644); err != nil {
 		return fmt.Errorf("could not write Java source files: %v", err)
 	}
-	return w.ExecCommand("mvn", "compile", "exec:java", "-q", "-D", "exec.mainClass=org.example.Execution")
-}
-
-func copyFile(src, dst string) error {
-	input, err := ioutil.ReadFile(src)
-	if err != nil {
-		return fmt.Errorf("could not read file: %w", err)
-	}
-
-	err = ioutil.WriteFile(dst, input, 0644)
-	if err != nil {
-		return fmt.Errorf("could not write file: %w", err)
-	}
-	return nil
+	return w.ExecCommand("mvn", "compile", "exec:java", "-q", "-D", "jdk.module.illegalAccess=deny", "-D", fmt.Sprintf("exec.mainClass=org.example.%s", className))
 }
 
 func main() {

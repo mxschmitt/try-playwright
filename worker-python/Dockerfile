@@ -4,7 +4,7 @@ COPY go.mod /root/
 COPY go.sum /root/
 RUN go mod download
 
-COPY worker-python/* /root/
+COPY worker-python/main.go /root/
 COPY internal/ /root/internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app
 
