@@ -1,7 +1,5 @@
 #!/bin/bash
 
-IMAGE_ID="ghcr.io/$GITHUB_REPOSITORY/$1"
-
 if [[ "$GITHUB_EVENT_NAME" == 'pull_request' ]]; then
     VERSION="pr-$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")"
 else
@@ -15,4 +13,4 @@ fi
 # Use Docker `latest` tag convention
 [ "$VERSION" == "master" ] && VERSION=latest
 
-echo "$IMAGE_ID:$VERSION"
+echo "$VERSION"

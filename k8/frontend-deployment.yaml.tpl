@@ -15,7 +15,7 @@ spec:
         io.kompose.service: frontend
     spec:
       containers:
-        - image: ghcr.io/mxschmitt/try-playwright/frontend:latest
+        - image: ghcr.io/mxschmitt/try-playwright/frontend:${DOCKER_TAG}
           name: frontend
           ports:
             - containerPort: 8080

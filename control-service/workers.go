@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/mxschmitt/try-playwright/internal/workertypes"
@@ -16,13 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 )
-
-var WORKER_TO_DOCKER_IMAGE = map[workertypes.WorkerLanguage]string{
-	workertypes.WorkerLanguageJavaScript: "ghcr.io/mxschmitt/try-playwright/worker-javascript:latest",
-	workertypes.WorkerLanguageJava:       "ghcr.io/mxschmitt/try-playwright/worker-java:latest",
-	workertypes.WorkerLanguagePython:     "ghcr.io/mxschmitt/try-playwright/worker-python:latest",
-	workertypes.WorkerLanguageCSharp:     "ghcr.io/mxschmitt/try-playwright/worker-csharp:latest",
-}
 
 var SUPPORTED_LANGUAGES = []workertypes.WorkerLanguage{
 	workertypes.WorkerLanguageJavaScript,
@@ -181,7 +175,7 @@ func (w *Worker) createPod() error {
 			Containers: []v1.Container{
 				{
 					Name:            "worker",
-					Image:           WORKER_TO_DOCKER_IMAGE[w.workers.language],
+					Image:           determineWorkerImageName(w.workers.language),
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Env: []v1.EnvVar{
 						{
@@ -213,6 +207,11 @@ func (w *Worker) createPod() error {
 		return fmt.Errorf("could not create pod: %w", err)
 	}
 	return nil
+}
+
+func determineWorkerImageName(language workertypes.WorkerLanguage) string {
+	tag := os.Getenv("WORKER_IMAGE_TAG")
+	return fmt.Sprintf("ghcr.io/mxschmitt/try-playwright/worker-%s:%s", language, tag)
 }
 
 func (w *Worker) Publish(code string) error {

@@ -8,6 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-20.04
     timeout-minutes: 60
+    needs: [build]
     steps:
     - uses: microsoft/playwright-github-action@v1
     - name: Use Node.js
@@ -23,6 +24,9 @@ jobs:
     - name: Install dependencies
       run: npm ci
       working-directory: e2e
+    - run: |
+        version="$(bash .github/workflows/determine_docker_image_tag.sh)"
+        bash k8/generate.sh $version
     - run: kubectl apply -f k8/
     - name: Run e2e tests
       working-directory: e2e
@@ -38,13 +42,9 @@ jobs:
       uses: mxschmitt/action-tmate@v3
   lint:
     runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
-      matrix:
-        folder: [frontend]
     defaults:
       run:
-        working-directory: ${{ matrix.folder }}
+        working-directory: frontend
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js
@@ -83,7 +83,10 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
       - name: Push image
         run: |
-          DOCKER_IMAGE="$(bash .github/workflows/determine_docker_image_name.sh ${{ matrix.directory }})"
+          IMAGE_ID=ghcr.io/${{ github.repository }}/${{ matrix.directory }}
+          DOCKER_IMAGE_TAG="$(bash .github/workflows/determine_docker_image_tag.sh)"
+          DOCKER_IMAGE="$IMAGE_ID:$DOCKER_IMAGE_TAG"
+          echo "Docker image: $DOCKER_IMAGE"
 
           docker tag local-image $DOCKER_IMAGE
           docker push $DOCKER_IMAGE
