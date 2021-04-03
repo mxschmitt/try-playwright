@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "CommonJS",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "lib"
+  },
+  "files": [
+    "../types/api.d.ts"
+  ],
+  "include": [
+    "src"
+  ]
+}
