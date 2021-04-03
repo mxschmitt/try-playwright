@@ -96,21 +96,11 @@ func newServer() (*server, error) {
 	}
 
 	workersMap := map[workertypes.WorkerLanguage]*Workers{}
-	workersMap[workertypes.WorkerLanguagePython], err = newWorkers(workertypes.WorkerLanguagePython, workerCount, k8ClientSet, amqpChannel)
-	if err != nil {
-		return nil, fmt.Errorf("could not create new Python workers: %w", err)
-	}
-	workersMap[workertypes.WorkerLanguageJavaScript], err = newWorkers(workertypes.WorkerLanguageJavaScript, workerCount, k8ClientSet, amqpChannel)
-	if err != nil {
-		return nil, fmt.Errorf("could not create new JavaScript workers: %w", err)
-	}
-	workersMap[workertypes.WorkerLanguageJava], err = newWorkers(workertypes.WorkerLanguageJava, workerCount, k8ClientSet, amqpChannel)
-	if err != nil {
-		return nil, fmt.Errorf("could not create new Java workers: %w", err)
-	}
-	workersMap[workertypes.WorkerLanguageCSharp], err = newWorkers(workertypes.WorkerLanguageCSharp, workerCount, k8ClientSet, amqpChannel)
-	if err != nil {
-		return nil, fmt.Errorf("could not create new C# workers: %w", err)
+	for _, lang := range SUPPORTED_LANGUAGES {
+		workersMap[lang], err = newWorkers(lang, workerCount, k8ClientSet, amqpChannel)
+		if err != nil {
+			return nil, fmt.Errorf("could not create new %s workers: %w", lang, err)
+		}
 	}
 
 	s := &server{

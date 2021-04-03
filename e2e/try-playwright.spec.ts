@@ -86,7 +86,7 @@ describe('Examples', () => {
     const allStartsWithHttpOrHttpsProtocol = logStatements.every(entry => entry.startsWith("http://") || entry.startsWith("https://"))
     expect(allStartsWithHttpOrHttpsProtocol).toBe(true)
   })
-  it.skip("7: should be able to intercept and modify network requests", async ({ page }) => {
+  it("7: should be able to intercept and modify network requests", async ({ page }) => {
     await executeExample(page, 7)
     const imageCount = await getImageCount(page)
     expect(imageCount).toBe(1)

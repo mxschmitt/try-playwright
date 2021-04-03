@@ -13,7 +13,6 @@ var projectDir = "/home/pwuser/project/"
 var findClassRegexp = regexp.MustCompile(`class (\w+) `)
 
 func handler(w *worker.Worker, code string) error {
-	w.TmpDir = projectDir
 	basePath := filepath.Join(projectDir, "src", "main", "java", "org", "example")
 	if err := os.MkdirAll(basePath, 0755); err != nil {
 		return fmt.Errorf("could not create execution sub folder: %v", err)
@@ -23,7 +22,6 @@ func handler(w *worker.Worker, code string) error {
 		return fmt.Errorf("could not determine class name")
 	}
 	className := matches[1]
-	fmt.Println("got class name", matches)
 	if err := os.WriteFile(filepath.Join(basePath, fmt.Sprintf("%s.java", className)), []byte(code), 0644); err != nil {
 		return fmt.Errorf("could not write Java source files: %v", err)
 	}
@@ -31,5 +29,5 @@ func handler(w *worker.Worker, code string) error {
 }
 
 func main() {
-	worker.NewWorker(handler).Run()
+	worker.NewWorker(handler, projectDir).Run()
 }

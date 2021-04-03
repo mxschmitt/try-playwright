@@ -20,22 +20,6 @@ jobs:
         curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker --no-deploy traefik" sh -
         mkdir -p ~/.kube
         cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
-    - name: Build Docker image control microservice
-      run: docker build . -f control-service/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/control-service:latest
-    - name: Build Docker image worker-python
-      run: docker build . -f worker-python/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-python:latest
-    - name: Build Docker image worker-javascript
-      run: docker build . -f worker-javascript/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-javascript:latest
-    - name: Build Docker image worker-java
-      run: docker build . -f worker-java/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-java:latest
-    - name: Build Docker image worker-csharp
-      run: docker build . -f worker-csharp/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/worker-csharp:latest
-    - name: Build Docker image file-service microservice
-      run: docker build . -f file-service/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/file-service:latest
-    - name: Build Docker image frontend microservice
-      run: docker build . -f frontend/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/frontend:latest
-    - name: Build Docker image squid
-      run: docker build . -f squid/Dockerfile --tag ghcr.io/mxschmitt/try-playwright/squid:latest
     - name: Install dependencies
       run: npm ci
       working-directory: e2e
@@ -74,17 +58,23 @@ jobs:
     - name: Build
       run: npm run build
   build:
-    #needs: test
     runs-on: ubuntu-20.04
-    if: github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
-        dockerfile: [worker, file-service, frontend, control-service, squid]
+        directory:
+          - worker-javascript
+          - worker-java
+          - worker-python
+          - worker-csharp
+          - file-service
+          - frontend
+          - control-service
+          - squid
     steps:
       - uses: actions/checkout@v2
       - name: Build image
-        run: docker build . --file ${{ matrix.dockerfile }}/Dockerfile --tag local-image
+        run: docker build . --file ${{ matrix.directory }}/Dockerfile --tag local-image
       - name: Login to GitHub Package Registry
         uses: docker/login-action@v1
         with:
@@ -93,7 +83,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
       - name: Push image
         run: |
-          IMAGE_ID=ghcr.io/${{ github.repository }}/${{ matrix.dockerfile }}
+          IMAGE_ID=ghcr.io/${{ github.repository }}/${{ matrix.dir }}
 
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')

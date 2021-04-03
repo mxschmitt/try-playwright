@@ -22,7 +22,7 @@ type executionHandler func(worker *Worker, code string) error
 type Worker struct {
 	channel *amqp.Channel
 	handler executionHandler
-	TmpDir  string
+	tmpDir  string
 	output  *bytes.Buffer
 	files   []string
 }
@@ -61,14 +61,14 @@ func (w *Worker) Run() {
 func (w *Worker) ExecCommand(name string, args ...string) error {
 	path, err := exec.LookPath(name)
 	if err != nil {
-		return fmt.Errorf("could not lookup path: %w", err)
+		return fmt.Errorf("could not command lookup path: %w", err)
 	}
-	collector, err := newFilesCollector(w.TmpDir)
+	collector, err := newFilesCollector(w.tmpDir)
 	if err != nil {
 		return fmt.Errorf("could not create file collector: %w", err)
 	}
 	c := exec.Cmd{
-		Dir:    collector.tmpDir,
+		Dir:    collector.dir,
 		Path:   path,
 		Args:   append([]string{name}, args...),
 		Stdout: io.MultiWriter(os.Stdout, w.output),
@@ -80,7 +80,7 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 	}
 	files, err := collector.Collect()
 	if err != nil {
-		return fmt.Errorf("could not collect file: %w", err)
+		return fmt.Errorf("could not collect files: %w", err)
 	}
 	w.files = append(w.files, files...)
 	return nil
@@ -101,7 +101,7 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 		outgoingMessage.Output = strings.TrimRight(w.output.String(), "\n")
 		outgoingMessage.Files, err = w.uploadFiles()
 		if err != nil {
-			return fmt.Errorf("could not upload file: %w", err)
+			return fmt.Errorf("could not upload files: %w", err)
 		}
 	}
 	outgoingMessageBody, err := json.Marshal(outgoingMessage)
@@ -144,7 +144,7 @@ func (w *Worker) uploadFiles() ([]workertypes.File, error) {
 		}
 		defer f.Close()
 		if _, err = io.Copy(fw, f); err != nil {
-			return nil, fmt.Errorf("could not copy file into fw: %w", err)
+			return nil, fmt.Errorf("could not copy file into form file writer %w", err)
 		}
 	}
 	if err := requestWriter.Close(); err != nil {
@@ -172,16 +172,22 @@ func (w *Worker) uploadFiles() ([]workertypes.File, error) {
 	return respBody, nil
 }
 
-func NewWorker(handler executionHandler) *Worker {
-	tmpDir, err := os.MkdirTemp("", "try-pw")
-	if err != nil {
-		log.Fatalf("could not create tmp dir: %v", err)
-		return nil
+func NewWorker(handler executionHandler, optionalDirectory ...string) *Worker {
+	var tmpDir string
+	if len(optionalDirectory) == 1 {
+		tmpDir = optionalDirectory[0]
+	} else {
+		var err error
+		tmpDir, err = os.MkdirTemp("", "try-pw")
+		if err != nil {
+			log.Fatalf("could not create tmp dir: %v", err)
+			return nil
+		}
 	}
 	return &Worker{
 		handler: handler,
 		output:  new(bytes.Buffer),
 		files:   make([]string, 0),
-		TmpDir:  tmpDir,
+		tmpDir:  tmpDir,
 	}
 }

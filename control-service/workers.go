@@ -24,6 +24,13 @@ var WORKER_TO_DOCKER_IMAGE = map[workertypes.WorkerLanguage]string{
 	workertypes.WorkerLanguageCSharp:     "ghcr.io/mxschmitt/try-playwright/worker-csharp:latest",
 }
 
+var SUPPORTED_LANGUAGES = []workertypes.WorkerLanguage{
+	workertypes.WorkerLanguageJavaScript,
+	workertypes.WorkerLanguageJava,
+	workertypes.WorkerLanguagePython,
+	workertypes.WorkerLanguageCSharp,
+}
+
 type Workers struct {
 	language           workertypes.WorkerLanguage
 	workers            chan *Worker
@@ -124,15 +131,17 @@ func (w *Workers) Cleanup() error {
 }
 
 type Worker struct {
-	id      string
-	workers *Workers
-	pod     *v1.Pod
+	id       string
+	workers  *Workers
+	pod      *v1.Pod
+	language workertypes.WorkerLanguage
 }
 
 func newWorker(workers *Workers) (*Worker, error) {
 	w := &Worker{
-		id:      uuid.New().String(),
-		workers: workers,
+		id:       uuid.New().String(),
+		workers:  workers,
+		language: workers.language,
 	}
 
 	w.workers.repliesMu.Lock()
@@ -162,7 +171,7 @@ func (w *Worker) createPod() error {
 	var err error
 	w.pod, err = w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).Create(context.Background(), &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("worker-%s-", w.workers.language),
+			GenerateName: fmt.Sprintf("worker-%s-", w.language),
 			Labels: map[string]string{
 				"role": "worker",
 			},

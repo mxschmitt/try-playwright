@@ -15,8 +15,6 @@ RUN apt-get remove -y openjdk-11-jdk && \
 
 ENV JAVA_HOME=/usr/lib/jvm/java-14-openjdk-amd64
 
-# pwuser needs to have write access
-RUN chmod -R 777 /ms-playwright
 
 RUN adduser pwuser
 USER pwuser

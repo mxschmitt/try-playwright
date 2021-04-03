@@ -10,7 +10,7 @@ import (
 )
 
 type filesCollector struct {
-	tmpDir  string
+	dir     string
 	done    chan bool
 	watcher *fsnotify.Watcher
 
@@ -18,18 +18,18 @@ type filesCollector struct {
 	files   []string
 }
 
-func newFilesCollector(tmpDir string) (*filesCollector, error) {
+func newFilesCollector(dir string) (*filesCollector, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("could not create new fs watcher: %w", err)
 	}
-	if err := watcher.Add(tmpDir); err != nil {
-		return nil, fmt.Errorf("could not add tmpDir to watcher: %w", err)
+	if err := watcher.Add(dir); err != nil {
+		return nil, fmt.Errorf("could not add dir to watcher: %w", err)
 	}
 	fw := &filesCollector{
 		done:    make(chan bool),
 		watcher: watcher,
-		tmpDir:  tmpDir,
+		dir:     dir,
 		files:   []string{},
 	}
 	go fw.watch()
@@ -53,22 +53,10 @@ func (fw *filesCollector) watch() {
 			if !ok {
 				return
 			}
-			log.Println("event:", event)
 			if event.Op&fsnotify.Create == fsnotify.Create {
-				fi, err := os.Stat(event.Name)
-				if err != nil {
-					log.Printf("could not stat: %v", err)
+				if err := fw.consumeCreateEvent(event); err != nil {
+					log.Printf("could n ot consume create event: %v", err)
 					return
-				}
-				if fi.IsDir() {
-					if err := fw.watcher.Add(event.Name); err != nil {
-						log.Printf("could not add folder recursively: %v", err)
-						return
-					}
-				} else {
-					fw.filesMu.Lock()
-					fw.files = append(fw.files, event.Name)
-					fw.filesMu.Unlock()
 				}
 			}
 		case err, ok := <-fw.watcher.Errors:
@@ -78,4 +66,21 @@ func (fw *filesCollector) watch() {
 			log.Printf("could not watch: %v", err)
 		}
 	}
+}
+
+func (fw *filesCollector) consumeCreateEvent(event fsnotify.Event) error {
+	fi, err := os.Stat(event.Name)
+	if err != nil {
+		return fmt.Errorf("could not stat: %w", err)
+	}
+	if fi.IsDir() {
+		if err := fw.watcher.Add(event.Name); err != nil {
+			return fmt.Errorf("could not add folder recursivelyt: %w", err)
+		}
+	} else {
+		fw.filesMu.Lock()
+		fw.files = append(fw.files, event.Name)
+		fw.filesMu.Unlock()
+	}
+	return nil
 }
