@@ -24,7 +24,7 @@ RUN mkdir /home/pwuser/project/
 
 COPY worker-java/pom.xml /home/pwuser/project/
 
-RUN cd  /home/pwuser/project/ && \
+RUN cd /home/pwuser/project/ && \
     mvn install
 
 COPY --from=builder /app /app
