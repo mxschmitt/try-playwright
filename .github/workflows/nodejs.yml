@@ -28,6 +28,8 @@ jobs:
       run: |
         version="$(bash .github/workflows/determine_docker_image_tag.sh)"
         bash k8/generate.sh $version
+      env:
+        WORKER_COUNT: 2
     - run: kubectl apply -f k8/
     - name: Run e2e tests
       working-directory: e2e

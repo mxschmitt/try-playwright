@@ -2,7 +2,8 @@
 
 set -e
 
-export DOCKER_TAG="$1"
+export DOCKER_TAG="${1:-latest}"
+export WORKER_COUNT="${WORKER_COUNT:-4}"
 
 for file_path in k8/*.yaml.tpl; do
     filename="$(basename $file_path)"

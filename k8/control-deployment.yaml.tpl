@@ -18,7 +18,7 @@ spec:
       containers:
         - env:
             - name: WORKER_COUNT
-              value: "8"
+              value: "${WORKER_COUNT}"
             - name: CONTROL_HTTP_PORT
               value: "8080"
             - name: ETCD_ENDPOINT
