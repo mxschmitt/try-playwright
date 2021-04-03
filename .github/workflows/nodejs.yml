@@ -81,11 +81,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: Push image
         run: |
-          DOCKER_IMAGE="$(bash .github/workflows/determine_docker_image_name.sh)"
+          DOCKER_IMAGE="$(bash .github/workflows/determine_docker_image_name.sh ${{ matrix.directory }})"
 
           docker tag local-image $DOCKER_IMAGE
           docker push $DOCKER_IMAGE
