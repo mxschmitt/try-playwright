@@ -67,13 +67,18 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 	if err != nil {
 		return fmt.Errorf("could not create file collector: %w", err)
 	}
+	workerProxy := os.Getenv("WORKER_HTTP_PROXY")
 	c := exec.Cmd{
 		Dir:    collector.dir,
 		Path:   path,
 		Args:   append([]string{name}, args...),
 		Stdout: io.MultiWriter(os.Stdout, w.output),
 		Stderr: io.MultiWriter(os.Stderr, w.output),
-		Env:    append(os.Environ(), fmt.Sprintf("http_proxy=%s", os.Getenv("WORKER_HTTP_PROXY"))),
+		Env: append(
+			os.Environ(),
+			fmt.Sprintf("http_proxy=%s", workerProxy),
+			fmt.Sprintf("HTTPS_PROXY=%s", workerProxy),
+		),
 	}
 	if err := c.Run(); err != nil {
 		return fmt.Errorf("could not run command: %s", strings.TrimRight(w.output.String(), "\n"))
