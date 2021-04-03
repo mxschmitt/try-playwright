@@ -4,8 +4,8 @@
   "private": true,
   "dependencies": {
     "@feedback-fish/react": "^1.2.1",
-    "@sentry/browser": "6.2.3",
-    "@types/node": "14.14.35",
+    "@sentry/browser": "6.2.5",
+    "@types/node": "14.14.37",
     "@types/react": "17.0.3",
     "@types/react-dom": "17.0.3",
     "clipboard-polyfill": "3.0.2",
@@ -39,9 +39,9 @@
   },
   "proxy": "https://localhost",
   "devDependencies": {
-    "@sentry/types": "6.2.3",
+    "@sentry/types": "6.2.5",
     "cross-env": "^7.0.3",
-    "eslint": "^7.22.0",
+    "eslint": "^7.23.0",
     "raw-loader": "4.0.2",
     "react-app-rewired": "2.1.8"
   },

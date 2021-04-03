@@ -29,18 +29,21 @@ EOM
 
 set -e
 
+function get_playwright_file() {
+    echo "$(curl -sL https://unpkg.com/playwright/$1)"
+}
+
 function update_playwright_types {
     TYPES_FILE="frontend/src/components/Editor/types.txt"
-    cat worker/node_modules/@types/node/globals.d.ts > $TYPES_FILE
+    cat e2e/node_modules/@types/node/globals.d.ts > $TYPES_FILE
     echo "declare module 'playwright' {" >> $TYPES_FILE
-    cat worker/node_modules/playwright/types/protocol.d.ts >> $TYPES_FILE
-    cat worker/node_modules/playwright/types/structs.d.ts | tail -n +19 >> $TYPES_FILE
-    cat worker/node_modules/playwright/types/types.d.ts | tail -n +22 >> $TYPES_FILE
+    echo "$(get_playwright_file types/protocol.d.ts)" >> $TYPES_FILE
+    echo "$(get_playwright_file types/structs.d.ts)" | tail -n +19 >> $TYPES_FILE
+    echo "$(get_playwright_file types/types.d.ts)" | tail -n +22 >> $TYPES_FILE
     echo "$CUSTOM_SUFFIX" >> $TYPES_FILE
 }
 
 
 update_dependencies frontend
-update_dependencies worker
 update_dependencies e2e
 update_playwright_types
