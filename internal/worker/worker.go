@@ -79,7 +79,7 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 	}
 	workerProxy := os.Getenv("WORKER_HTTP_PROXY")
 	c := exec.Cmd{
-		Dir:    collector.dir,
+		Dir:    w.tmpDir,
 		Path:   path,
 		Args:   append([]string{name}, args...),
 		Stdout: io.MultiWriter(os.Stdout, w.output),

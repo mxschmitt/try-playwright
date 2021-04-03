@@ -1,0 +1,11 @@
+<settings>
+    <proxies>
+        <proxy>
+            <id>genproxy</id>
+            <active>true</active>
+            <protocol>http</protocol>
+            <host>squid</host>
+            <port>3128</port>
+        </proxy>
+    </proxies>
+</settings>
