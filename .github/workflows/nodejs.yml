@@ -7,6 +7,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-20.04
+    needs: [build]
     timeout-minutes: 60
     steps:
     - uses: microsoft/playwright-github-action@v1
@@ -17,7 +18,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install k3s
       run: |
-        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker --no-deploy traefik" sh -
+        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --no-deploy traefik" sh -
         mkdir -p ~/.kube
         cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
     - name: Install dependencies
@@ -31,7 +32,7 @@ jobs:
     - name: Run e2e tests
       working-directory: e2e
       run: |
-        kubectl wait --timeout 2m --for=condition=ready pod -l io.kompose.service=frontend
+        kubectl wait --timeout 2m --for=condition=available pods --all
         FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}')
         FRONTEND_URL="http://localhost:$FRONTEND_PORT"
         echo "Host: $FRONTEND_URL"
