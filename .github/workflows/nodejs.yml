@@ -81,9 +81,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Push image
         run: |
-          IMAGE_ID=ghcr.io/${{ github.repository }}/${{ matrix.dir }}
+          IMAGE_ID=ghcr.io/${{ github.repository }}/${{ matrix.directory }}
 
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
