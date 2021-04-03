@@ -4,7 +4,7 @@ if [[ "$GITHUB_EVENT_NAME" == 'pull_request' ]]; then
     VERSION="pr-$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")"
 else
     # Strip git ref prefix from version
-    VERSION=$(echo "$GITHU_REF" | sed -e 's,.*/\(.*\),\1,')
+    VERSION=$(echo "$GITHUB_REF" | sed -e 's,.*/\(.*\),\1,')
 fi
 
 # Strip "v" prefix from tag name
