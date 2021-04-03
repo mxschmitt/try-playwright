@@ -32,7 +32,7 @@ jobs:
     - name: Run e2e tests
       working-directory: e2e
       run: |
-        kubectl wait --timeout 2m --for=condition=available pods --all
+        kubectl wait --timeout 2m --for=condition=ready pods --all
         FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}')
         FRONTEND_URL="http://localhost:$FRONTEND_PORT"
         echo "Host: $FRONTEND_URL"
