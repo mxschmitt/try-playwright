@@ -2,7 +2,7 @@
   "name": "try-playwright",
   "version": "1.0.0",
   "scripts": {
-    "test": "folio -j 1 --retries 1 --reporter list try-playwright.spec.ts"
+    "test": "folio -j 1 --retries 2 --reporter list try-playwright.spec.ts"
   },
   "repository": {
     "type": "git",
