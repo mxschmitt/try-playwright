@@ -5,6 +5,7 @@ import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import useDarkMode from "../../hooks/useDarkMode"
+import { determineLanguage } from '../../utils';
 import { CodeContext } from '../CodeContext';
 import styles from './index.module.css'
 
@@ -69,10 +70,12 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         // @ts-ignore
         editor._standaloneKeybindingService.addDynamicKeybinding("-expandLineSelection",null,() => {});
 
-        monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
-        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-            diagnosticCodesToIgnore: [80001, 7044]
-        })
+        if (determineLanguage() === "javascript") {
+            monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
+            monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+                diagnosticCodesToIgnore: [80001, 7044]
+            })
+        }
         editor.focus()
     }
 
@@ -80,7 +83,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         <div className={styles.monacoEditorWrapper}>
             <MonacoEditor
                 onChange={onChange}
-                language="javascript"
+                language={determineLanguage()}
                 theme={darkMode ? "custom-dark" : "vs"}
                 value={code}
                 options={MONACO_OPTIONS}

@@ -1,18 +1,7 @@
-type LogMode = "log" | "error"
-
-interface LogEntry {
-  mode: LogMode;
-  args: string[];
-}
-
 interface FileWrapper {
   publicURL: string;
   fileName?: string;
   extension: string;
-}
-
-interface BaseExecutionResponse {
-  success: boolean;
 }
 
 type ErroredExecutionResponse = {
@@ -25,7 +14,7 @@ type SuccessExecutionResponse ={
   version: string;
   duration?: number;
   files: FileWrapper[];
-  logs: LogEntry[];
+  output: string;
 }
 
 type ExecutionResponse = ErroredExecutionResponse | SuccessExecutionResponse

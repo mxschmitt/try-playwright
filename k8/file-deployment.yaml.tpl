@@ -27,6 +27,7 @@ spec:
               value: "R9gGSFb4QkZH8LzzS8SECsG66JNX"
             - name: FILE_SERVICE_SENTRY_DSN
               value: https://3911972a34944ec5bd8b681a252d4f1d@o359550.ingest.sentry.io/5479804
-          image: ghcr.io/mxschmitt/try-playwright/file-service:latest
+          image: ghcr.io/mxschmitt/try-playwright/file-service:${DOCKER_TAG}
+          imagePullPolicy: IfNotPresent
           name: file
       restartPolicy: Always

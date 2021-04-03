@@ -18,7 +18,7 @@ spec:
       containers:
         - env:
             - name: WORKER_COUNT
-              value: "8"
+              value: "${WORKER_COUNT}"
             - name: CONTROL_HTTP_PORT
               value: "8080"
             - name: ETCD_ENDPOINT
@@ -27,7 +27,9 @@ spec:
               value: amqp://rabbitmq:5672?heartbeat=5s
             - name: CONTROL_SERVICE_SENTRY_DSN
               value: https://c4698982912c457ba9c9a2a815a8bb25@o359550.ingest.sentry.io/5479806
-          image: ghcr.io/mxschmitt/try-playwright/control-service:latest
+            - name: WORKER_IMAGE_TAG
+              value: ${DOCKER_TAG}
+          image: ghcr.io/mxschmitt/try-playwright/control-service:${DOCKER_TAG}
           name: control
           imagePullPolicy: IfNotPresent
       restartPolicy: Always

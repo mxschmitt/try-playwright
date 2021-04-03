@@ -24,6 +24,4 @@ ENV NODE_ENV=production
 
 RUN npm run build
 
-ENV FILE_SERVICE_URL=http://file:8080
-
 CMD ["node", "/home/pwuser/worker/lib/index.js"]

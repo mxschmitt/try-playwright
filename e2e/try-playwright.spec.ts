@@ -175,7 +175,7 @@ const playwright = require("playwright");
     })
     await page.waitForTimeout(200)
     await page.click("text='Run'")
-    await page.waitForSelector("text='Error: foobar!'")
+    await page.waitForSelector("text=Error: foobar!")
   })
   it("should prevent access to the control microservice from inside the worker", async ({ page }) => {
     await page.goto(ROOT_URL);

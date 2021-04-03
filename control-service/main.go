@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/mxschmitt/try-playwright/internal/workertypes"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/getsentry/sentry-go"
@@ -46,7 +47,7 @@ type server struct {
 
 	amqpErrorChan chan *amqp.Error
 
-	workers *Workers
+	workers map[workertypes.WorkerLanguage]*Workers
 }
 
 func newServer() (*server, error) {
@@ -84,17 +85,7 @@ func newServer() (*server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not open channel: %w", err)
 	}
-	amqpReplyQueue, err := amqpChannel.QueueDeclare(
-		"",    // name
-		false, // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // noWait
-		nil,   // arguments
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to declare reply queue: %w", err)
-	}
+
 	workerCount := 4
 	workerCountEnv := os.Getenv("WORKER_COUNT")
 	if workerCountEnv != "" {
@@ -104,15 +95,18 @@ func newServer() (*server, error) {
 		}
 	}
 
-	workers, err := newWorkers(workerCount, k8ClientSet, amqpReplyQueue.Name, amqpChannel)
-	if err != nil {
-		return nil, fmt.Errorf("could not create new workers: %w", err)
+	workersMap := map[workertypes.WorkerLanguage]*Workers{}
+	for _, lang := range workertypes.SUPPORTED_LANGUAGES {
+		workersMap[lang], err = newWorkers(lang, workerCount, k8ClientSet, amqpChannel)
+		if err != nil {
+			return nil, fmt.Errorf("could not create new %s workers: %w", lang, err)
+		}
 	}
 
 	s := &server{
 		etcdClient:    etcdClient,
 		amqpErrorChan: amqpErrorChan,
-		workers:       workers,
+		workers:       workersMap,
 	}
 
 	s.initializeHttpServer()
@@ -129,36 +123,23 @@ func (s *server) initializeHttpServer() {
 	s.server.POST("/service/control/share/create", s.handleShareCreate)
 }
 
-type runRequestPayload struct {
-	Code string `json:"code"`
-}
-
-type workerResponsePayload struct {
-	Success  bool   `json:"success"`
-	Error    string `json:"error"`
-	Version  string `json:"version"`
-	Duration int64  `json:"duration"`
-	Files    []struct {
-		PublicURL string `json:"publicURL"`
-		FileName  string `json:"fileName"`
-		Extension string `json:"extension"`
-	} `json:"files"`
-	Logs []struct {
-		Mode string   `json:"mode"`
-		Args []string `json:"args"`
-	} `json:"logs"`
-}
-
 func (s *server) handleRun(c echo.Context) error {
-	var req *runRequestPayload
+	var req *workertypes.WorkerRequestPayload
 	if err := c.Bind(&req); err != nil {
-		return fmt.Errorf("could not decode request body: %w", err)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "could not decode request body",
+		})
+	}
+	if !req.Language.IsValid() {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "could not recognize language",
+		})
 	}
 
 	log.Printf("Obtaining worker")
 	var worker *Worker
 	select {
-	case worker = <-s.workers.GetCh():
+	case worker = <-s.workers[req.Language].GetCh():
 	case <-time.After(WORKER_TIMEOUT * time.Second):
 		log.Println("Got Worker timeout, was not able to get a worker!")
 		return c.JSON(http.StatusServiceUnavailable, echo.Map{
@@ -177,7 +158,7 @@ func (s *server) handleRun(c echo.Context) error {
 
 	start := time.Now()
 
-	var payload *workerResponsePayload
+	var payload *workertypes.WorkerResponsePayload
 	timeout := false
 	select {
 	case payload = <-worker.Subscribe():
@@ -197,7 +178,7 @@ func (s *server) handleRun(c echo.Context) error {
 		logger.Println("Finished worker cleanup")
 
 		logger.Println("Adding new worker")
-		if err := s.workers.AddWorkers(1); err != nil {
+		if err := s.workers[req.Language].AddWorkers(1); err != nil {
 			logger.Printf("could not create new worker: %v", err)
 			return
 		}
@@ -269,9 +250,12 @@ func (s *server) Stop() error {
 	if err := s.server.Shutdown(context.Background()); err != nil {
 		return fmt.Errorf("could not shutdown server: %w", err)
 	}
-	if err := s.workers.Cleanup(); err != nil {
-		return fmt.Errorf("could not cleanup workers: %w", err)
+	for language := range s.workers {
+		if err := s.workers[language].Cleanup(); err != nil {
+			return fmt.Errorf("could not cleanup workers: %w", err)
+		}
 	}
+
 	return s.etcdClient.Close()
 }
 

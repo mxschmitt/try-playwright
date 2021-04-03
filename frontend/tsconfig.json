@@ -20,9 +20,6 @@
     "jsx": "react-jsx",
     "noFallthroughCasesInSwitch": true
   },
-  "files": [
-    "../types/api.d.ts"
-  ],
   "include": [
     "src"
   ],

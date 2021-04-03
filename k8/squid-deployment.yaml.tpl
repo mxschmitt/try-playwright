@@ -16,7 +16,7 @@ spec:
         reachable-by-worker: "true"
     spec:
       containers:
-        - image: ghcr.io/mxschmitt/try-playwright/squid:latest
+        - image: ghcr.io/mxschmitt/try-playwright/squid:${DOCKER_TAG}
           name: squid
           imagePullPolicy: IfNotPresent
       restartPolicy: Always

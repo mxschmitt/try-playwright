@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sync"
 
+	"github.com/mxschmitt/try-playwright/internal/workertypes"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
@@ -17,21 +19,22 @@ import (
 )
 
 type Workers struct {
+	language           workertypes.WorkerLanguage
 	workers            chan *Worker
 	amqpReplyQueueName string
 	amqpChannel        *amqp.Channel
 	k8ClientSet        kubernetes.Interface
 	repliesMu          sync.Mutex
-	replies            map[string]chan *workerResponsePayload
+	replies            map[string]chan *workertypes.WorkerResponsePayload
 }
 
-func newWorkers(workerCount int, k8ClientSet kubernetes.Interface, amqpReplyQueueName string, amqpChannel *amqp.Channel) (*Workers, error) {
+func newWorkers(language workertypes.WorkerLanguage, workerCount int, k8ClientSet kubernetes.Interface, amqpChannel *amqp.Channel) (*Workers, error) {
 	w := &Workers{
-		replies:            make(map[string]chan *workerResponsePayload),
-		k8ClientSet:        k8ClientSet,
-		amqpReplyQueueName: amqpReplyQueueName,
-		amqpChannel:        amqpChannel,
-		workers:            make(chan *Worker, workerCount),
+		language:    language,
+		replies:     make(map[string]chan *workertypes.WorkerResponsePayload),
+		k8ClientSet: k8ClientSet,
+		amqpChannel: amqpChannel,
+		workers:     make(chan *Worker, workerCount),
 	}
 	if err := w.consumeReplies(); err != nil {
 		return nil, fmt.Errorf("could not consume replies: %w", err)
@@ -44,14 +47,26 @@ func newWorkers(workerCount int, k8ClientSet kubernetes.Interface, amqpReplyQueu
 }
 
 func (w *Workers) consumeReplies() error {
+	amqpReplyQueue, err := w.amqpChannel.QueueDeclare(
+		"",    // name
+		false, // durable
+		false, // delete when unused
+		true,  // exclusive
+		false, // noWait
+		nil,   // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("Failed to declare reply queue: %w", err)
+	}
+	w.amqpReplyQueueName = amqpReplyQueue.Name
 	msgs, err := w.amqpChannel.Consume(
-		w.amqpReplyQueueName, // queue
-		"",                   // consumer
-		true,                 // auto-ack
-		false,                // exclusive
-		false,                // no-local
-		false,                // no-wait
-		nil,                  // args
+		amqpReplyQueue.Name, // queue
+		"",                  // consumer
+		true,                // auto-ack
+		false,               // exclusive
+		false,               // no-local
+		false,               // no-wait
+		nil,                 // args
 	)
 	if err != nil {
 		return fmt.Errorf("Failed to register a consumer: %w", err)
@@ -66,7 +81,7 @@ func (w *Workers) consumeReplies() error {
 				log.Printf("no reply channel exists for worker %s", msg.CorrelationId)
 				continue
 			}
-			var reply *workerResponsePayload
+			var reply *workertypes.WorkerResponsePayload
 			if err := json.Unmarshal(msg.Body, &reply); err != nil {
 				log.Printf("could not unmarshal reply json: %v", err)
 				continue
@@ -103,19 +118,21 @@ func (w *Workers) Cleanup() error {
 }
 
 type Worker struct {
-	id      string
-	workers *Workers
-	pod     *v1.Pod
+	id       string
+	workers  *Workers
+	pod      *v1.Pod
+	language workertypes.WorkerLanguage
 }
 
 func newWorker(workers *Workers) (*Worker, error) {
 	w := &Worker{
-		id:      uuid.New().String(),
-		workers: workers,
+		id:       uuid.New().String(),
+		workers:  workers,
+		language: workers.language,
 	}
 
 	w.workers.repliesMu.Lock()
-	w.workers.replies[w.id] = make(chan *workerResponsePayload, 1)
+	w.workers.replies[w.id] = make(chan *workertypes.WorkerResponsePayload, 1)
 	w.workers.repliesMu.Unlock()
 
 	_, err := w.workers.amqpChannel.QueueDeclare(
@@ -141,7 +158,7 @@ func (w *Worker) createPod() error {
 	var err error
 	w.pod, err = w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).Create(context.Background(), &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "worker-",
+			GenerateName: fmt.Sprintf("worker-%s-", w.language),
 			Labels: map[string]string{
 				"role": "worker",
 			},
@@ -151,7 +168,7 @@ func (w *Worker) createPod() error {
 			Containers: []v1.Container{
 				{
 					Name:            "worker",
-					Image:           "ghcr.io/mxschmitt/try-playwright/worker:latest",
+					Image:           determineWorkerImageName(w.workers.language),
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Env: []v1.EnvVar{
 						{
@@ -170,6 +187,10 @@ func (w *Worker) createPod() error {
 							Name:  "WORKER_HTTP_PROXY",
 							Value: "http://squid:3128",
 						},
+						{
+							Name:  "FILE_SERVICE_URL",
+							Value: "http://file:8080",
+						},
 					},
 				},
 			},
@@ -179,6 +200,11 @@ func (w *Worker) createPod() error {
 		return fmt.Errorf("could not create pod: %w", err)
 	}
 	return nil
+}
+
+func determineWorkerImageName(language workertypes.WorkerLanguage) string {
+	tag := os.Getenv("WORKER_IMAGE_TAG")
+	return fmt.Sprintf("ghcr.io/mxschmitt/try-playwright/worker-%s:%s", language, tag)
 }
 
 func (w *Worker) Publish(code string) error {
@@ -218,7 +244,7 @@ func (w *Worker) Cleanup() error {
 	return nil
 }
 
-func (w *Worker) Subscribe() <-chan *workerResponsePayload {
+func (w *Worker) Subscribe() <-chan *workertypes.WorkerResponsePayload {
 	w.workers.repliesMu.Lock()
 	ch := w.workers.replies[w.id]
 	w.workers.repliesMu.Unlock()

@@ -8,6 +8,7 @@ export const runCode = async (code: string): Promise<SuccessExecutionResponse> =
     },
     body: JSON.stringify({
       code,
+      language: determineLanguage()
     })
   })
   if (!resp.ok) {
@@ -61,4 +62,15 @@ export const determineCode = async (setCode: ((code: string) => void)): Promise<
   }
   // Fallback
   setCode(Examples[0].code)
+}
+
+const allowedLanguages = ["javascript", "java", "python", "csharp"]
+
+export const determineLanguage = (): string => {
+  const params = new URLSearchParams(window.location.search)
+  const language = params.get("l")
+  if (language && allowedLanguages.includes(language)) {
+    return language
+  }
+  return "javascript"
 }
