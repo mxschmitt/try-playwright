@@ -8,7 +8,6 @@ jobs:
   test:
     runs-on: ubuntu-20.04
     timeout-minutes: 60
-    needs: [build]
     steps:
     - uses: microsoft/playwright-github-action@v1
     - name: Use Node.js
@@ -24,7 +23,8 @@ jobs:
     - name: Install dependencies
       run: npm ci
       working-directory: e2e
-    - run: |
+    - name: Generate K8 files
+      run: |
         version="$(bash .github/workflows/determine_docker_image_tag.sh)"
         bash k8/generate.sh $version
     - run: kubectl apply -f k8/
@@ -36,9 +36,8 @@ jobs:
         FRONTEND_URL="http://localhost:$FRONTEND_PORT"
         echo "Host: $FRONTEND_URL"
         npx wait-on "$FRONTEND_URL/service/control/health"
-        ROOT_TEST_URL=$FRONTEND_URL npm run test
+        # ROOT_TEST_URL=$FRONTEND_URL npm run test
     - name: Setup tmate session
-      if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
   lint:
     runs-on: ubuntu-20.04
