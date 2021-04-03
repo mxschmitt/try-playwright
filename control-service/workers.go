@@ -18,13 +18,6 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var SUPPORTED_LANGUAGES = []workertypes.WorkerLanguage{
-	workertypes.WorkerLanguageJavaScript,
-	workertypes.WorkerLanguageJava,
-	workertypes.WorkerLanguagePython,
-	workertypes.WorkerLanguageCSharp,
-}
-
 type Workers struct {
 	language           workertypes.WorkerLanguage
 	workers            chan *Worker

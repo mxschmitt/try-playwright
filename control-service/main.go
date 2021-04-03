@@ -96,7 +96,7 @@ func newServer() (*server, error) {
 	}
 
 	workersMap := map[workertypes.WorkerLanguage]*Workers{}
-	for _, lang := range SUPPORTED_LANGUAGES {
+	for _, lang := range workertypes.SUPPORTED_LANGUAGES {
 		workersMap[lang], err = newWorkers(lang, workerCount, k8ClientSet, amqpChannel)
 		if err != nil {
 			return nil, fmt.Errorf("could not create new %s workers: %w", lang, err)
@@ -130,7 +130,7 @@ func (s *server) handleRun(c echo.Context) error {
 			"error": "could not decode request body",
 		})
 	}
-	if _, ok := WORKER_TO_DOCKER_IMAGE[req.Language]; !ok {
+	if !req.Language.IsValid() {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "could not recognize language",
 		})

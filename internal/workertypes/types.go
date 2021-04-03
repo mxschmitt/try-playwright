@@ -28,3 +28,19 @@ const (
 	WorkerLanguagePython     WorkerLanguage = "python"
 	WorkerLanguageCSharp     WorkerLanguage = "csharp"
 )
+
+var SUPPORTED_LANGUAGES = []WorkerLanguage{
+	WorkerLanguageJavaScript,
+	WorkerLanguageJava,
+	WorkerLanguagePython,
+	WorkerLanguageCSharp,
+}
+
+func (givenLanguage WorkerLanguage) IsValid() bool {
+	for _, language := range SUPPORTED_LANGUAGES {
+		if string(givenLanguage) == string(language) {
+			return true
+		}
+	}
+	return false
+}
