@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/mxschmitt/try-playwright/internal/worker"
 )
@@ -28,6 +29,37 @@ func handler(w *worker.Worker, code string) error {
 	return w.ExecCommand("mvn", "compile", "exec:java", "-q", "-D", "jdk.module.illegalAccess=deny", "-D", fmt.Sprintf("exec.mainClass=org.example.%s", className))
 }
 
+const NEW_LINE_SEPARATOR = "\n"
+
+func transformOutput(input string) string {
+	forbiddenLines := []string{
+		"WARNING: An illegal reflective access operation has occurred",
+		"WARNING: Illegal reflective access by com.google.inject.internal.cglib.core.$ReflectUtils$1 (file:/usr/share/maven/lib/guice.jar) to method java.lang.ClassLoader.defineClass(java.lang.String,byte[],int,int,java.security.ProtectionDomain)",
+		"WARNING: Please consider reporting this to the maintainers of com.google.inject.internal.cglib.core.$ReflectUtils$1",
+		"WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations",
+		"WARNING: All illegal access operations will be denied in a future release",
+	}
+	lines := strings.Split(input, NEW_LINE_SEPARATOR)
+	out := []string{}
+	for _, line := range lines {
+		lineIsOk := true
+		for _, forbidenLine := range forbiddenLines {
+			if forbidenLine == line {
+				lineIsOk = false
+				break
+			}
+		}
+		if lineIsOk {
+			out = append(out, line)
+		}
+	}
+	return worker.DefaultTransformOutput(strings.Join(out, NEW_LINE_SEPARATOR))
+}
+
 func main() {
-	worker.NewWorker(handler, projectDir).Run()
+	worker.NewWorker(&worker.WorkerExectionOptions{
+		Handler:            handler,
+		ExecutionDirectory: projectDir,
+		TransformOutput:    transformOutput,
+	}).Run()
 }

@@ -2,7 +2,7 @@
   "name": "try-playwright",
   "version": "1.0.0",
   "scripts": {
-    "test": "folio -j 1 --retries 2 --reporter list try-playwright.spec.ts"
+    "test": "folio -j 1 --retries 2 --reporter list"
   },
   "repository": {
     "type": "git",
@@ -13,7 +13,11 @@
   },
   "homepage": "https://github.com/mxschmitt/try-playwright#readme",
   "devDependencies": {
-    "@playwright/test": "^0.1100.0"
+    "@playwright/test": "^0.1100.0",
+    "@types/node-fetch": "^2.5.9"
   },
-  "dependencies": {}
+  "dependencies": {
+    "node-fetch": "^2.6.1"
+  },
+  "private": true
 }

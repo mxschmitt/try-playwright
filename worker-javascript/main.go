@@ -9,5 +9,7 @@ func handler(w *worker.Worker, code string) error {
 }
 
 func main() {
-	worker.NewWorker(handler).Run()
+	worker.NewWorker(&worker.WorkerExectionOptions{
+		Handler: handler,
+	}).Run()
 }

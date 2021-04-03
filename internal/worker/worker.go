@@ -20,8 +20,8 @@ import (
 type executionHandler func(worker *Worker, code string) error
 
 type Worker struct {
+	options *WorkerExectionOptions
 	channel *amqp.Channel
-	handler executionHandler
 	tmpDir  string
 	output  *bytes.Buffer
 	files   []string
@@ -30,6 +30,16 @@ type Worker struct {
 var queue_name = fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
 
 func (w *Worker) Run() {
+	if w.options.ExecutionDirectory != "" {
+		w.tmpDir = w.options.ExecutionDirectory
+	} else {
+		var err error
+		w.tmpDir, err = os.MkdirTemp("", "try-pw")
+		if err != nil {
+			log.Fatalf("could not create tmp dir: %v", err)
+		}
+	}
+
 	conn, err := amqp.Dial(os.Getenv("AMQP_URL"))
 	if err != nil {
 		log.Fatalf("could not dial to amqp: %v", err)
@@ -69,7 +79,7 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 	}
 	workerProxy := os.Getenv("WORKER_HTTP_PROXY")
 	c := exec.Cmd{
-		Dir:    collector.dir,
+		Dir:    w.tmpDir,
 		Path:   path,
 		Args:   append([]string{name}, args...),
 		Stdout: io.MultiWriter(os.Stdout, w.output),
@@ -81,7 +91,7 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 		),
 	}
 	if err := c.Run(); err != nil {
-		return fmt.Errorf("could not run command: %s", strings.TrimRight(w.output.String(), "\n"))
+		return fmt.Errorf("could not run command: %s", w.options.TransformOutput(w.output.String()))
 	}
 	files, err := collector.Collect()
 	if err != nil {
@@ -98,12 +108,12 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 		return fmt.Errorf("could not parse incoming amqp message: %w", err)
 	}
 	outgoingMessage := &workertypes.WorkerResponsePayload{}
-	if err := w.handler(w, incomingMessageParsed.Code); err != nil {
+	if err := w.options.Handler(w, incomingMessageParsed.Code); err != nil {
 		outgoingMessage.Success = false
 		outgoingMessage.Error = err.Error()
 	} else {
 		outgoingMessage.Success = true
-		outgoingMessage.Output = strings.TrimRight(w.output.String(), "\n")
+		outgoingMessage.Output = w.options.TransformOutput(w.output.String())
 		outgoingMessage.Files, err = w.uploadFiles()
 		if err != nil {
 			return fmt.Errorf("could not upload files: %w", err)
@@ -177,22 +187,23 @@ func (w *Worker) uploadFiles() ([]workertypes.File, error) {
 	return respBody, nil
 }
 
-func NewWorker(handler executionHandler, optionalDirectory ...string) *Worker {
-	var tmpDir string
-	if len(optionalDirectory) == 1 {
-		tmpDir = optionalDirectory[0]
-	} else {
-		var err error
-		tmpDir, err = os.MkdirTemp("", "try-pw")
-		if err != nil {
-			log.Fatalf("could not create tmp dir: %v", err)
-			return nil
-		}
+type WorkerExectionOptions struct {
+	Handler            executionHandler
+	ExecutionDirectory string
+	TransformOutput    func(output string) string
+}
+
+func NewWorker(options *WorkerExectionOptions) *Worker {
+	if options.TransformOutput == nil {
+		options.TransformOutput = DefaultTransformOutput
 	}
 	return &Worker{
-		handler: handler,
+		options: options,
 		output:  new(bytes.Buffer),
 		files:   make([]string, 0),
-		tmpDir:  tmpDir,
 	}
+}
+
+func DefaultTransformOutput(output string) string {
+	return strings.TrimRight(output, "\n")
 }

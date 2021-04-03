@@ -1,5 +1,6 @@
 import { Page } from 'playwright';
 import { expect, folio } from '@playwright/test';
+import { ROOT_URL } from './utils';
 
 const fixtures = folio.extend();
 fixtures.contextOptions.override(async ({ contextOptions }, runTest) => {
@@ -13,8 +14,6 @@ fixtures.contextOptions.override(async ({ contextOptions }, runTest) => {
   });
 });
 const { it, describe } = fixtures.build();
-
-const ROOT_URL = process.env.ROOT_TEST_URL || "http://localhost:8080"
 
 const executeExample = async (page: Page, nth: number): Promise<void> => {
   await page.goto(ROOT_URL, { waitUntil: "networkidle" });
