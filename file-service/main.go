@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/h2non/filetype"
+	"github.com/mxschmitt/try-playwright/internal/echoutils"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/getsentry/sentry-go"
@@ -77,6 +78,7 @@ func newServer() (*server, error) {
 	}
 
 	s.server = echo.New()
+	s.server.HTTPErrorHandler = echoutils.HTTPErrorHandler(s.server)
 	s.server.Use(sentryecho.New(sentryecho.Options{}))
 	s.server.GET("/api/v1/health", s.handleHealth)
 	s.server.HEAD("/api/v1/health", s.handleHealth)

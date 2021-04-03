@@ -5,6 +5,7 @@ COPY go.sum /root/
 RUN go mod download
 
 COPY file-service/* /root/
+COPY internal/echoutils /root/internal/echoutils
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app main.go
 
 FROM alpine:latest

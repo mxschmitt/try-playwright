@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/mxschmitt/try-playwright/internal/echoutils"
 	"github.com/mxschmitt/try-playwright/internal/workertypes"
 	log "github.com/sirupsen/logrus"
 
@@ -115,6 +116,7 @@ func newServer() (*server, error) {
 
 func (s *server) initializeHttpServer() {
 	s.server = echo.New()
+	s.server.HTTPErrorHandler = echoutils.HTTPErrorHandler(s.server)
 	s.server.Use(sentryecho.New(sentryecho.Options{}))
 	s.server.GET("/service/control/health", s.handleHealth)
 	s.server.HEAD("/service/control/health", s.handleHealth)
