@@ -1,5 +1,5 @@
 import { useState, useContext, useRef } from 'react';
-import { Col, Grid, IconButton, Icon, Loader, Panel, Notification } from 'rsuite'
+import { Col, Grid, IconButton, Icon, Loader, Panel } from 'rsuite'
 
 import { runCode, trackEvent } from '../../utils'
 import RightPanel from '../RightPanel'
@@ -13,6 +13,7 @@ const App: React.FunctionComponent = () => {
   const { code, onChangeRightPanelMode } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<SuccessExecutionResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const handleExecutionRef = useRef<() => Promise<void>>()
 
   const handleExecution = async (): Promise<void> => {
@@ -24,10 +25,7 @@ const App: React.FunctionComponent = () => {
       const resp = await runCode(code)
       setResponse(resp)
     } catch (err) {
-      Notification.error({
-        title: "Error!",
-        description: err.toString()
-      })
+      setError(err.toString())
     }
     setLoading(false)
     onChangeRightPanelMode(false)
@@ -56,7 +54,7 @@ const App: React.FunctionComponent = () => {
           </Panel>
         </Col>
         <Col xs={24} md={12}>
-          <RightPanel resp={resp} />
+          <RightPanel resp={resp} error={error}/>
         </Col>
       </Grid >
     </>
