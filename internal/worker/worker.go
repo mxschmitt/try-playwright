@@ -107,7 +107,7 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 	if err := json.Unmarshal(incomingMessage.Body, &incomingMessageParsed); err != nil {
 		return fmt.Errorf("could not parse incoming amqp message: %w", err)
 	}
-	outgoingMessage := &workertypes.WorkerResponsePayload{}
+	outgoingMessage := &workertypes.WorkerResponsePayload{Version: os.Getenv("PLAYWRIGHT_VERSION")}
 	if err := w.options.Handler(w, incomingMessageParsed.Code); err != nil {
 		outgoingMessage.Success = false
 		outgoingMessage.Error = err.Error()

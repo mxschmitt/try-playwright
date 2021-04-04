@@ -15,6 +15,10 @@ function executeCode(code: string, language: string): Promise<Response> {
   })
 }
 
+function expectValidVersion(payload: any) {
+  expect(payload.version).toMatch(/^\d+.\d+.\d+$/)
+}
+
 describe("JavaScript", () => {
   it("can execute basic code", async () => {
     const code = `console.log(1 + 1)`
@@ -23,7 +27,7 @@ describe("JavaScript", () => {
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
-    expect(body).toHaveProperty('version', '') // TODO: add version
+    expectValidVersion(body)
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
@@ -36,7 +40,7 @@ describe("Python", () => {
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
-    expect(body).toHaveProperty('version', '') // TODO: add version
+    expectValidVersion(body)
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
@@ -58,7 +62,7 @@ public class Example {
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
-    expect(body).toHaveProperty('version', '') // TODO: add version
+    expectValidVersion(body)
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
@@ -84,7 +88,7 @@ namespace e2e
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
-    expect(body).toHaveProperty('version', '') // TODO: add version
+    expectValidVersion(body)
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })

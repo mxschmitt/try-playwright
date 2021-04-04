@@ -29,7 +29,7 @@ jobs:
         version="$(bash .github/workflows/determine_docker_image_tag.sh)"
         bash k8/generate.sh $version
       env:
-        WORKER_COUNT: 2
+        WORKER_COUNT: 1
     - run: kubectl apply -f k8/
     - name: Run e2e tests
       working-directory: e2e
@@ -40,7 +40,7 @@ jobs:
         echo "Host: $FRONTEND_URL"
         npx wait-on "$FRONTEND_URL/service/control/health"
         kubectl wait --timeout 5m --for=condition=ready pod -l role=worker
-        ROOT_TEST_URL=$FRONTEND_URL npm run test
+        ROOT_TEST_URL=$FRONTEND_URL npm run test -- --forbid-only --retries 2
     - name: Setup tmate session
       if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
