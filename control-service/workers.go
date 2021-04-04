@@ -167,6 +167,7 @@ func (w *Worker) createPod() error {
 		Spec: v1.PodSpec{
 			RestartPolicy:                v1.RestartPolicy(v1.RestartPolicyNever),
 			AutomountServiceAccountToken: pointer.BoolPtr(false),
+			EnableServiceLinks:           pointer.BoolPtr(false),
 			Containers: []v1.Container{
 				{
 					Name:            "worker",
@@ -180,10 +181,6 @@ func (w *Worker) createPod() error {
 						{
 							Name:  "AMQP_URL",
 							Value: "amqp://rabbitmq:5672?heartbeat=5s",
-						},
-						{
-							Name:  "WORKER_NODE_SENTRY_DSN",
-							Value: "https://b700ea8b8e884318b9e97dddadb20804@o359550.ingest.sentry.io/3480980",
 						},
 						{
 							Name:  "WORKER_HTTP_PROXY",
