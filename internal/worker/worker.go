@@ -73,7 +73,7 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 	if err != nil {
 		return fmt.Errorf("could not command lookup path: %w", err)
 	}
-	collector, err := newFilesCollector(w.tmpDir)
+	collector, err := newFilesCollector(w.tmpDir, w.options.IgnoreFilePatterns)
 	if err != nil {
 		return fmt.Errorf("could not create file collector: %w", err)
 	}
@@ -191,6 +191,7 @@ type WorkerExectionOptions struct {
 	Handler            executionHandler
 	ExecutionDirectory string
 	TransformOutput    func(output string) string
+	IgnoreFilePatterns []string
 }
 
 func NewWorker(options *WorkerExectionOptions) *Worker {
