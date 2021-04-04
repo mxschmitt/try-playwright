@@ -26,7 +26,7 @@ func handler(w *worker.Worker, code string) error {
 	if err := os.WriteFile(filepath.Join(basePath, fmt.Sprintf("%s.java", className)), []byte(code), 0644); err != nil {
 		return fmt.Errorf("could not write Java source files: %v", err)
 	}
-	return w.ExecCommand("mvn", "compile", "exec:java", "-q", "-D", "jdk.module.illegalAccess=deny", "-D", fmt.Sprintf("exec.mainClass=org.example.%s", className))
+	return w.ExecCommand("mvn", "compile", "exec:java", "-q", "--offline", "-D", fmt.Sprintf("exec.mainClass=org.example.%s", className))
 }
 
 const NEW_LINE_SEPARATOR = "\n"
@@ -61,5 +61,6 @@ func main() {
 		Handler:            handler,
 		ExecutionDirectory: projectDir,
 		TransformOutput:    transformOutput,
+		IgnoreFilePatterns: []string{filepath.Join(projectDir, "target", "**")},
 	}).Run()
 }

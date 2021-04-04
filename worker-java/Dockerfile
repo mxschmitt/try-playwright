@@ -25,9 +25,7 @@ RUN mkdir /home/pwuser/project/
 COPY worker-java/pom.xml /home/pwuser/project/
 
 RUN cd /home/pwuser/project/ && \
-    mvn install
-
-COPY worker-java/settings.xml /home/pwuser/.m2/
+    mvn dependency:resolve-plugins dependency:go-offline
 
 COPY --from=builder /app /app
 

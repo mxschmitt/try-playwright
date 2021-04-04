@@ -4,21 +4,23 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
 )
 
 type filesCollector struct {
-	dir     string
-	done    chan bool
-	watcher *fsnotify.Watcher
+	dir            string
+	ignorePatterns []string
+	done           chan bool
+	watcher        *fsnotify.Watcher
 
 	filesMu sync.Mutex
 	files   []string
 }
 
-func newFilesCollector(dir string) (*filesCollector, error) {
+func newFilesCollector(dir string, ignorePatterns []string) (*filesCollector, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("could not create new fs watcher: %w", err)
@@ -27,10 +29,11 @@ func newFilesCollector(dir string) (*filesCollector, error) {
 		return nil, fmt.Errorf("could not add dir to watcher: %w", err)
 	}
 	fw := &filesCollector{
-		done:    make(chan bool),
-		watcher: watcher,
-		dir:     dir,
-		files:   []string{},
+		done:           make(chan bool),
+		watcher:        watcher,
+		dir:            dir,
+		ignorePatterns: ignorePatterns,
+		files:          []string{},
 	}
 	go fw.watch()
 	return fw, nil
@@ -69,6 +72,16 @@ func (fw *filesCollector) watch() {
 }
 
 func (fw *filesCollector) consumeCreateEvent(event fsnotify.Event) error {
+	for _, ignorePattern := range fw.ignorePatterns {
+		matched, err := filepath.Match(ignorePattern, event.Name)
+		if err != nil {
+			return fmt.Errorf("could not match pattern: %w", err)
+		}
+		if matched {
+			return nil
+		}
+	}
+
 	fi, err := os.Stat(event.Name)
 	if err != nil {
 		return fmt.Errorf("could not stat: %w", err)
@@ -77,10 +90,11 @@ func (fw *filesCollector) consumeCreateEvent(event fsnotify.Event) error {
 		if err := fw.watcher.Add(event.Name); err != nil {
 			return fmt.Errorf("could not add folder recursivelyt: %w", err)
 		}
-	} else {
-		fw.filesMu.Lock()
-		fw.files = append(fw.files, event.Name)
-		fw.filesMu.Unlock()
+		return nil
 	}
+
+	fw.filesMu.Lock()
+	fw.files = append(fw.files, event.Name)
+	fw.filesMu.Unlock()
 	return nil
 }
