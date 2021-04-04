@@ -1,3 +1,4 @@
+ARG PLAYWRIGHT_VERSION=1.9.2
 FROM golang:1.16-buster as builder
 WORKDIR /root
 COPY go.mod /root/
@@ -8,7 +9,10 @@ COPY worker-csharp/main.go /root/
 COPY internal/ /root/internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app
 
-FROM mcr.microsoft.com/playwright:v1.10.0-focal
+FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-focal
+
+ARG PLAYWRIGHT_VERSION
+ENV PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION
 
 RUN curl -o packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb && \
     dpkg -i packages-microsoft-prod.deb && \
@@ -27,7 +31,7 @@ USER pwuser
 RUN mkdir /home/pwuser/project/ && \
     cd /home/pwuser/project/ && \
     dotnet new console && \
-    dotnet add package PlaywrightSharp && \
+    dotnet add package PlaywrightSharp --version 0.192.0 && \
     dotnet build && \
     bin/Debug/net5.0/.playwright/unix/native/playwright.sh install && \
     rm Program.cs
