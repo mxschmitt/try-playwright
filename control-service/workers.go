@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
@@ -164,7 +165,8 @@ func (w *Worker) createPod() error {
 			},
 		},
 		Spec: v1.PodSpec{
-			RestartPolicy: v1.RestartPolicy(v1.RestartPolicyNever),
+			RestartPolicy:                v1.RestartPolicy(v1.RestartPolicyNever),
+			AutomountServiceAccountToken: pointer.BoolPtr(false),
 			Containers: []v1.Container{
 				{
 					Name:            "worker",
@@ -190,6 +192,18 @@ func (w *Worker) createPod() error {
 						{
 							Name:  "FILE_SERVICE_URL",
 							Value: "http://file:8080",
+						},
+					},
+					Resources: v1.ResourceRequirements{
+						Limits: v1.ResourceList{
+							v1.ResourceMemory:           resource.MustParse("512Mi"),
+							v1.ResourceCPU:              resource.MustParse("500m"),
+							v1.ResourceEphemeralStorage: resource.MustParse("512Mi"),
+						},
+						Requests: v1.ResourceList{
+							v1.ResourceMemory:           resource.MustParse("128Mi"),
+							v1.ResourceCPU:              resource.MustParse("200m"),
+							v1.ResourceEphemeralStorage: resource.MustParse("512Mi"),
 						},
 					},
 				},
