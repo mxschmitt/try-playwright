@@ -31,7 +31,7 @@ const (
 	SNIPPET_ID_LENGTH = 7
 	K8_NAMESPACE_NAME = "default"
 	WORKER_TIMEOUT    = 10
-	EXECUTION_TIMEOUT = 30
+	EXECUTION_TIMEOUT = 60
 )
 
 func init() {

@@ -15,5 +15,6 @@ git clone https://github.com/mxschmitt/try-playwright.git
 openssl req -x509 -nodes -days 730 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=try.playwright.tech/O=try.playwright.tech"
 kubectl create secret tls try-playwright-cf-tls-cert --key=tls.key --cert=tls.crt
 cd try-playwright
+bash k8/generate.sh
 kubectl apply -f k8/
 ```

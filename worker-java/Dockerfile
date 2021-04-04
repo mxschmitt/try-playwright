@@ -22,6 +22,9 @@ ARG PLAYWRIGHT_VERSION
 ENV PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION
 
 RUN adduser pwuser
+
+RUN chown pwuser -R /ms-playwright
+
 USER pwuser
 WORKDIR /home/pwuser/
 
