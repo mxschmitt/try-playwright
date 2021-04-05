@@ -11,13 +11,14 @@ import styles from './index.module.css'
 
 interface RightPanelProps {
     resp: SuccessExecutionResponse | null;
+    error: string | null
 }
 
 const getHeaderText = (mode: boolean): string => {
     return mode ? "Output" : "Examples"
 }
 
-const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
+const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp, error }) => {
     const { rightPanelMode, onChangeRightPanelMode } = useContext(CodeContext)
     const handleShowExamplesClick = (): void => onChangeRightPanelMode(!rightPanelMode)
 
@@ -33,7 +34,7 @@ const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
             }
         >
             <div className={styles.rightPanelWrapper}>
-                {rightPanelMode ? <RightExamplesPanel /> : <RightOutputPanel resp={resp} />}
+                {rightPanelMode ? <RightExamplesPanel /> : <RightOutputPanel resp={resp} error={error}/>}
             </div>
         </Panel>
     )

@@ -8,7 +8,7 @@ import styles from './index.module.css'
 const ShareButton: React.FunctionComponent = () => {
     const { code } = useContext(CodeContext)
     const handleOnClick = async (): Promise<void> => {
-        let path = ""
+        const urlParams = new URLSearchParams(window.location.search);
         // if there is a example existing with the same code, then use this
         const example = Examples.find(example => example.code === code)
         if (!example) {
@@ -29,12 +29,14 @@ const ShareButton: React.FunctionComponent = () => {
                 return
             }
             const body = await resp.json()
-            path = `s=${body?.key}`
+            urlParams.set("s", body?.key)
+            urlParams.delete("e")
         } else {
-            path = `e=${example.id}`
+            urlParams.set("e", example.id)
+            urlParams.delete("s")
         }
 
-        const newURL = `${window.location.origin}${window.location.pathname}?${path}`
+        const newURL = `${window.location.origin}${window.location.pathname}?${urlParams.toString()}`
         window.history.pushState(null, "Try Playwright", newURL)
         clipboard.writeText(newURL)
             .then(() => {
