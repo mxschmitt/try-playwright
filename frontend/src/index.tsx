@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/browser';
 import './index.css'
 
 import App from './components/App';
-import CodeContextWrapper from './components/CodeContext';
+import CodeContextProvider from './components/CodeContext';
 
 if (process.env.NODE_ENV === "production" && window.location.hostname !== "localhost") {
     Sentry.init({
@@ -14,6 +14,6 @@ if (process.env.NODE_ENV === "production" && window.location.hostname !== "local
     });
 }
 
-ReactDOM.render(<CodeContextWrapper>
+ReactDOM.render(<CodeContextProvider>
     <App />
-</CodeContextWrapper>, document.getElementById('root'));
+</CodeContextProvider>, document.getElementById('root'));

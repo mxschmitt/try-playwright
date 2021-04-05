@@ -1,4 +1,5 @@
-import { Examples } from "./constants";
+import { CodeLanguage, LANGUAGES } from "./constants";
+import { Example } from "./examples";
 
 export const runCode = async (code: string): Promise<SuccessExecutionResponse> => {
   const resp = await fetch("/service/control/run", {
@@ -40,7 +41,7 @@ const fetchSharedCode = async (code: string): Promise<string | null> => {
   return await resp.text()
 }
 
-export const determineCode = async (setCode: ((code: string) => void)): Promise<void> => {
+export const determineCode = async (setCode: ((code: string) => void), examples: Example[]): Promise<void> => {
   const urlParams = new URLSearchParams(window.location.search);
   const localStorageCode = window.localStorage && window.localStorage.getItem("code")
   if (urlParams.has("s")) {
@@ -53,7 +54,7 @@ export const determineCode = async (setCode: ((code: string) => void)): Promise<
     }
   } else if (urlParams.has("e")) {
     const id = urlParams.get("e")
-    const example = Examples.find(example => example.id === id)
+    const example = examples.find(example => example.id === id)
     if (example) {
       return setCode(example.code)
     }
@@ -61,16 +62,20 @@ export const determineCode = async (setCode: ((code: string) => void)): Promise<
     return setCode(localStorageCode)
   }
   // Fallback
-  setCode(Examples[0].code)
+  setCode(examples?.[0]?.code)
 }
 
-const allowedLanguages = ["javascript", "java", "python", "csharp"]
-
-export const determineLanguage = (): string => {
+export const determineLanguage = (): CodeLanguage => {
   const params = new URLSearchParams(window.location.search)
-  const language = params.get("l")
-  if (language && allowedLanguages.includes(language)) {
+  const language = params.get("l") as CodeLanguage
+  if (language && LANGUAGES.includes(language)) {
     return language
   }
-  return "javascript"
+  return CodeLanguage.JAVASCRIPT
+}
+
+export const pushNewURL = (params: URLSearchParams): string => {
+  const newURL = `${window.location.origin}${window.location.pathname}?${params.toString()}`
+  window.history.pushState(null, "Try Playwright", newURL)
+  return newURL
 }

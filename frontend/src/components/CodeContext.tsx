@@ -1,11 +1,16 @@
 import { useState, useEffect, createContext } from 'react'
+import { CodeLanguage } from '../constants'
+import { Example, Examples } from '../examples'
 
 import useDebounceCallback from '../hooks/useDebounceCallback'
-import { determineCode } from '../utils'
+import { determineCode, determineLanguage, pushNewURL } from '../utils'
 
 
 interface CodeContextContent {
     code: string;
+    codeLanguage: CodeLanguage
+    onLanguageChange: (language: CodeLanguage) => void,
+    examples: Example[],
     onChange: (code: string) => void;
     rightPanelMode: boolean;
     onChangeRightPanelMode: (val: boolean) => void;
@@ -13,15 +18,19 @@ interface CodeContextContent {
 
 export const CodeContext = createContext<CodeContextContent>({
     code: "",
+    codeLanguage: CodeLanguage.JAVASCRIPT,
+    onLanguageChange: () => {},
+    examples: [],
     onChange: () => null,
     rightPanelMode: true,
     onChangeRightPanelMode: () => null,
 })
 
-const CodeContextWrapper: React.FunctionComponent = ({ children }) => {
+const CodeContextProvider: React.FunctionComponent = ({ children }) => {
     // keep some value in there due a bug with react-monaco-editor
     const [code, setCode] = useState<string>(" ")
     const [rightPanelMode, setRightPanelMode] = useState(true)
+    const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>(determineLanguage())
 
     // Store the code in localstorage with a 500ms debounce on change
     const handleLazyStore = ()=>{
@@ -34,14 +43,27 @@ const CodeContextWrapper: React.FunctionComponent = ({ children }) => {
         debouncedCallback()
     }, [code, debouncedCallback])
 
+    const examples = Examples[codeLanguage]
+
     // determine the code which should be loaded on the application start
     useEffect(() => {
-        determineCode(code => setCode(code))
-    }, [])
+        determineCode(code => setCode(code), examples)
+    }, [examples])
+
+    const handleSetLanguage = (language: CodeLanguage) => {
+        const params = new URLSearchParams(window.location.search)
+        params.set("l", language)
+        pushNewURL(params)
+        setCodeLanguage(language)
+        setRightPanelMode(true)
+    }
 
     return (
         <CodeContext.Provider value={{
             code,
+            codeLanguage: codeLanguage,
+            onLanguageChange: handleSetLanguage,
+            examples,
             onChange: setCode,
             rightPanelMode,
             onChangeRightPanelMode: setRightPanelMode
@@ -51,4 +73,4 @@ const CodeContextWrapper: React.FunctionComponent = ({ children }) => {
     )
 }
 
-export default CodeContextWrapper
+export default CodeContextProvider

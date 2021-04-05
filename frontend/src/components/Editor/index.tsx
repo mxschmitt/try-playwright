@@ -5,7 +5,6 @@ import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import useDarkMode from "../../hooks/useDarkMode"
-import { determineLanguage } from '../../utils';
 import { CodeContext } from '../CodeContext';
 import styles from './index.module.css'
 
@@ -30,8 +29,9 @@ interface EditorProps {
 }
 
 const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
+    const monacoEditorRef = useRef<typeof monacoEditor|null>(null)
     const [darkMode] = useDarkMode()
-    const { code, onChange } = useContext(CodeContext)
+    const { code, onChange, codeLanguage } = useContext(CodeContext)
     const ref = useRef<monacoEditor.editor.IStandaloneCodeEditor>()
     useEffect(() => {
         monacoEditor.editor.defineTheme('custom-dark', {
@@ -69,21 +69,26 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
 
         // @ts-ignore
         editor._standaloneKeybindingService.addDynamicKeybinding("-expandLineSelection",null,() => {});
+        monacoEditorRef.current = monaco
+        editor.focus()
+    }
 
-        if (determineLanguage() === "javascript") {
-            monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
-            monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+    const tsTypesAlreadyLoaded = useRef(false)
+    useEffect(()=>{
+        if (monacoEditorRef.current && codeLanguage === "javascript" && tsTypesAlreadyLoaded.current === false) {
+            tsTypesAlreadyLoaded.current = true
+            monacoEditorRef.current.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
+            monacoEditorRef.current.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
                 diagnosticCodesToIgnore: [80001, 7044]
             })
         }
-        editor.focus()
-    }
+    }, [codeLanguage])
 
     return (
         <div className={styles.monacoEditorWrapper}>
             <MonacoEditor
                 onChange={onChange}
-                language={determineLanguage()}
+                language={codeLanguage}
                 theme={darkMode ? "custom-dark" : "vs"}
                 value={code}
                 options={MONACO_OPTIONS}

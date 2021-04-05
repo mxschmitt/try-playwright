@@ -1,29 +1,30 @@
 import { useState, useEffect, useContext } from 'react'
 import { PanelGroup, Panel } from 'rsuite'
 
-import { Examples } from '../../../constants'
-import { determineCode } from '../../../utils'
+import { determineCode, pushNewURL } from '../../../utils'
 import { CodeContext } from '../../CodeContext'
 
 import styles from './index.module.css'
 
 const RightExamplesPanel: React.FunctionComponent = () => {
     const [expandedID, setExpandedId] = useState<string>()
-    const { onChange } = useContext(CodeContext)
+    const { onChange, examples } = useContext(CodeContext)
     // Try to find the matching example and set it to expanded
     useEffect(() => {
         determineCode((code) => {
-            const example = Examples.find(example => example.code === code)
+            const example = examples.find(example => example.code === code)
             if (example) {
                 setExpandedId(example.id)
             }
-        })
-    }, [setExpandedId])
+        }, examples)
+    }, [setExpandedId, examples])
     const handleOnSelect = (eventKey: string): void => {
-        const newURL = `${window.location.origin}${window.location.pathname}?e=${eventKey}`
-        window.history.pushState(null, "Try Playwright", newURL)
+        const params = new URLSearchParams(window.location.search)
+        params.set("e", eventKey)
+        params.delete("s")
+        pushNewURL(params)
 
-        const example = Examples.find(example => example.id === eventKey)
+        const example = examples.find(example => example.id === eventKey)
         if (example) {
             onChange(example.code)
         }
@@ -31,7 +32,7 @@ const RightExamplesPanel: React.FunctionComponent = () => {
     return (
         <>
             <PanelGroup accordion bordered onSelect={handleOnSelect}>
-                {Examples.map((example, idx) => <Panel key={example.id} eventKey={example.id} header={<>
+                {examples.map((example, idx) => <Panel key={example.id} eventKey={example.id} header={<>
                     <a className={styles.exampleLink} href={`/?e=${example.id}`} onClick={(e: React.MouseEvent): void => e.preventDefault()}>
                         {example.title}
                     </a>

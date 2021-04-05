@@ -2,15 +2,17 @@ import { useEffect, useContext } from 'react'
 import { IconButton, Icon, Notification } from 'rsuite'
 import * as clipboard from 'clipboard-polyfill'
 import { CodeContext } from '../CodeContext'
-import { Examples } from '../../constants'
 import styles from './index.module.css'
+import { pushNewURL } from '../../utils'
 
 const ShareButton: React.FunctionComponent = () => {
-    const { code } = useContext(CodeContext)
+    const { code, examples } = useContext(CodeContext)
     const handleOnClick = async (): Promise<void> => {
         const urlParams = new URLSearchParams(window.location.search);
+        urlParams.delete("e")
+        urlParams.delete("s")
         // if there is a example existing with the same code, then use this
-        const example = Examples.find(example => example.code === code)
+        const example = examples.find(example => example.code === code)
         if (!example) {
             const resp = await fetch("/service/control/share/create", {
                 method: "POST",
@@ -30,14 +32,10 @@ const ShareButton: React.FunctionComponent = () => {
             }
             const body = await resp.json()
             urlParams.set("s", body?.key)
-            urlParams.delete("e")
         } else {
             urlParams.set("e", example.id)
-            urlParams.delete("s")
         }
-
-        const newURL = `${window.location.origin}${window.location.pathname}?${urlParams.toString()}`
-        window.history.pushState(null, "Try Playwright", newURL)
+        const newURL = pushNewURL(urlParams)
         clipboard.writeText(newURL)
             .then(() => {
                 Notification.success({
