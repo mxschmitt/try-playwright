@@ -8,6 +8,7 @@ import Editor from '../Editor'
 import { CodeContext } from '../CodeContext'
 
 import styles from './index.module.css'
+import CodeLanguageSelector from '../CodeLanguageSelector';
 
 const App: React.FunctionComponent = () => {
   const { code, onChangeRightPanelMode } = useContext(CodeContext)
@@ -45,9 +46,12 @@ const App: React.FunctionComponent = () => {
             header={
               <>
                 Editor
-               <IconButton onClick={handleExecution} className={styles.runButton} icon={<Icon icon="play" />}>
-                  Run
-              </IconButton>
+                <div className={styles.codeHeaderButtons}>
+                  <CodeLanguageSelector />
+                  <IconButton onClick={handleExecution} icon={<Icon icon="play" />}>
+                      Run
+                  </IconButton>
+                </div>
               </>
             }
           >
