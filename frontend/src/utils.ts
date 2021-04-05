@@ -67,9 +67,15 @@ export const determineCode = async (setCode: ((code: string) => void), examples:
 
 export const determineLanguage = (): CodeLanguage => {
   const params = new URLSearchParams(window.location.search)
-  const language = params.get("l") as CodeLanguage
-  if (language && LANGUAGES.includes(language)) {
-    return language
+  const paramsLanguage = params.get("l") as CodeLanguage
+  if (paramsLanguage && LANGUAGES.includes(paramsLanguage)) {
+    return paramsLanguage
+  }
+  if (window.localStorage) {
+    const localStorageLanguage = window.localStorage.getItem("language") as CodeLanguage
+    if (localStorageLanguage) {
+      return localStorageLanguage
+    }
   }
   return CodeLanguage.JAVASCRIPT
 }

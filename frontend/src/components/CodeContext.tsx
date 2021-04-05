@@ -36,6 +36,7 @@ const CodeContextProvider: React.FunctionComponent = ({ children }) => {
     const handleLazyStore = ()=>{
         if (window.localStorage) {
             window.localStorage.setItem("code", code)
+            window.localStorage.setItem("language", codeLanguage)
         }
     }
     const [debouncedCallback] = useDebounceCallback(handleLazyStore, 500)
@@ -55,6 +56,10 @@ const CodeContextProvider: React.FunctionComponent = ({ children }) => {
         params.set("l", language)
         pushNewURL(params)
         setCodeLanguage(language)
+        setCode("")
+        if (window.localStorage) {
+            window.localStorage.removeItem("code")
+        }
         setRightPanelMode(true)
     }
 
