@@ -19,6 +19,7 @@ const App: React.FunctionComponent = () => {
   const handleExecution = async (): Promise<void> => {
     setLoading(true)
     setResponse(null)
+    setError(null)
 
     trackEvent()
     try {
