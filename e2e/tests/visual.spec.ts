@@ -140,7 +140,7 @@ describe("should handle platform core related features", test => {
 }, () => {
   it("should handle the timeout correctly", async ({ page }) => {
     const CODE = `(async () => {
-  await new Promise(resolve => {})`
+      await new Promise(resolve => setTimeout(resolve, 70 * 1000))`
     await page.goto(ROOT_URL, { waitUntil: "networkidle" });
     await page.click(".monaco-editor")
     await page.keyboard.press("Meta+KeyA")
