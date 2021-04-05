@@ -1,5 +1,8 @@
 import { CodeLanguage } from "../constants"
 import javaScriptExamples from './javascript'
+import javaExamples from './java'
+import cSharpExamples from './csharp'
+import pythonExamples from './python'
 
 interface MetaExample {
   id: string;
@@ -11,8 +14,8 @@ export interface Example extends MetaExample {
   code: string;
 }
 
-const injectCode = (language: CodeLanguage) => (example: MetaExample): Example => {
-  const code = require(`!!raw-loader!./${language}/${example.id}.js`)
+const injectCode = (language: CodeLanguage, extension: string) => (example: MetaExample): Example => {
+  const code = require(`!!raw-loader!./${language}/${example.id}.${extension}`)
   return {
     ...example,
     code: code.default
@@ -20,8 +23,8 @@ const injectCode = (language: CodeLanguage) => (example: MetaExample): Example =
 }
 
 export const Examples: Record<CodeLanguage, Example[]> = {
-  [CodeLanguage.CSHARP]: [].map(injectCode(CodeLanguage.CSHARP)),
-  [CodeLanguage.JAVASCRIPT]: javaScriptExamples.map(injectCode(CodeLanguage.JAVASCRIPT)),
-  [CodeLanguage.JAVA]: [].map(injectCode(CodeLanguage.JAVA)),
-  [CodeLanguage.PYTHON]: [].map(injectCode(CodeLanguage.PYTHON)),
+  [CodeLanguage.CSHARP]: cSharpExamples.map(injectCode(CodeLanguage.CSHARP, "cs")),
+  [CodeLanguage.JAVASCRIPT]: javaScriptExamples.map(injectCode(CodeLanguage.JAVASCRIPT, "js")),
+  [CodeLanguage.JAVA]: javaExamples.map(injectCode(CodeLanguage.JAVA, "java")),
+  [CodeLanguage.PYTHON]: pythonExamples.map(injectCode(CodeLanguage.PYTHON, "py")),
 }
