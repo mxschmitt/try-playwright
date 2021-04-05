@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install k3s
       run: |
-        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --no-deploy traefik" sh -
+        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker --no-deploy traefik" sh -
         mkdir -p ~/.kube
         cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
     - name: Install dependencies
