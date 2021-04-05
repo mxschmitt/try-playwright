@@ -84,13 +84,17 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         }
     }, [codeLanguage])
 
+    // Workaround for https://github.com/react-monaco-editor/react-monaco-editor/issues/325
+    useEffect(()=>{
+        ref.current?.setValue(code)
+    }, [code, ref])
+
     return (
         <div className={styles.monacoEditorWrapper}>
             <MonacoEditor
                 onChange={onChange}
                 language={codeLanguage}
                 theme={darkMode ? "custom-dark" : "vs"}
-                value={code}
                 options={MONACO_OPTIONS}
                 editorDidMount={handleEditorDidMount}
                 height="100%"
