@@ -87,7 +87,7 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 		Env: append(
 			os.Environ(),
 			fmt.Sprintf("http_proxy=%s", workerProxy),
-			fmt.Sprintf("HTTPS_PROXY=%s", workerProxy),
+			fmt.Sprintf("https_proxy=%s", workerProxy),
 		),
 	}
 	if err := c.Run(); err != nil {
