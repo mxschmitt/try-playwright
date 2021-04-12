@@ -1,4 +1,4 @@
-import { expect, it, describe } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import fetch, { Response } from 'node-fetch'
 import { ROOT_URL } from './utils';
 
@@ -19,8 +19,8 @@ function expectValidVersion(payload: any) {
   expect(payload.version).toMatch(/^\d+.\d+.\d+$/)
 }
 
-describe("JavaScript", () => {
-  it("can execute basic code", async () => {
+test.describe("JavaScript", () => {
+  test("can execute basic code", async () => {
     const code = `console.log(1 + 1)`
     const resp = await executeCode(code, "javascript")
     expect(resp.ok).toBe(true)
@@ -31,7 +31,7 @@ describe("JavaScript", () => {
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
-  it("can evaluate in a Page", async () => {
+  test("can evaluate in a Page", async () => {
     const code = `
     // @ts-check
     const playwright = require('playwright');
@@ -53,8 +53,8 @@ describe("JavaScript", () => {
   })
 })
 
-describe("Python", () => {
-  it("can execute basic code", async () => {
+test.describe("Python", () => {
+  test("can execute basic code", async () => {
     const resp = await executeCode("print(1+1)", "python")
     expect(resp.ok).toBe(true)
     const body = await resp.json()
@@ -64,7 +64,7 @@ describe("Python", () => {
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
-  it("can evaluate in a Page", async () => {
+  test("can evaluate in a Page", async () => {
     const code = `
 from playwright.sync_api import sync_playwright
 
@@ -85,8 +85,8 @@ with sync_playwright() as p:
   })
 })
 
-describe("Java", () => {
-  it("can execute basic code", async () => {
+test.describe("Java", () => {
+  test("can execute basic code", async () => {
     const code = `
 package org.example;
 
@@ -105,7 +105,7 @@ public class Example {
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
-  it("can evaluate in a Page", async () => {
+  test("can evaluate in a Page", async () => {
     const code = `
     package org.example;
 
@@ -133,8 +133,8 @@ public class Example {
   })
 })
 
-describe("C#", () => {
-  it("can execute basic code", async () => {
+test.describe("C#", () => {
+  test("can execute basic code", async () => {
     const code = `
     using System;
     using System.Threading.Tasks;
@@ -165,7 +165,7 @@ describe("C#", () => {
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
-  it("can evaluate in a Page", async () => {
+  test("can evaluate in a Page", async () => {
     const code = `
 using System;
 
