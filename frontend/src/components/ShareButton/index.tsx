@@ -6,11 +6,12 @@ import styles from './index.module.css'
 import { pushNewURL } from '../../utils'
 
 const ShareButton: React.FunctionComponent = () => {
-    const { code, examples } = useContext(CodeContext)
+    const { code, codeLanguage, examples } = useContext(CodeContext)
     const handleOnClick = async (): Promise<void> => {
         const urlParams = new URLSearchParams(window.location.search);
         urlParams.delete("e")
         urlParams.delete("s")
+        urlParams.set("l", codeLanguage)
         // if there is a example existing with the same code, then use this
         const example = examples.find(example => example.code === code)
         if (!example) {
