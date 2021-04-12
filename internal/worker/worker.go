@@ -88,6 +88,8 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 			os.Environ(),
 			fmt.Sprintf("http_proxy=%s", workerProxy),
 			fmt.Sprintf("HTTPS_PROXY=%s", workerProxy),
+			// Firefox needs it currently in lower-case. See
+			// https://github.com/microsoft/playwright/issues/6094
 			fmt.Sprintf("https_proxy=%s", workerProxy),
 		),
 	}

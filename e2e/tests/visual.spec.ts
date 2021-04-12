@@ -116,7 +116,7 @@ describe("Share functionality", () => {
     await page.goto(ROOT_URL, { waitUntil: "networkidle" });
     await page.click("text='Share'")
     await page.waitForTimeout(500)
-    expect(page.url()).toBe(`${ROOT_URL}/?e=page-screenshot`)
+    expect(page.url()).toBe(`${ROOT_URL}/?l=javascript&e=page-screenshot`)
   })
   it("should generate share URL", async ({ page }) => {
     await page.goto(ROOT_URL, { waitUntil: "networkidle" });
@@ -127,7 +127,7 @@ describe("Share functionality", () => {
 
     await page.click("text='Share'")
     await page.waitForTimeout(500)
-    expect(page.url().startsWith(`${ROOT_URL}/?s=`)).toBeTruthy()
+    expect(page.url().startsWith(`${ROOT_URL}/?l=javascript&s=`)).toBeTruthy()
 
     await page.reload()
     await page.click("text='Run'")
