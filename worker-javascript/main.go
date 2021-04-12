@@ -5,7 +5,7 @@ import (
 )
 
 func handler(w *worker.Worker, code string) error {
-	return w.ExecCommand("node", "-e", code)
+	return w.ExecCommand("node", "--unhandled-rejections=strict", "-e", code)
 }
 
 func main() {

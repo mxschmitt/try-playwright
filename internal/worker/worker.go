@@ -3,6 +3,7 @@ package worker
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -94,7 +95,7 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 		),
 	}
 	if err := c.Run(); err != nil {
-		return fmt.Errorf("could not run command: %s", w.options.TransformOutput(w.output.String()))
+		return errors.New("could not run command")
 	}
 	files, err := collector.Collect()
 	if err != nil {
@@ -116,12 +117,12 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 		outgoingMessage.Error = err.Error()
 	} else {
 		outgoingMessage.Success = true
-		outgoingMessage.Output = w.options.TransformOutput(w.output.String())
 		outgoingMessage.Files, err = w.uploadFiles()
 		if err != nil {
 			return fmt.Errorf("could not upload files: %w", err)
 		}
 	}
+	outgoingMessage.Output = w.options.TransformOutput(w.output.String())
 	outgoingMessageBody, err := json.Marshal(outgoingMessage)
 	if err != nil {
 		return fmt.Errorf("could not marshal outgoing message payload: %w", err)

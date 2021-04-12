@@ -10,15 +10,14 @@ import { CodeContext } from '../CodeContext'
 import styles from './index.module.css'
 
 interface RightPanelProps {
-    resp: SuccessExecutionResponse | null;
-    error: string | null
+    resp: ExecutionResponse | null;
 }
 
 const getHeaderText = (mode: boolean): string => {
     return mode ? "Output" : "Examples"
 }
 
-const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp, error }) => {
+const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
     const { rightPanelMode, onChangeRightPanelMode } = useContext(CodeContext)
     const handleShowExamplesClick = (): void => onChangeRightPanelMode(!rightPanelMode)
 
@@ -34,7 +33,7 @@ const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp, error }) =
             }
         >
             <div className={styles.rightPanelWrapper}>
-                {rightPanelMode ? <RightExamplesPanel /> : <RightOutputPanel resp={resp} error={error}/>}
+                {rightPanelMode ? <RightExamplesPanel /> : <RightOutputPanel resp={resp} />}
             </div>
         </Panel>
     )
