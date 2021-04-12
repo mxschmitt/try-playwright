@@ -1,19 +1,6 @@
 import { Page } from 'playwright';
-import { expect, folio } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { ROOT_URL } from './utils';
-
-const fixtures = folio.extend();
-fixtures.contextOptions.override(async ({ contextOptions }, runTest) => {
-  await runTest({
-    ...contextOptions,
-    ignoreHTTPSErrors: true,
-    viewport: {
-      width: 1920,
-      height: 1080
-    }
-  });
-});
-const { it, describe } = fixtures.build();
 
 const executeExample = async (page: Page, nth: number): Promise<void> => {
   await page.goto(ROOT_URL, { waitUntil: "networkidle" });
@@ -38,22 +25,22 @@ const getConsoleLines = async (page: Page): Promise<string[]> => {
   return await page.$eval<string[], HTMLElement>(".rs-panel-body code", (code) => code.innerText.split(/\n/).filter(Boolean))
 }
 
-describe('Examples', () => {
-  it("1: should be able to make screenshots in all browsers", async ({ page }) => {
+test.describe('Examples', () => {
+  test("1: should be able to make screenshots in all browsers", async ({ page }) => {
     await executeExample(page, 1)
     const imageCount = await getImageCount(page)
     expect(imageCount).toBe(2)
     const imageNames = await getFileNames(page)
     expect(new Set(imageNames)).toEqual(new Set(["example-chromium.png", "example-webkit.png"]))
   })
-  it("2: should be able to set the geolocation", async ({ page }) => {
+  test("2: should be able to set the geolocation", async ({ page }) => {
     await executeExample(page, 2)
     const imageCount = await getImageCount(page)
     expect(imageCount).toBe(1)
     const imageNames = await getFileNames(page)
     expect(imageNames).toEqual(["colosseum-iphone.png"])
   })
-  it("3: should be able to generate a PDF file", async ({ page }) => {
+  test("3: should be able to generate a PDF file", async ({ page }) => {
     await executeExample(page, 3)
     await page.waitForSelector(".rs-panel-body object")
     const pdfCount = await page.$$eval('p[data-test-id="file"] object', (objects) => objects.length)
@@ -61,9 +48,7 @@ describe('Examples', () => {
     const imageNames = await getFileNames(page)
     expect(imageNames).toEqual(["document.pdf"])
   })
-  it("4: should be able to record a video", test => {
-    test.slow();
-  }, async ({ page }) => {
+  test("4: should be able to record a video", async ({ page }) => {
     await executeExample(page, 4)
     const videoCount = await getVideoCount(page)
     expect(videoCount).toBe(1)
@@ -71,28 +56,28 @@ describe('Examples', () => {
     expect(imageNames.length).toBe(1)
     expect(imageNames[0].endsWith(".webm")).toBe(true)
   })
-  it("5: should be able to execute something in the browser context", async ({ page }) => {
+  test("5: should be able to execute something in the browser context", async ({ page }) => {
     await executeExample(page, 5)
     const logStatements = await getConsoleLines(page)
     expect(logStatements.length).toBe(1)
     const parsed = JSON.parse(logStatements[0])
     expect(Object.keys(parsed)).toEqual(["width", "height", "deviceScaleFactor"])
   })
-  it("6: should be able to intercept network requests", async ({ page }) => {
+  test("6: should be able to intercept network requests", async ({ page }) => {
     await executeExample(page, 6)
     const logStatements = await getConsoleLines(page)
     expect(logStatements.length).toBeGreaterThan(20) // just so we know that something is going on here
     const allStartsWithHttpOrHttpsProtocol = logStatements.every(entry => entry.startsWith("http://") || entry.startsWith("https://"))
     expect(allStartsWithHttpOrHttpsProtocol).toBe(true)
   })
-  it("7: should be able to intercept and modify network requests", async ({ page }) => {
+  test("7: should be able to intercept and modify network requests", async ({ page }) => {
     await executeExample(page, 7)
     const imageCount = await getImageCount(page)
     expect(imageCount).toBe(1)
     const imageNames = await getFileNames(page)
     expect(imageNames).toEqual(["window.png"])
   })
-  it("8: should be able to run the todomvc.com example", async ({ page }) => {
+  test("8: should be able to run the todomvc.com example", async ({ page }) => {
     await executeExample(page, 8)
     const videoCount = await getVideoCount(page)
     expect(videoCount).toBe(1)
@@ -100,7 +85,7 @@ describe('Examples', () => {
     expect(imageNames.length).toBe(1)
     expect(imageNames[0].endsWith(".webm")).toBe(true)
   })
-  it("9: should be able to run the y-combinator crawling example", async ({ page }) => {
+  test("9: should be able to run the y-combinator crawling example", async ({ page }) => {
     await executeExample(page, 9)
     const imageCount = await getImageCount(page)
     expect(imageCount).toBe(1)
@@ -111,14 +96,14 @@ describe('Examples', () => {
   })
 });
 
-describe("Share functionality", () => {
-  it("should not generate share URL for predefined example", async ({ page }) => {
+test.describe("Share functionality", () => {
+  test("should not generate share URL for predefined example", async ({ page }) => {
     await page.goto(ROOT_URL, { waitUntil: "networkidle" });
     await page.click("text='Share'")
     await page.waitForTimeout(500)
     expect(page.url()).toBe(`${ROOT_URL}/?l=javascript&e=page-screenshot`)
   })
-  it("should generate share URL", async ({ page }) => {
+  test("should generate share URL", async ({ page }) => {
     await page.goto(ROOT_URL, { waitUntil: "networkidle" });
 
     await page.click(".monaco-editor")
@@ -135,10 +120,8 @@ describe("Share functionality", () => {
   })
 })
 
-describe("should handle platform core related features", test => {
-  test.slow();
-}, () => {
-  it("should handle the timeout correctly", async ({ page }) => {
+test.describe("should handle platform core related features", () => {
+  test("should handle the timeout correctly", async ({ page }) => {
     const CODE = `(async () => {
   await new Promise(resolve => setTimeout(resolve, 70 * 1000))`
     await page.goto(ROOT_URL, { waitUntil: "networkidle" });
@@ -154,7 +137,7 @@ describe("should handle platform core related features", test => {
       timeout: 70 * 1000
     })
   })
-  it("should handle uncaughtException correctly", async ({ page }) => {
+  test("should handle uncaughtException correctly", async ({ page }) => {
     await page.goto(ROOT_URL);
     await page.waitForTimeout(200)
     await page.evaluate(() => {
@@ -176,7 +159,7 @@ const playwright = require("playwright");
     await page.click("text='Run'")
     await page.waitForSelector("text=Error: foobar!")
   })
-  it("should prevent access to the control microservice from inside the worker", async ({ page }) => {
+  test("should prevent access to the control microservice from inside the worker", async ({ page }) => {
     await page.goto(ROOT_URL);
     await page.waitForTimeout(200)
     await page.evaluate(() => {
