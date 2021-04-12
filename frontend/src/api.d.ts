@@ -4,17 +4,11 @@ interface FileWrapper {
   extension: string;
 }
 
-type ErroredExecutionResponse = {
-  success: false
+type ExecutionResponse = Partial<{
+  success: boolean
   error: string
-}
-
-type SuccessExecutionResponse ={
-  success: true
   version: string;
   duration?: number;
   files: FileWrapper[];
   output: string;
-}
-
-type ExecutionResponse = ErroredExecutionResponse | SuccessExecutionResponse
+}>

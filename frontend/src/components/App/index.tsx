@@ -13,22 +13,15 @@ import CodeLanguageSelector from '../CodeLanguageSelector';
 const App: React.FunctionComponent = () => {
   const { code, onChangeRightPanelMode } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
-  const [resp, setResponse] = useState<SuccessExecutionResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [resp, setResponse] = useState<ExecutionResponse|null>(null)
   const handleExecutionRef = useRef<() => Promise<void>>()
 
   const handleExecution = async (): Promise<void> => {
     setLoading(true)
     setResponse(null)
-    setError(null)
 
     trackEvent()
-    try {
-      const resp = await runCode(code)
-      setResponse(resp)
-    } catch (err) {
-      setError(err.toString())
-    }
+    setResponse(await runCode(code))
     setLoading(false)
     onChangeRightPanelMode(false)
   }
@@ -59,7 +52,7 @@ const App: React.FunctionComponent = () => {
           </Panel>
         </Col>
         <Col xs={24} md={12}>
-          <RightPanel resp={resp} error={error}/>
+          <RightPanel resp={resp} />
         </Col>
       </Grid >
     </>

@@ -1,7 +1,7 @@
 import { CodeLanguage, LANGUAGES } from "./constants";
 import { Example } from "./examples";
 
-export const runCode = async (code: string): Promise<SuccessExecutionResponse> => {
+export const runCode = async (code: string): Promise<ExecutionResponse> => {
   const resp = await fetch("/service/control/run", {
     method: "POST",
     headers: {
@@ -12,15 +12,15 @@ export const runCode = async (code: string): Promise<SuccessExecutionResponse> =
       language: determineLanguage()
     })
   })
+
   if (!resp.ok) {
     if (resp.status === 429) {
-      throw new Error("You are rate limited, please try again in a few minutes.")
+      return { error: "You are rate limited, please try again in a few minutes." }
     }
     if (resp.headers.get("Content-Type")?.includes("application/json")) {
-      const error = await resp.json()
-      throw new Error(error.error)
+      return await resp.json()
     }
-    throw new Error("Execution was not successful, please try again in a few minutes.")
+    return { error: "Execution was not successful, please try again in a few minutes." }
   }
   return await resp.json()
 }

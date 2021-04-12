@@ -195,12 +195,12 @@ func (w *Worker) createPod() error {
 						Limits: v1.ResourceList{
 							v1.ResourceMemory:           resource.MustParse("1024Mi"),
 							v1.ResourceCPU:              resource.MustParse("1000m"),
-							v1.ResourceEphemeralStorage: resource.MustParse("512Mi"),
+							v1.ResourceEphemeralStorage: resource.MustParse("128Mi"),
 						},
 						Requests: v1.ResourceList{
 							v1.ResourceMemory:           resource.MustParse("128Mi"),
 							v1.ResourceCPU:              resource.MustParse("200m"),
-							v1.ResourceEphemeralStorage: resource.MustParse("512Mi"),
+							v1.ResourceEphemeralStorage: resource.MustParse("128Mi"),
 						},
 					},
 				},
