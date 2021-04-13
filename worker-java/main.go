@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -12,9 +14,10 @@ import (
 
 var projectDir = "/home/pwuser/project/"
 var findClassRegexp = regexp.MustCompile(`class (\w+) `)
+var classPath = ""
 
 func handler(w *worker.Worker, code string) error {
-	basePath := filepath.Join(projectDir, "src", "main", "java", "org", "example")
+	basePath := filepath.Join(projectDir, "org", "example")
 	if err := os.MkdirAll(basePath, 0755); err != nil {
 		return fmt.Errorf("could not create execution sub folder: %v", err)
 	}
@@ -23,10 +26,14 @@ func handler(w *worker.Worker, code string) error {
 		return fmt.Errorf("could not determine class name")
 	}
 	className := matches[1]
-	if err := os.WriteFile(filepath.Join(basePath, fmt.Sprintf("%s.java", className)), []byte(code), 0644); err != nil {
+	sourceFile := filepath.Join(basePath, fmt.Sprintf("%s.java", className))
+	if err := os.WriteFile(sourceFile, []byte(code), 0644); err != nil {
 		return fmt.Errorf("could not write Java source files: %v", err)
 	}
-	return w.ExecCommand("mvn", "compile", "exec:java", "-q", "--offline", "-D", fmt.Sprintf("exec.mainClass=org.example.%s", className))
+	if err := w.ExecCommand("javac", "--class-path", classPath, sourceFile); err != nil {
+		return fmt.Errorf("could not compile: %w", err)
+	}
+	return w.ExecCommand("java", "--class-path", classPath, filepath.Join("org", "example", className))
 }
 
 const NEW_LINE_SEPARATOR = "\n"
@@ -34,8 +41,8 @@ const NEW_LINE_SEPARATOR = "\n"
 func transformOutput(input string) string {
 	forbiddenLines := []string{
 		"WARNING: An illegal reflective access operation has occurred",
-		"WARNING: Illegal reflective access by com.google.inject.internal.cglib.core.$ReflectUtils$1 (file:/usr/share/maven/lib/guice.jar) to method java.lang.ClassLoader.defineClass(java.lang.String,byte[],int,int,java.security.ProtectionDomain)",
-		"WARNING: Please consider reporting this to the maintainers of com.google.inject.internal.cglib.core.$ReflectUtils$1",
+		"WARNING: Illegal reflective access by com.google.gson.internal.reflect.UnsafeReflectionAccessor (file:/home/pwuser/.m2/repository/com/google/code/gson/gson/2.8.6/gson-2.8.6.jar) to field java.util.Optional.value",
+		"WARNING: Please consider reporting this to the maintainers of com.google.gson.internal.reflect.UnsafeReflectionAccessor",
 		"WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations",
 		"WARNING: All illegal access operations will be denied in a future release",
 	}
@@ -57,6 +64,12 @@ func transformOutput(input string) string {
 }
 
 func main() {
+	mavenClassesOutput, err := exec.Command("bash", "-c", "find ~/.m2 -name *.jar | sed -z 's/\\n/:/g'").Output()
+	if err != nil {
+		log.Fatalf("could not determine Java class-path: %v", err)
+	}
+	classPath = fmt.Sprintf("%s./", mavenClassesOutput)
+
 	worker.NewWorker(&worker.WorkerExectionOptions{
 		Handler:            handler,
 		ExecutionDirectory: projectDir,

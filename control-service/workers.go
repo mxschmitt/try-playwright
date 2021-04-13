@@ -161,7 +161,8 @@ func (w *Worker) createPod() error {
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("worker-%s-", w.language),
 			Labels: map[string]string{
-				"role": "worker",
+				"role":     "worker",
+				"language": string(w.language),
 			},
 		},
 		Spec: v1.PodSpec{
