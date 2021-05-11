@@ -13,6 +13,7 @@ spec:
     metadata:
       labels:
         io.kompose.service: rabbitmq
+        reachable-by-worker: "true"
     spec:
       containers:
         - image: rabbitmq:3
