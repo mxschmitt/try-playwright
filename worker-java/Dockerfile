@@ -1,4 +1,4 @@
-ARG PLAYWRIGHT_VERSION=1.10.0
+ARG PLAYWRIGHT_VERSION=1.11.0
 FROM golang:1.16-buster as builder
 WORKDIR /root
 COPY go.mod /root/
@@ -9,7 +9,7 @@ COPY worker-java/main.go /root/
 COPY internal/ /root/internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app
 
-FROM mcr.microsoft.com/playwright/java:focal-v$PLAYWRIGHT_VERSION
+FROM mcr.microsoft.com/playwright/java:v$PLAYWRIGHT_VERSION-focal
 
 RUN apt-get remove -y openjdk-11-jdk && \
     apt-get install -y openjdk-14-jdk

@@ -1,4 +1,4 @@
-ARG PLAYWRIGHT_VERSION=1.10.0
+ARG PLAYWRIGHT_VERSION=1.11.0
 FROM golang:1.16-buster as builder
 WORKDIR /root
 COPY go.mod /root/
@@ -18,6 +18,8 @@ RUN apt-get remove -y git ssh xvfb curl && \
     apt-get autoremove -y
 
 WORKDIR /home/pwuser/
+
+RUN pip install pip --upgrade
 
 RUN pip install playwright==${PLAYWRIGHT_VERSION}
 
