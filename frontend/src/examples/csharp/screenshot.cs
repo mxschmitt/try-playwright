@@ -1,26 +1,14 @@
-using System;
-using System.IO;
+using Microsoft.Playwright;
 using System.Threading.Tasks;
 
-using PlaywrightSharp;
-
-namespace ScreenshotDemo
+class Program
 {
-    class Program
+    public static async Task Main()
     {
-        static async Task Main(string[] args)
-        {
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Webkit.LaunchAsync();
-
-            Console.WriteLine("Navigating microsoft");
-            var page = await browser.NewPageAsync();
-            await page.GoToAsync("https://github.com/microsoft/playwright");
-
-            Console.WriteLine("Taking Screenshot");
-            await File.WriteAllBytesAsync(Path.Combine(Directory.GetCurrentDirectory(), "microsoft.png"), await page.ScreenshotAsync());
-
-            Console.WriteLine("Export completed");
-        }
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Webkit.LaunchAsync();
+        var page = await browser.NewPageAsync();
+        await page.GotoAsync("https://playwright.dev/dotnet");
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = "screenshot.png" });
     }
 }

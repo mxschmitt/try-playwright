@@ -136,26 +136,16 @@ public class Example {
 test.describe("C#", () => {
   test("can execute basic code", async () => {
     const code = `
-    using System;
-    using System.Threading.Tasks;
+using System;
 
-    using PlaywrightSharp;
-
-    namespace TestCase
+class Program
+{
+    static void Main(string[] args)
     {
-        class Program
-        {
-            static async Task Main(string[] args)
-            {
-                using var playwright = await Playwright.CreateAsync();
-                await using var browser = await playwright.Chromium.LaunchAsync();
-
-                var page = await browser.NewPageAsync();
-
-                Console.WriteLine(await page.EvaluateAsync<int>("1 + 1"));
-            }
-        }
-    }`
+        Console.WriteLine(1 + 1);
+    }
+}
+`
     const resp = await executeCode(code, "csharp")
     expect(resp.ok).toBe(true)
     const body = await resp.json()
@@ -165,20 +155,23 @@ test.describe("C#", () => {
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
+
   test("can evaluate in a Page", async () => {
     const code = `
-using System;
+    using Microsoft.Playwright;
+    using System.Threading.Tasks;
+    using System;
 
-namespace e2e
-{
     class Program
     {
-        static void Main(string[] args)
+        public static async Task Main()
         {
-            Console.WriteLine(1 + 1);
-        }
-    }
-}`
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Chromium.LaunchAsync();
+            var page = await browser.NewPageAsync();
+            Console.WriteLine(await page.EvaluateAsync<int>("1 + 1"));
+          }
+    }`
     const resp = await executeCode(code, "csharp")
     expect(resp.ok).toBe(true)
     const body = await resp.json()
