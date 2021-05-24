@@ -1,5 +1,5 @@
 using Microsoft.Playwright;
-using System.Threading.Tasks;
+using System;
 
 class Program
 {
@@ -8,7 +8,8 @@ class Program
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync();
         var page = await browser.NewPageAsync();
-        await page.GotoAsync("https://github.com/microsoft/playwright");
-        await page.GetPdfAsync(Path.Combine(Directory.GetCurrentDirectory(), "playwright.pdf"));
+        page.Request += (_, request) => Console.WriteLine(">> " + request.Method + " " + request.Url);
+        page.Response += (_, response) => Console.WriteLine("<<" + response.Status + " " + response.Url);
+        await page.GotoAsync("https://example.com");
     }
 }

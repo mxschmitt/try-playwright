@@ -51,6 +51,8 @@ function determineDocumentationLink(codeLanguage: CodeLanguage):string {
       return "https://playwright.dev/java/docs/intro/"
     case CodeLanguage.PYTHON:
       return "https://playwright.dev/python/docs/intro/"
+    case CodeLanguage.CSHARP:
+        return "https://playwright.dev/dotnet/docs/intro/"
     default:
       return "https://playwright.dev/docs/intro/"
   }
