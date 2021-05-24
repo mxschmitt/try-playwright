@@ -9,6 +9,6 @@ class Program
         await using var browser = await playwright.Chromium.LaunchAsync();
         var page = await browser.NewPageAsync();
         await page.GotoAsync("https://github.com/microsoft/playwright");
-        await page.GetPdfAsync(Path.Combine(Directory.GetCurrentDirectory(), "playwright.pdf"));
+        await page.PdfAsync(new PagePdfOptions { Path = "page.pdf" });
     }
 }
