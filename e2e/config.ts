@@ -1,33 +1,53 @@
 import path from 'path'
 
-import * as folio from 'folio';
-import { ChromiumEnv, FirefoxEnv, WebKitEnv, test, setConfig, PlaywrightOptions, Config } from "@playwright/test";
+import { PlaywrightTestProject, PlaywrightTestConfig } from '@playwright/test';
 
-const config: Config = {
-  testDir: path.join(__dirname, "tests"),
-  timeout: 120 * 1000,
-}
-
-if (process.env.CI) {
-  config.forbidOnly = true
-  config.retries = 2
-
-  folio.setReporters([
-    new folio.reporters.list(),
-  ]);
-}
-
-setConfig(config);
-
-const options: PlaywrightOptions = {
+const options = {
   ignoreHTTPSErrors: true,
   viewport: {
     width: 1920,
-    height: 1080
-  }
+    height: 1080,
+  },
 };
 
-// Run tests in three browsers.
-test.runWith(new ChromiumEnv(options), { tag: 'chromium' });
-test.runWith(new FirefoxEnv(options), { tag: 'firefox' });
-test.runWith(new WebKitEnv(options), { tag: 'webkit' });
+const projects: PlaywrightTestProject[] = [
+  {
+    name: 'chromium',
+    use: {
+      browserName: 'chromium',
+      ...options,
+    },
+    testIgnore: /api/
+  },
+  {
+    name: 'webkit',
+    use: {
+      browserName: 'webkit',
+      ...options,
+    },
+    testIgnore: /api/
+  },
+  {
+    name: 'firefox',
+    use: {
+      browserName: 'firefox',
+      ...options,
+    },
+    testIgnore: /api/
+  },
+  {
+    name: 'api',
+    testMatch: /api/,
+  },
+];
+
+const config: PlaywrightTestConfig = {
+  timeout: 120 * 1000,
+  testDir: path.join(__dirname, 'tests'),
+  forbidOnly: !!process.env.CI,
+  retries: 2,
+  reporter: ['list'],
+  projects,
+};
+
+export default config
