@@ -2,7 +2,7 @@
   "name": "try-playwright",
   "version": "1.0.0",
   "scripts": {
-    "test": "folio --config config.ts"
+    "test": "playwright test --config config.ts"
   },
   "repository": {
     "type": "git",
@@ -13,8 +13,9 @@
   },
   "homepage": "https://github.com/mxschmitt/try-playwright#readme",
   "devDependencies": {
-    "@playwright/test": "^0.1112.0-alpha1",
-    "@types/node-fetch": "^2.5.9"
+    "@playwright/test": "^1.12.0-next-alpha-jun-4-2021",
+    "@types/node-fetch": "^2.5.9",
+    "playwright": "^1.12.0-next-alpha-jun-4-2021"
   },
   "dependencies": {
     "node-fetch": "^2.6.1"
