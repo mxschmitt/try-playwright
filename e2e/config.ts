@@ -1,8 +1,8 @@
 import path from 'path'
 
-import { PlaywrightTestProject, PlaywrightTestConfig } from '@playwright/test';
+import { PlaywrightTestProject, PlaywrightTestConfig, PlaywrightTestOptions } from '@playwright/test';
 
-const options = {
+const options: Partial<PlaywrightTestOptions> = {
   ignoreHTTPSErrors: true,
   viewport: {
     width: 1920,
@@ -46,7 +46,7 @@ const config: PlaywrightTestConfig = {
   testDir: path.join(__dirname, 'tests'),
   forbidOnly: !!process.env.CI,
   retries: 2,
-  reporter: ['list'],
+  reporter: 'list',
   projects,
 };
 
