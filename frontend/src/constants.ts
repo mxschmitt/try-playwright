@@ -2,7 +2,7 @@ export enum CodeLanguage {
   JAVA = "java",
   JAVASCRIPT = "javascript",
   PYTHON = "python",
-  CSHARP = "csharp",
+  DOTNET = "csharp",
 }
 
 export const LANGUAGES = Object.values(CodeLanguage)

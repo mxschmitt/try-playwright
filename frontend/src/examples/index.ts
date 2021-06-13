@@ -23,7 +23,7 @@ const injectCode = (language: CodeLanguage, extension: string) => (example: Meta
 }
 
 export const Examples: Record<CodeLanguage, Example[]> = {
-  [CodeLanguage.CSHARP]: cSharpExamples.map(injectCode(CodeLanguage.CSHARP, "cs")),
+  [CodeLanguage.DOTNET]: cSharpExamples.map(injectCode(CodeLanguage.DOTNET, "cs")),
   [CodeLanguage.JAVASCRIPT]: javaScriptExamples.map(injectCode(CodeLanguage.JAVASCRIPT, "js")),
   [CodeLanguage.JAVA]: javaExamples.map(injectCode(CodeLanguage.JAVA, "java")),
   [CodeLanguage.PYTHON]: pythonExamples.map(injectCode(CodeLanguage.PYTHON, "py")),

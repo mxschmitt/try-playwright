@@ -1,4 +1,4 @@
-ARG PLAYWRIGHT_VERSION=1.11.1
+ARG PLAYWRIGHT_VERSION=1.12.1
 FROM golang:1.16-buster as builder
 WORKDIR /root
 COPY go.mod /root/
@@ -31,9 +31,10 @@ USER pwuser
 RUN mkdir /home/pwuser/project/ && \
     cd /home/pwuser/project/ && \
     dotnet new console && \
-    dotnet add package Microsoft.Playwright --version 1.11.1-alpha && \
+    dotnet tool install --global Microsoft.Playwright.CLI && \
+    dotnet add package Microsoft.Playwright --version ${PLAYWRIGHT_VERSION} && \
     dotnet build && \
-    bin/Debug/net5.0/.playwright/unix/native/playwright.sh install && \
+    /home/pwuser/.dotnet/tools/playwright install && \
     rm Program.cs
 
 COPY --from=builder /app /app

@@ -18,8 +18,8 @@ const data = [
     "value": CodeLanguage.JAVA,
   },
   {
-    "label": "C#",
-    "value": CodeLanguage.CSHARP,
+    "label": ".NET",
+    "value": CodeLanguage.DOTNET,
   },
 ]
 

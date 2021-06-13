@@ -43,7 +43,7 @@ jobs:
         ROOT_TEST_URL=$FRONTEND_URL npm run test
     - name: Upload test-results
       if: ${{ failure() }}
-    - uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v2
       with:
         name: e2e-test-results
         path: e2e/test-results/
