@@ -52,6 +52,8 @@ const CodeContextProvider: React.FunctionComponent = ({ children }) => {
     }, [examples])
 
     const handleSetLanguage = (language: CodeLanguage) => {
+        if (language === codeLanguage)
+            return
         const params = new URLSearchParams(window.location.search)
         params.set("l", language)
         pushNewURL(params)
