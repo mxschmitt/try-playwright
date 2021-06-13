@@ -1,7 +1,7 @@
 # Try Playwright
 
 ![CI](https://github.com/mxschmitt/try-playwright/workflows/CI/badge.svg)
-![Playwright version](https://img.shields.io/badge/Playwright-1.11.0-blue.svg)
+![Playwright version](https://img.shields.io/badge/Playwright-1.12.1-blue.svg)
 
 > Interactive playground for [Playwright](https://github.com/microsoft/playwright) to run examples directly from your browser
 
@@ -18,3 +18,5 @@ cd try-playwright
 bash k8/generate.sh
 kubectl apply -f k8/
 ```
+
+For more information about the infrastructure and contributing, see [here](./CONTRIBUTING.md).

@@ -67,3 +67,20 @@ See [this](https://gist.github.com/mxschmitt/303ed443a0219dce51633ceb9eedb97e) G
 ### 3rd iteration
 
 The worker infra got rewritten, since the workers would share a lot of code each time: uploading artifacts to the storage server, listening for RabbitMQ messages, etc. For that, a [Go](https://golang.org) daemon was created which took care of that which all the workers now use and only slightly extend the execution logic. In this iteration support for [Java](https://github.com/microsoft/playwright-java), [.NET](https://github.com/microsoft/playwright-dotnet) and [Python](https://github.com/microsoft/playwright-python) was added.
+
+## Updating Playwright
+
+1. Update the Docker images
+  - [./worker-csharp/Dockerfile](./worker-csharp/Dockerfile)
+  - [./worker-java/Dockerfile](./worker-java/Dockerfile)
+  - [./worker-javascript/Dockerfile](./worker-javascript/Dockerfile)
+  - [./worker-python/Dockerfile](./worker-python/Dockerfile)
+2. Update the badge in the [./README.md](./README.md)
+3. Create and merge the PR
+4. Wait until PR is built on the `master` branch
+5. Exeute the following on the host:
+  - `k3s crictl img`
+  - `k3s crictl rmi <image-ids>`
+  - `kubectl delete pod -l io.kompose.service=control`
+
+Then the new version should be live.
