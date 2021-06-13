@@ -133,7 +133,7 @@ public class Example {
   })
 })
 
-test.describe("C#", () => {
+test.describe(".NET", () => {
   test("can execute basic code", async () => {
     const code = `
 using System;
