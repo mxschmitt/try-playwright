@@ -41,9 +41,12 @@ jobs:
         npx wait-on "$FRONTEND_URL/service/control/health"
         kubectl wait --timeout 5m --for=condition=ready pod -l role=worker
         ROOT_TEST_URL=$FRONTEND_URL npm run test
-    - name: Setup tmate session
+    - name: Upload test-results
       if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
+    - uses: actions/upload-artifact@v2
+      with:
+        name: e2e-test-results
+        path: e2e/test-results/
   lint:
     runs-on: ubuntu-20.04
     defaults:
