@@ -2,7 +2,7 @@
   "name": "try-playwright",
   "version": "1.0.0",
   "scripts": {
-    "test": "playwright test --config config.ts"
+    "test": "playwright test"
   },
   "repository": {
     "type": "git",

@@ -47,6 +47,10 @@ const config: PlaywrightTestConfig = {
   forbidOnly: !!process.env.CI,
   retries: 2,
   reporter: 'list',
+  workers: 1,
+  use: {
+    trace: 'retain-on-failure',
+  },
   projects,
 };
 
