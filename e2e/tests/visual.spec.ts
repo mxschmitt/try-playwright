@@ -1,5 +1,4 @@
-import { Page } from 'playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, Page } from '@playwright/test';
 import { ROOT_URL } from './utils';
 
 const executeExample = async (page: Page, nth: number): Promise<void> => {
