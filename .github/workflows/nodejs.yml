@@ -20,6 +20,8 @@ jobs:
         curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker --no-deploy traefik --kubelet-arg=image-gc-high-threshold=85 --kubelet-arg=image-gc-low-threshold=80" sh -
         mkdir -p ~/.kube
         cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+      env:
+        INSTALL_K3S_COMMIT: e32292478107855f6c3046df24c86a2da2b2dc3d
     - name: Install dependencies
       run: npm ci
       working-directory: e2e
