@@ -212,9 +212,9 @@ func (s *server) handleShareGet(c echo.Context) error {
 }
 
 func (s *server) handleShareCreate(c echo.Context) error {
-	code, err := ioutil.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1024))
+	code, err := ioutil.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1<<20))
 	if err != nil {
-		return fmt.Errorf("could read request body: %w", err)
+		return fmt.Errorf("could not read request body: %w", err)
 	}
 	for retryCount := 0; retryCount <= 3; retryCount++ {
 		id := generateRandomString(SNIPPET_ID_LENGTH)
