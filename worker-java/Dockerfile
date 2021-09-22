@@ -11,13 +11,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app
 
 FROM mcr.microsoft.com/playwright/java:v$PLAYWRIGHT_VERSION-focal
 
-RUN apt-get update && apt-get remove -y openjdk-11-jdk && \
-    apt-get install -y openjdk-14-jdk
-
 RUN apt-get remove -y python3.8 python3-pip git ssh xvfb curl nodejs && \
     apt-get autoremove -y
 
-ENV JAVA_HOME=/usr/lib/jvm/java-14-openjdk-amd64
 ARG PLAYWRIGHT_VERSION
 ENV PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION
 
