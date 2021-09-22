@@ -70,15 +70,16 @@ The worker infra got rewritten, since the workers would share a lot of code each
 
 ## Updating Playwright
 
+1. Execute `bash update_pw.sh`
 1. Update the Docker images
   - [./worker-csharp/Dockerfile](./worker-csharp/Dockerfile)
   - [./worker-java/Dockerfile](./worker-java/Dockerfile)
   - [./worker-javascript/Dockerfile](./worker-javascript/Dockerfile)
   - [./worker-python/Dockerfile](./worker-python/Dockerfile)
-2. Update the badge in the [./README.md](./README.md)
-3. Create and merge the PR
-4. Wait until PR is built on the `master` branch
-5. Exeute the following on the host:
+1. Update the badge in the [./README.md](./README.md)
+1. Create and merge the PR
+1. Wait until PR is built on the `master` branch
+1. Exeute the following on the host:
   - `k3s crictl img`
   - `k3s crictl rmi <image-ids>`
   - `kubectl delete pod -l io.kompose.service=control`
