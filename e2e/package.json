@@ -13,9 +13,7 @@
   },
   "homepage": "https://github.com/mxschmitt/try-playwright#readme",
   "devDependencies": {
-    "@playwright/test": "^1.14.0",
-    "@types/node-fetch": "^2.5.12",
-    "node-fetch": "^2.6.1"
+    "@playwright/test": "^1.15.0"
   },
   "private": true
 }
