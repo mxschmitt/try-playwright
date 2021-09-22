@@ -32,7 +32,7 @@ test.describe("JavaScript", () => {
   test("can execute basic code", async ({ executeCode }) => {
     const code = `console.log(1 + 1)`
     const resp = await executeCode(code, "javascript")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -52,7 +52,7 @@ test.describe("JavaScript", () => {
       await browser.close();
     })();`
     const resp = await executeCode(code, "javascript")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -65,7 +65,7 @@ test.describe("JavaScript", () => {
 test.describe("Python", () => {
   test("can execute basic code", async ({ executeCode }) => {
     const resp = await executeCode("print(1+1)", "python")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -84,7 +84,7 @@ with sync_playwright() as p:
     browser.close()
     `
     const resp = await executeCode(code, "python")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -106,7 +106,7 @@ public class Example {
 }
     `
     const resp = await executeCode(code, "java")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -132,7 +132,7 @@ public class Example {
     }
         `
     const resp = await executeCode(code, "java")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -156,7 +156,7 @@ class Program
 }
 `
     const resp = await executeCode(code, "csharp")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -182,7 +182,7 @@ class Program
           }
     }`
     const resp = await executeCode(code, "csharp")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
