@@ -1,29 +1,42 @@
-import { expect, test } from '@playwright/test';
-import fetch, { Response } from 'node-fetch'
+import { expect, test as base, FetchRequest, FetchResponse } from '@playwright/test';
 import { ROOT_URL } from './utils';
 
-function executeCode(code: string, language: string): Promise<Response> {
-  return fetch(`${ROOT_URL}/service/control/run`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      code,
-      language
-    })
-  })
-}
+type WorkerFixtures = {
+  request: FetchRequest,
+  executeCode: (code: string, language: string) => Promise<FetchResponse>
+};
+
+const test = base.extend<{}, WorkerFixtures>({
+  request: [async ({ playwright }, use) => {
+    const request = await playwright._newRequest()
+    await use(request);
+    request.dispose();
+  }, { scope: 'worker' }],
+  executeCode: [async ({ request }, use) => {
+    await use(async (code: string, language: string) => {
+      return await request.post(`${ROOT_URL}/service/control/run`, {
+        data: JSON.stringify({
+          code,
+          language
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 30 * 1000,
+      })
+    });
+  }, { scope: 'worker' }],
+});
 
 function expectValidVersion(payload: any) {
   expect(payload.version).toMatch(/^\d+.\d+.\d+$/)
 }
 
 test.describe("JavaScript", () => {
-  test("can execute basic code", async () => {
+  test("can execute basic code", async ({ executeCode }) => {
     const code = `console.log(1 + 1)`
     const resp = await executeCode(code, "javascript")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -31,7 +44,7 @@ test.describe("JavaScript", () => {
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
-  test("can evaluate in a Page", async () => {
+  test("can evaluate in a Page", async ({ executeCode }) => {
     const code = `
     // @ts-check
     const playwright = require('playwright');
@@ -43,7 +56,7 @@ test.describe("JavaScript", () => {
       await browser.close();
     })();`
     const resp = await executeCode(code, "javascript")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -54,9 +67,9 @@ test.describe("JavaScript", () => {
 })
 
 test.describe("Python", () => {
-  test("can execute basic code", async () => {
+  test("can execute basic code", async ({ executeCode }) => {
     const resp = await executeCode("print(1+1)", "python")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -64,7 +77,7 @@ test.describe("Python", () => {
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
-  test("can evaluate in a Page", async () => {
+  test("can evaluate in a Page", async ({ executeCode }) => {
     const code = `
 from playwright.sync_api import sync_playwright
 
@@ -75,7 +88,7 @@ with sync_playwright() as p:
     browser.close()
     `
     const resp = await executeCode(code, "python")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -86,7 +99,7 @@ with sync_playwright() as p:
 })
 
 test.describe("Java", () => {
-  test("can execute basic code", async () => {
+  test("can execute basic code", async ({ executeCode }) => {
     const code = `
 package org.example;
 
@@ -97,7 +110,7 @@ public class Example {
 }
     `
     const resp = await executeCode(code, "java")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -105,7 +118,7 @@ public class Example {
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
-  test("can evaluate in a Page", async () => {
+  test("can evaluate in a Page", async ({ executeCode }) => {
     const code = `
     package org.example;
 
@@ -123,7 +136,7 @@ public class Example {
     }
         `
     const resp = await executeCode(code, "java")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -134,7 +147,7 @@ public class Example {
 })
 
 test.describe(".NET", () => {
-  test("can execute basic code", async () => {
+  test("can execute basic code", async ({ executeCode }) => {
     const code = `
 using System;
 
@@ -147,7 +160,7 @@ class Program
 }
 `
     const resp = await executeCode(code, "csharp")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
@@ -156,7 +169,7 @@ class Program
     expect(body).toHaveProperty('output', '2')
   })
 
-  test("can evaluate in a Page", async () => {
+  test("can evaluate in a Page", async ({ executeCode }) => {
     const code = `
     using Microsoft.Playwright;
     using System.Threading.Tasks;
@@ -173,7 +186,7 @@ class Program
           }
     }`
     const resp = await executeCode(code, "csharp")
-    expect(resp.ok).toBe(true)
+    expect(resp.ok()).toBe(true)
     const body = await resp.json()
     expect(body).toHaveProperty('success', true)
     expect(body).toHaveProperty('error', '')
