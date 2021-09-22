@@ -19,6 +19,10 @@ const test = base.extend<{}, WorkerFixtures>({
           code,
           language
         }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 30 * 1000,
       })
     });
   }, { scope: 'worker' }],
