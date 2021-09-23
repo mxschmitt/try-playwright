@@ -15,12 +15,9 @@ const test = base.extend<{}, WorkerFixtures>({
   executeCode: [async ({ request }, use) => {
     await use(async (code: string, language: string) => {
       return await request.post(`${ROOT_URL}/service/control/run`, {
-        data: JSON.stringify({
+        data: {
           code,
           language
-        }),
-        headers: {
-          "Content-Type": "application/json",
         },
         timeout: 30 * 1000,
       })
