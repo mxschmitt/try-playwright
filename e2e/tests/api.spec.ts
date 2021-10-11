@@ -1,18 +1,12 @@
-import { expect, test as base, FetchRequest, FetchResponse } from '@playwright/test';
+import { expect, test as base, ApiResponse } from '@playwright/test';
 import { ROOT_URL } from './utils';
 
-type WorkerFixtures = {
-  request: FetchRequest,
-  executeCode: (code: string, language: string) => Promise<FetchResponse>
+type TestFixtures = {
+  executeCode: (code: string, language: string) => Promise<ApiResponse>
 };
 
-const test = base.extend<{}, WorkerFixtures>({
-  request: [async ({ playwright }, use) => {
-    const request = await playwright._newRequest()
-    await use(request);
-    request.dispose();
-  }, { scope: 'worker' }],
-  executeCode: [async ({ request }, use) => {
+const test = base.extend<TestFixtures>({
+  executeCode: async ({ request }, use) => {
     await use(async (code: string, language: string) => {
       return await request.post(`${ROOT_URL}/service/control/run`, {
         data: {
@@ -22,7 +16,7 @@ const test = base.extend<{}, WorkerFixtures>({
         timeout: 30 * 1000,
       })
     });
-  }, { scope: 'worker' }],
+  },
 });
 
 function expectValidVersion(payload: any) {
