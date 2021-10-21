@@ -612,7 +612,7 @@ declare namespace NodeJS {
         readonly [key: string]: T | undefined;
     }
 }
-declare module 'playwright' {
+declare module 'playwright-core' {
 // This is generated from /utils/protocol-types-generator/index.js
 type binary = string;
 export module Protocol {
@@ -1168,137 +1168,6 @@ animation/transition.
     }
   }
   
-  export module ApplicationCache {
-    /**
-     * Detailed application cache resource information.
-     */
-    export interface ApplicationCacheResource {
-      /**
-       * Resource url.
-       */
-      url: string;
-      /**
-       * Resource size.
-       */
-      size: number;
-      /**
-       * Resource type.
-       */
-      type: string;
-    }
-    /**
-     * Detailed application cache information.
-     */
-    export interface ApplicationCache {
-      /**
-       * Manifest URL.
-       */
-      manifestURL: string;
-      /**
-       * Application cache size.
-       */
-      size: number;
-      /**
-       * Application cache creation time.
-       */
-      creationTime: number;
-      /**
-       * Application cache update time.
-       */
-      updateTime: number;
-      /**
-       * Application cache resources.
-       */
-      resources: ApplicationCacheResource[];
-    }
-    /**
-     * Frame identifier - manifest URL pair.
-     */
-    export interface FrameWithManifest {
-      /**
-       * Frame identifier.
-       */
-      frameId: Page.FrameId;
-      /**
-       * Manifest URL.
-       */
-      manifestURL: string;
-      /**
-       * Application cache status.
-       */
-      status: number;
-    }
-    
-    export type applicationCacheStatusUpdatedPayload = {
-      /**
-       * Identifier of the frame containing document whose application cache updated status.
-       */
-      frameId: Page.FrameId;
-      /**
-       * Manifest URL.
-       */
-      manifestURL: string;
-      /**
-       * Updated application cache status.
-       */
-      status: number;
-    }
-    export type networkStateUpdatedPayload = {
-      isNowOnline: boolean;
-    }
-    
-    /**
-     * Enables application cache domain notifications.
-     */
-    export type enableParameters = {
-    }
-    export type enableReturnValue = {
-    }
-    /**
-     * Returns relevant application cache data for the document in given frame.
-     */
-    export type getApplicationCacheForFrameParameters = {
-      /**
-       * Identifier of the frame containing document whose application cache is retrieved.
-       */
-      frameId: Page.FrameId;
-    }
-    export type getApplicationCacheForFrameReturnValue = {
-      /**
-       * Relevant application cache data for the document in given frame.
-       */
-      applicationCache: ApplicationCache;
-    }
-    /**
-     * Returns array of frame identifiers with manifest urls for each frame containing a document
-associated with some application cache.
-     */
-    export type getFramesWithManifestsParameters = {
-    }
-    export type getFramesWithManifestsReturnValue = {
-      /**
-       * Array of frame identifiers with manifest urls for each frame containing a document
-associated with some application cache.
-       */
-      frameIds: FrameWithManifest[];
-    }
-    /**
-     * Returns manifest URL for document in the given frame.
-     */
-    export type getManifestForFrameParameters = {
-      /**
-       * Identifier of the frame containing document whose manifest is retrieved.
-       */
-      frameId: Page.FrameId;
-    }
-    export type getManifestForFrameReturnValue = {
-      /**
-       * Manifest URL for document in the given frame.
-       */
-      manifestURL: string;
-    }
-  }
-  
   /**
    * Audits domain allows investigation of page violations and possible improvements.
    */
@@ -1532,12 +1401,23 @@ instead of "limited-quirks".
       targetOrigin: string;
       isWarning: boolean;
     }
+    export type GenericIssueErrorType = "CrossOriginPortalPostMessageError";
+    /**
+     * Depending on the concrete errorType, different properties are set.
+     */
+    export interface GenericIssueDetails {
+      /**
+       * Issues with the same errorType are aggregated in the frontend.
+       */
+      errorType: GenericIssueErrorType;
+      frameId?: Page.FrameId;
+    }
     /**
      * A unique identifier for the type of issue. Each type may use one of the
 optional fields in InspectorIssueDetails to convey more specific
 information about the kind of issue.
      */
-    export type InspectorIssueCode = "SameSiteCookieIssue"|"MixedContentIssue"|"BlockedByResponseIssue"|"HeavyAdIssue"|"ContentSecurityPolicyIssue"|"SharedArrayBufferIssue"|"TrustedWebActivityIssue"|"LowTextContrastIssue"|"CorsIssue"|"AttributionReportingIssue"|"QuirksModeIssue"|"NavigatorUserAgentIssue"|"WasmCrossOriginModuleSharingIssue";
+    export type InspectorIssueCode = "SameSiteCookieIssue"|"MixedContentIssue"|"BlockedByResponseIssue"|"HeavyAdIssue"|"ContentSecurityPolicyIssue"|"SharedArrayBufferIssue"|"TrustedWebActivityIssue"|"LowTextContrastIssue"|"CorsIssue"|"AttributionReportingIssue"|"QuirksModeIssue"|"NavigatorUserAgentIssue"|"WasmCrossOriginModuleSharingIssue"|"GenericIssue";
     /**
      * This struct holds a list of optional fields with additional information
 specific to the kind of issue. When adding a new issue code, please also
@@ -1557,6 +1437,7 @@ add a new optional field to this type.
       quirksModeIssueDetails?: QuirksModeIssueDetails;
       navigatorUserAgentIssueDetails?: NavigatorUserAgentIssueDetails;
       wasmCrossOriginModuleSharingIssue?: WasmCrossOriginModuleSharingIssueDetails;
+      genericIssueDetails?: GenericIssueDetails;
     }
     /**
      * A unique id for a DevTools inspector issue. Allows other entities (e.g.
@@ -7934,7 +7815,7 @@ request correspondinfg to the main frame.
     /**
      * The reason why request was blocked.
      */
-    export type CorsError = "DisallowedByMode"|"InvalidResponse"|"WildcardOriginNotAllowed"|"MissingAllowOriginHeader"|"MultipleAllowOriginValues"|"InvalidAllowOriginValue"|"AllowOriginMismatch"|"InvalidAllowCredentials"|"CorsDisabledScheme"|"PreflightInvalidStatus"|"PreflightDisallowedRedirect"|"PreflightWildcardOriginNotAllowed"|"PreflightMissingAllowOriginHeader"|"PreflightMultipleAllowOriginValues"|"PreflightInvalidAllowOriginValue"|"PreflightAllowOriginMismatch"|"PreflightInvalidAllowCredentials"|"PreflightMissingAllowExternal"|"PreflightInvalidAllowExternal"|"InvalidAllowMethodsPreflightResponse"|"InvalidAllowHeadersPreflightResponse"|"MethodDisallowedByPreflightResponse"|"HeaderDisallowedByPreflightResponse"|"RedirectContainsCredentials"|"InsecurePrivateNetwork"|"NoCorsRedirectModeNotFollow";
+    export type CorsError = "DisallowedByMode"|"InvalidResponse"|"WildcardOriginNotAllowed"|"MissingAllowOriginHeader"|"MultipleAllowOriginValues"|"InvalidAllowOriginValue"|"AllowOriginMismatch"|"InvalidAllowCredentials"|"CorsDisabledScheme"|"PreflightInvalidStatus"|"PreflightDisallowedRedirect"|"PreflightWildcardOriginNotAllowed"|"PreflightMissingAllowOriginHeader"|"PreflightMultipleAllowOriginValues"|"PreflightInvalidAllowOriginValue"|"PreflightAllowOriginMismatch"|"PreflightInvalidAllowCredentials"|"PreflightMissingAllowExternal"|"PreflightInvalidAllowExternal"|"InvalidAllowMethodsPreflightResponse"|"InvalidAllowHeadersPreflightResponse"|"MethodDisallowedByPreflightResponse"|"HeaderDisallowedByPreflightResponse"|"RedirectContainsCredentials"|"InsecurePrivateNetwork"|"InvalidPrivateNetworkAccess"|"UnexpectedPrivateNetworkAccess"|"NoCorsRedirectModeNotFollow";
     export interface CorsErrorStatus {
       corsError: CorsError;
       failedParameter: string;
@@ -8234,11 +8115,11 @@ This is a temporary ability and it will be removed in the future.
     /**
      * Types of reasons why a cookie may not be stored from a response.
      */
-    export type SetCookieBlockedReason = "SecureOnly"|"SameSiteStrict"|"SameSiteLax"|"SameSiteUnspecifiedTreatedAsLax"|"SameSiteNoneInsecure"|"UserPreferences"|"SyntaxError"|"SchemeNotSupported"|"OverwriteSecure"|"InvalidDomain"|"InvalidPrefix"|"UnknownError"|"SchemefulSameSiteStrict"|"SchemefulSameSiteLax"|"SchemefulSameSiteUnspecifiedTreatedAsLax"|"SamePartyFromCrossPartyContext"|"SamePartyConflictsWithOtherAttributes";
+    export type SetCookieBlockedReason = "SecureOnly"|"SameSiteStrict"|"SameSiteLax"|"SameSiteUnspecifiedTreatedAsLax"|"SameSiteNoneInsecure"|"UserPreferences"|"SyntaxError"|"SchemeNotSupported"|"OverwriteSecure"|"InvalidDomain"|"InvalidPrefix"|"UnknownError"|"SchemefulSameSiteStrict"|"SchemefulSameSiteLax"|"SchemefulSameSiteUnspecifiedTreatedAsLax"|"SamePartyFromCrossPartyContext"|"SamePartyConflictsWithOtherAttributes"|"NameValuePairExceedsMaxSize";
     /**
      * Types of reasons why a cookie may not be sent with a request.
      */
-    export type CookieBlockedReason = "SecureOnly"|"NotOnPath"|"DomainMismatch"|"SameSiteStrict"|"SameSiteLax"|"SameSiteUnspecifiedTreatedAsLax"|"SameSiteNoneInsecure"|"UserPreferences"|"UnknownError"|"SchemefulSameSiteStrict"|"SchemefulSameSiteLax"|"SchemefulSameSiteUnspecifiedTreatedAsLax"|"SamePartyFromCrossPartyContext";
+    export type CookieBlockedReason = "SecureOnly"|"NotOnPath"|"DomainMismatch"|"SameSiteStrict"|"SameSiteLax"|"SameSiteUnspecifiedTreatedAsLax"|"SameSiteNoneInsecure"|"UserPreferences"|"UnknownError"|"SchemefulSameSiteStrict"|"SchemefulSameSiteLax"|"SchemefulSameSiteUnspecifiedTreatedAsLax"|"SamePartyFromCrossPartyContext"|"NameValuePairExceedsMaxSize";
     /**
      * A cookie which was not stored from a response with the corresponding reason.
      */
@@ -8511,7 +8392,7 @@ https://wicg.github.io/webpackage/draft-yasskin-httpbis-origin-signed-exchanges-
      * List of content encodings supported by the backend.
      */
     export type ContentEncoding = "deflate"|"gzip"|"br";
-    export type PrivateNetworkRequestPolicy = "Allow"|"BlockFromInsecureToMorePrivate"|"WarnFromInsecureToMorePrivate";
+    export type PrivateNetworkRequestPolicy = "Allow"|"BlockFromInsecureToMorePrivate"|"WarnFromInsecureToMorePrivate"|"PreflightBlock"|"PreflightWarn";
     export type IPAddressSpace = "Local"|"Private"|"Public"|"Unknown";
     export interface ConnectTiming {
       /**
@@ -10133,6 +10014,30 @@ should be omitted for worker targets.
        */
       descendantBorder?: LineStyle;
     }
+    export interface IsolatedElementHighlightConfig {
+      /**
+       * A descriptor for the highlight appearance of an element in isolation mode.
+       */
+      isolationModeHighlightConfig: IsolationModeHighlightConfig;
+      /**
+       * Identifier of the isolated element to highlight.
+       */
+      nodeId: DOM.NodeId;
+    }
+    export interface IsolationModeHighlightConfig {
+      /**
+       * The fill color of the resizers (default: transparent).
+       */
+      resizerColor?: DOM.RGBA;
+      /**
+       * The fill color for resizer handles (default: transparent).
+       */
+      resizerHandleColor?: DOM.RGBA;
+      /**
+       * The fill color for the mask covering non-isolated elements (default: transparent).
+       */
+      maskColor?: DOM.RGBA;
+    }
     export type InspectMode = "searchForNode"|"searchForUAShadowDOM"|"captureAreaScreenshot"|"showDistances"|"none";
     
     /**
@@ -10538,6 +10443,17 @@ Backend then generates 'inspectNodeRequested' event upon element selection.
     }
     export type setShowHingeReturnValue = {
     }
+    /**
+     * Show elements in isolation mode with overlays.
+     */
+    export type setShowIsolatedElementsParameters = {
+      /**
+       * An array of node identifiers and descriptors for the highlight appearance.
+       */
+      isolatedElementHighlightConfigs: IsolatedElementHighlightConfig[];
+    }
+    export type setShowIsolatedElementsReturnValue = {
+    }
   }
   
   /**
@@ -10573,7 +10489,7 @@ Backend then generates 'inspectNodeRequested' event upon element selection.
      * All Permissions Policy features. This enum should match the one defined
 in third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5.
      */
-    export type PermissionsPolicyFeature = "accelerometer"|"ambient-light-sensor"|"attribution-reporting"|"autoplay"|"camera"|"ch-dpr"|"ch-device-memory"|"ch-downlink"|"ch-ect"|"ch-lang"|"ch-prefers-color-scheme"|"ch-rtt"|"ch-ua"|"ch-ua-arch"|"ch-ua-bitness"|"ch-ua-platform"|"ch-ua-model"|"ch-ua-mobile"|"ch-ua-full-version"|"ch-ua-platform-version"|"ch-ua-reduced"|"ch-viewport-height"|"ch-viewport-width"|"ch-width"|"clipboard-read"|"clipboard-write"|"cross-origin-isolated"|"direct-sockets"|"display-capture"|"document-domain"|"encrypted-media"|"execution-while-out-of-viewport"|"execution-while-not-rendered"|"focus-without-user-activation"|"fullscreen"|"frobulate"|"gamepad"|"geolocation"|"gyroscope"|"hid"|"idle-detection"|"interest-cohort"|"magnetometer"|"microphone"|"midi"|"otp-credentials"|"payment"|"picture-in-picture"|"publickey-credentials-get"|"screen-wake-lock"|"serial"|"shared-autofill"|"storage-access-api"|"sync-xhr"|"trust-token-redemption"|"usb"|"vertical-scroll"|"web-share"|"window-placement"|"xr-spatial-tracking";
+    export type PermissionsPolicyFeature = "accelerometer"|"ambient-light-sensor"|"attribution-reporting"|"autoplay"|"camera"|"ch-dpr"|"ch-device-memory"|"ch-downlink"|"ch-ect"|"ch-prefers-color-scheme"|"ch-rtt"|"ch-ua"|"ch-ua-arch"|"ch-ua-bitness"|"ch-ua-platform"|"ch-ua-model"|"ch-ua-mobile"|"ch-ua-full-version"|"ch-ua-platform-version"|"ch-ua-reduced"|"ch-viewport-height"|"ch-viewport-width"|"ch-width"|"clipboard-read"|"clipboard-write"|"cross-origin-isolated"|"direct-sockets"|"display-capture"|"document-domain"|"encrypted-media"|"execution-while-out-of-viewport"|"execution-while-not-rendered"|"focus-without-user-activation"|"fullscreen"|"frobulate"|"gamepad"|"geolocation"|"gyroscope"|"hid"|"idle-detection"|"interest-cohort"|"magnetometer"|"microphone"|"midi"|"otp-credentials"|"payment"|"picture-in-picture"|"publickey-credentials-get"|"screen-wake-lock"|"serial"|"shared-autofill"|"storage-access-api"|"sync-xhr"|"trust-token-redemption"|"usb"|"vertical-scroll"|"web-share"|"window-placement"|"xr-spatial-tracking";
     /**
      * Reason for a permissions policy feature to be disabled.
      */
@@ -10591,7 +10507,7 @@ in third_party/blink/renderer/core/permissions_policy/permissions_policy_feature
      * Origin Trial(https://www.chromium.org/blink/origin-trials) support.
 Status for an Origin Trial token.
      */
-    export type OriginTrialTokenStatus = "Success"|"NotSupported"|"Insecure"|"Expired"|"WrongOrigin"|"InvalidSignature"|"Malformed"|"WrongVersion"|"FeatureDisabled"|"TokenDisabled"|"FeatureDisabledForUser";
+    export type OriginTrialTokenStatus = "Success"|"NotSupported"|"Insecure"|"Expired"|"WrongOrigin"|"InvalidSignature"|"Malformed"|"WrongVersion"|"FeatureDisabled"|"TokenDisabled"|"FeatureDisabledForUser"|"UnknownTrial";
     /**
      * Status for an Origin Trial.
      */
@@ -11025,7 +10941,7 @@ Example URLs: http://www.google.com/file.html -> "google.com"
     /**
      * List of not restored reasons for back-forward cache.
      */
-    export type BackForwardCacheNotRestoredReason = "NotMainFrame"|"BackForwardCacheDisabled"|"RelatedActiveContentsExist"|"HTTPStatusNotOK"|"SchemeNotHTTPOrHTTPS"|"Loading"|"WasGrantedMediaAccess"|"DisableForRenderFrameHostCalled"|"DomainNotAllowed"|"HTTPMethodNotGET"|"SubframeIsNavigating"|"Timeout"|"CacheLimit"|"JavaScriptExecution"|"RendererProcessKilled"|"RendererProcessCrashed"|"GrantedMediaStreamAccess"|"SchedulerTrackedFeatureUsed"|"ConflictingBrowsingInstance"|"CacheFlushed"|"ServiceWorkerVersionActivation"|"SessionRestored"|"ServiceWorkerPostMessage"|"EnteredBackForwardCacheBeforeServiceWorkerHostAdded"|"RenderFrameHostReused_SameSite"|"RenderFrameHostReused_CrossSite"|"ServiceWorkerClaim"|"IgnoreEventAndEvict"|"HaveInnerContents"|"TimeoutPuttingInCache"|"BackForwardCacheDisabledByLowMemory"|"BackForwardCacheDisabledByCommandLine"|"NetworkRequestDatapipeDrainedAsBytesConsumer"|"NetworkRequestRedirected"|"NetworkRequestTimeout"|"NetworkExceedsBufferLimit"|"NavigationCancelledWhileRestoring"|"NotMostRecentNavigationEntry"|"BackForwardCacheDisabledForPrerender"|"UserAgentOverrideDiffers"|"ForegroundCacheLimit"|"BrowsingInstanceNotSwapped"|"BackForwardCacheDisabledForDelegate"|"OptInUnloadHeaderNotPresent"|"UnloadHandlerExistsInMainFrame"|"UnloadHandlerExistsInSubFrame"|"ServiceWorkerUnregistration"|"CacheControlNoStore"|"CacheControlNoStoreCookieModified"|"CacheControlNoStoreHTTPOnlyCookieModified"|"NoResponseHead"|"Unknown"|"ActivationNavigationsDisallowedForBug1234857"|"WebSocket"|"WebTransport"|"WebRTC"|"MainResourceHasCacheControlNoStore"|"MainResourceHasCacheControlNoCache"|"SubresourceHasCacheControlNoStore"|"SubresourceHasCacheControlNoCache"|"ContainsPlugins"|"DocumentLoaded"|"DedicatedWorkerOrWorklet"|"OutstandingNetworkRequestOthers"|"OutstandingIndexedDBTransaction"|"RequestedNotificationsPermission"|"RequestedMIDIPermission"|"RequestedAudioCapturePermission"|"RequestedVideoCapturePermission"|"RequestedBackForwardCacheBlockedSensors"|"RequestedBackgroundWorkPermission"|"BroadcastChannel"|"IndexedDBConnection"|"WebXR"|"SharedWorker"|"WebLocks"|"WebHID"|"WebShare"|"RequestedStorageAccessGrant"|"WebNfc"|"OutstandingNetworkRequestFetch"|"OutstandingNetworkRequestXHR"|"AppBanner"|"Printing"|"WebDatabase"|"PictureInPicture"|"Portal"|"SpeechRecognizer"|"IdleManager"|"PaymentManager"|"SpeechSynthesis"|"KeyboardLock"|"WebOTPService"|"OutstandingNetworkRequestDirectSocket"|"InjectedJavascript"|"InjectedStyleSheet"|"Dummy"|"ContentSecurityHandler"|"ContentWebAuthenticationAPI"|"ContentFileChooser"|"ContentSerial"|"ContentFileSystemAccess"|"ContentMediaDevicesDispatcherHost"|"ContentWebBluetooth"|"ContentWebUSB"|"ContentMediaSession"|"EmbedderPopupBlockerTabHelper"|"EmbedderSafeBrowsingTriggeredPopupBlocker"|"EmbedderSafeBrowsingThreatDetails"|"EmbedderAppBannerManager"|"EmbedderDomDistillerViewerSource"|"EmbedderDomDistillerSelfDeletingRequestDelegate"|"EmbedderOomInterventionTabHelper"|"EmbedderOfflinePage"|"EmbedderChromePasswordManagerClientBindCredentialManager"|"EmbedderPermissionRequestManager"|"EmbedderModalDialog"|"EmbedderExtensions"|"EmbedderExtensionMessaging"|"EmbedderExtensionMessagingForOpenPort"|"EmbedderExtensionSentMessageToCachedFrame";
+    export type BackForwardCacheNotRestoredReason = "NotMainFrame"|"BackForwardCacheDisabled"|"RelatedActiveContentsExist"|"HTTPStatusNotOK"|"SchemeNotHTTPOrHTTPS"|"Loading"|"WasGrantedMediaAccess"|"DisableForRenderFrameHostCalled"|"DomainNotAllowed"|"HTTPMethodNotGET"|"SubframeIsNavigating"|"Timeout"|"CacheLimit"|"JavaScriptExecution"|"RendererProcessKilled"|"RendererProcessCrashed"|"GrantedMediaStreamAccess"|"SchedulerTrackedFeatureUsed"|"ConflictingBrowsingInstance"|"CacheFlushed"|"ServiceWorkerVersionActivation"|"SessionRestored"|"ServiceWorkerPostMessage"|"EnteredBackForwardCacheBeforeServiceWorkerHostAdded"|"RenderFrameHostReused_SameSite"|"RenderFrameHostReused_CrossSite"|"ServiceWorkerClaim"|"IgnoreEventAndEvict"|"HaveInnerContents"|"TimeoutPuttingInCache"|"BackForwardCacheDisabledByLowMemory"|"BackForwardCacheDisabledByCommandLine"|"NetworkRequestDatapipeDrainedAsBytesConsumer"|"NetworkRequestRedirected"|"NetworkRequestTimeout"|"NetworkExceedsBufferLimit"|"NavigationCancelledWhileRestoring"|"NotMostRecentNavigationEntry"|"BackForwardCacheDisabledForPrerender"|"UserAgentOverrideDiffers"|"ForegroundCacheLimit"|"BrowsingInstanceNotSwapped"|"BackForwardCacheDisabledForDelegate"|"OptInUnloadHeaderNotPresent"|"UnloadHandlerExistsInMainFrame"|"UnloadHandlerExistsInSubFrame"|"ServiceWorkerUnregistration"|"CacheControlNoStore"|"CacheControlNoStoreCookieModified"|"CacheControlNoStoreHTTPOnlyCookieModified"|"NoResponseHead"|"Unknown"|"ActivationNavigationsDisallowedForBug1234857"|"WebSocket"|"WebTransport"|"WebRTC"|"MainResourceHasCacheControlNoStore"|"MainResourceHasCacheControlNoCache"|"SubresourceHasCacheControlNoStore"|"SubresourceHasCacheControlNoCache"|"ContainsPlugins"|"DocumentLoaded"|"DedicatedWorkerOrWorklet"|"OutstandingNetworkRequestOthers"|"OutstandingIndexedDBTransaction"|"RequestedNotificationsPermission"|"RequestedMIDIPermission"|"RequestedAudioCapturePermission"|"RequestedVideoCapturePermission"|"RequestedBackForwardCacheBlockedSensors"|"RequestedBackgroundWorkPermission"|"BroadcastChannel"|"IndexedDBConnection"|"WebXR"|"SharedWorker"|"WebLocks"|"WebHID"|"WebShare"|"RequestedStorageAccessGrant"|"WebNfc"|"OutstandingNetworkRequestFetch"|"OutstandingNetworkRequestXHR"|"AppBanner"|"Printing"|"WebDatabase"|"PictureInPicture"|"Portal"|"SpeechRecognizer"|"IdleManager"|"PaymentManager"|"SpeechSynthesis"|"KeyboardLock"|"WebOTPService"|"OutstandingNetworkRequestDirectSocket"|"InjectedJavascript"|"InjectedStyleSheet"|"Dummy"|"ContentSecurityHandler"|"ContentWebAuthenticationAPI"|"ContentFileChooser"|"ContentSerial"|"ContentFileSystemAccess"|"ContentMediaDevicesDispatcherHost"|"ContentWebBluetooth"|"ContentWebUSB"|"ContentMediaSession"|"ContentMediaSessionService"|"ContentMediaPlay"|"EmbedderPopupBlockerTabHelper"|"EmbedderSafeBrowsingTriggeredPopupBlocker"|"EmbedderSafeBrowsingThreatDetails"|"EmbedderAppBannerManager"|"EmbedderDomDistillerViewerSource"|"EmbedderDomDistillerSelfDeletingRequestDelegate"|"EmbedderOomInterventionTabHelper"|"EmbedderOfflinePage"|"EmbedderChromePasswordManagerClientBindCredentialManager"|"EmbedderPermissionRequestManager"|"EmbedderModalDialog"|"EmbedderExtensions"|"EmbedderExtensionMessaging"|"EmbedderExtensionMessagingForOpenPort"|"EmbedderExtensionSentMessageToCachedFrame";
     /**
      * Types of not restored reasons for back-forward cache.
      */
@@ -11576,14 +11492,19 @@ option, use with caution.
     }
     /**
      * Returns the unique (PWA) app id.
+Only returns values if the feature flag 'WebAppEnableManifestId' is enabled
      */
     export type getAppIdParameters = {
     }
     export type getAppIdReturnValue = {
       /**
-       * Only returns a value if the feature flag 'WebAppEnableManifestId' is enabled
+       * App id, either from manifest's id attribute or computed from start_url
        */
       appId?: string;
+      /**
+       * Recommendation for manifest's id attribute to match current id computed from start_url
+       */
+      recommendedId?: string;
     }
     /**
      * Returns all browser cookies. Depending on the backend support, will return detailed cookie
@@ -17372,8 +17293,6 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Animation.animationCanceled": Animation.animationCanceledPayload;
     "Animation.animationCreated": Animation.animationCreatedPayload;
     "Animation.animationStarted": Animation.animationStartedPayload;
-    "ApplicationCache.applicationCacheStatusUpdated": ApplicationCache.applicationCacheStatusUpdatedPayload;
-    "ApplicationCache.networkStateUpdated": ApplicationCache.networkStateUpdatedPayload;
     "Audits.issueAdded": Audits.issueAddedPayload;
     "BackgroundService.recordingStateChanged": BackgroundService.recordingStateChangedPayload;
     "BackgroundService.backgroundServiceEventReceived": BackgroundService.backgroundServiceEventReceivedPayload;
@@ -17556,10 +17475,6 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Animation.setPaused": Animation.setPausedParameters;
     "Animation.setPlaybackRate": Animation.setPlaybackRateParameters;
     "Animation.setTiming": Animation.setTimingParameters;
-    "ApplicationCache.enable": ApplicationCache.enableParameters;
-    "ApplicationCache.getApplicationCacheForFrame": ApplicationCache.getApplicationCacheForFrameParameters;
-    "ApplicationCache.getFramesWithManifests": ApplicationCache.getFramesWithManifestsParameters;
-    "ApplicationCache.getManifestForFrame": ApplicationCache.getManifestForFrameParameters;
     "Audits.getEncodedResponse": Audits.getEncodedResponseParameters;
     "Audits.disable": Audits.disableParameters;
     "Audits.enable": Audits.enableParameters;
@@ -17835,6 +17750,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Overlay.setShowWebVitals": Overlay.setShowWebVitalsParameters;
     "Overlay.setShowViewportSizeOnResize": Overlay.setShowViewportSizeOnResizeParameters;
     "Overlay.setShowHinge": Overlay.setShowHingeParameters;
+    "Overlay.setShowIsolatedElements": Overlay.setShowIsolatedElementsParameters;
     "Page.addScriptToEvaluateOnLoad": Page.addScriptToEvaluateOnLoadParameters;
     "Page.addScriptToEvaluateOnNewDocument": Page.addScriptToEvaluateOnNewDocumentParameters;
     "Page.bringToFront": Page.bringToFrontParameters;
@@ -18077,10 +17993,6 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Animation.setPaused": Animation.setPausedReturnValue;
     "Animation.setPlaybackRate": Animation.setPlaybackRateReturnValue;
     "Animation.setTiming": Animation.setTimingReturnValue;
-    "ApplicationCache.enable": ApplicationCache.enableReturnValue;
-    "ApplicationCache.getApplicationCacheForFrame": ApplicationCache.getApplicationCacheForFrameReturnValue;
-    "ApplicationCache.getFramesWithManifests": ApplicationCache.getFramesWithManifestsReturnValue;
-    "ApplicationCache.getManifestForFrame": ApplicationCache.getManifestForFrameReturnValue;
     "Audits.getEncodedResponse": Audits.getEncodedResponseReturnValue;
     "Audits.disable": Audits.disableReturnValue;
     "Audits.enable": Audits.enableReturnValue;
@@ -18356,6 +18268,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
     "Overlay.setShowWebVitals": Overlay.setShowWebVitalsReturnValue;
     "Overlay.setShowViewportSizeOnResize": Overlay.setShowViewportSizeOnResizeReturnValue;
     "Overlay.setShowHinge": Overlay.setShowHingeReturnValue;
+    "Overlay.setShowIsolatedElements": Overlay.setShowIsolatedElementsReturnValue;
     "Page.addScriptToEvaluateOnLoad": Page.addScriptToEvaluateOnLoadReturnValue;
     "Page.addScriptToEvaluateOnNewDocument": Page.addScriptToEvaluateOnNewDocumentReturnValue;
     "Page.bringToFront": Page.bringToFrontReturnValue;
@@ -18585,7 +18498,7 @@ unsubscribes current runtime agent from Runtime.bindingCalled notifications.
 /**
  * Can be converted to JSON
  */
-export type Serializable = {};
+export type Serializable = any;
 /**
  * Can be converted to JSON, but may also contain JSHandles.
  */
@@ -18609,6 +18522,7 @@ export type PageFunctionOn<On, Arg2, R> = string | ((on: On, arg2: Unboxed<Arg2>
 export type SmartHandle<T> = T extends Node ? ElementHandle<T> : JSHandle<T>;
 export type ElementHandleForTag<K extends keyof HTMLElementTagNameMap> = ElementHandle<HTMLElementTagNameMap[K]>;
 export type BindingSource = { context: BrowserContext, page: Page, frame: Frame };
+import { Serializable, EvaluationArgument, PageFunction, PageFunctionOn, SmartHandle, ElementHandleForTag, BindingSource } from './structs';
 
 type PageWaitForSelectorOptionsNotHidden = PageWaitForSelectorOptions & {
   state?: 'visible'|'attached';
@@ -20005,11 +19919,6 @@ export interface Page {
    */
   off(event: 'worker', listener: (worker: Worker) => void): this;
 
-  /**
-   * API testing helper associated with this page. Requests made with this API will use page cookies.
-   */
-  _request: FetchRequest;
-
   accessibility: Accessibility;
 
   /**
@@ -21345,6 +21254,11 @@ export interface Page {
   }): Promise<null|Response>;
 
   /**
+   * API testing helper associated with this page. Requests made with this API will use page cookies.
+   */
+  request: APIRequestContext;
+
+  /**
    * Routing provides the capability to modify network requests that are made by a page.
    *
    * Once routing is enabled, every request matching the url pattern will stall unless it's continued, fulfilled or aborted.
@@ -21700,6 +21614,9 @@ export interface Page {
    *
    * `page.setViewportSize` will resize the page. A lot of websites don't expect phones to change size, so you should set the
    * viewport size before navigating to the page.
+   * [page.setViewportSize(viewportSize)](https://playwright.dev/docs/api/class-page#page-set-viewport-size) will also reset
+   * `screen` size, use [browser.newContext([options])](https://playwright.dev/docs/api/class-browser#browser-new-context)
+   * with `screen` and `viewport` parameters if you need better control of these properties.
    *
    * ```js
    * const page = await browser.newPage();
@@ -22217,7 +22134,9 @@ export interface Page {
     timeout?: number;
 
     /**
-     * A glob pattern, regex pattern or predicate receiving [URL] to match while waiting for the navigation.
+     * A glob pattern, regex pattern or predicate receiving [URL] to match while waiting for the navigation. Note that if the
+     * parameter is a string without wilcard characters, the method will wait for navigation to URL that is exactly equal to
+     * the string.
      */
     url?: string|RegExp|((url: URL) => boolean);
 
@@ -22328,7 +22247,8 @@ export interface Page {
    *
    * Shortcut for main frame's
    * [frame.waitForURL(url[, options])](https://playwright.dev/docs/api/class-frame#frame-wait-for-url).
-   * @param url A glob pattern, regex pattern or predicate receiving [URL] to match while waiting for the navigation.
+   * @param url A glob pattern, regex pattern or predicate receiving [URL] to match while waiting for the navigation. Note that if the parameter is a string without wilcard characters, the method will wait for navigation to URL that is exactly equal to
+   * the string.
    * @param options
    */
   waitForURL(url: string|RegExp|((url: URL) => boolean), options?: {
@@ -24335,7 +24255,9 @@ export interface Frame {
     timeout?: number;
 
     /**
-     * A glob pattern, regex pattern or predicate receiving [URL] to match while waiting for the navigation.
+     * A glob pattern, regex pattern or predicate receiving [URL] to match while waiting for the navigation. Note that if the
+     * parameter is a string without wilcard characters, the method will wait for navigation to URL that is exactly equal to
+     * the string.
      */
     url?: string|RegExp|((url: URL) => boolean);
 
@@ -24365,7 +24287,8 @@ export interface Frame {
    * await frame.waitForURL('**\/target.html');
    * ```
    *
-   * @param url A glob pattern, regex pattern or predicate receiving [URL] to match while waiting for the navigation.
+   * @param url A glob pattern, regex pattern or predicate receiving [URL] to match while waiting for the navigation. Note that if the parameter is a string without wilcard characters, the method will wait for navigation to URL that is exactly equal to
+   * the string.
    * @param options
    */
   waitForURL(url: string|RegExp|((url: URL) => boolean), options?: {
@@ -24396,8 +24319,9 @@ export interface Frame {
  * If a page opens another page, e.g. with a `window.open` call, the popup will belong to the parent page's browser
  * context.
  *
- * Playwright allows creation of "incognito" browser contexts with `browser.newContext()` method. "Incognito" browser
- * contexts don't write any browsing data to disk.
+ * Playwright allows creating "incognito" browser contexts with
+ * [browser.newContext([options])](https://playwright.dev/docs/api/class-browser#browser-new-context) method. "Incognito"
+ * browser contexts don't write any browsing data to disk.
  *
  * ```js
  * // Create a new incognito browser context
@@ -24814,11 +24738,6 @@ export interface BrowserContext {
   off(event: 'serviceworker', listener: (worker: Worker) => void): this;
 
   /**
-   * API testing helper associated with this context. Requests made with this API will use context cookies.
-   */
-  _request: FetchRequest;
-
-  /**
    * Adds cookies into this browser context. All pages within this context will have these cookies installed. Cookies can be
    * obtained via
    * [browserContext.cookies([urls])](https://playwright.dev/docs/api/class-browsercontext#browser-context-cookies).
@@ -25039,6 +24958,11 @@ export interface BrowserContext {
    * Returns all open pages in the context.
    */
   pages(): Array<Page>;
+
+  /**
+   * API testing helper associated with this context. Requests made with this API will use context cookies.
+   */
+  request: APIRequestContext;
 
   /**
    * Routing provides the capability to modify network requests that are made by any page in the browser context. Once route
@@ -28135,6 +28059,40 @@ export interface Locator {
      * `false`. Useful to wait until the element is ready for the action without performing it.
      */
     trial?: boolean;
+  }): Promise<void>;
+
+  /**
+   * Returns when element specified by locator satisfies the `state` option.
+   *
+   * If target element already satisfies the condition, the method returns immediately. Otherwise, waits for up to `timeout`
+   * milliseconds until the condition is met.
+   *
+   * ```js
+   * const orderSent = page.locator('#order-sent');
+   * await orderSent.waitFor();
+   * ```
+   *
+   * @param options
+   */
+  waitFor(options?: {
+    /**
+     * Defaults to `'visible'`. Can be either:
+     * - `'attached'` - wait for element to be present in DOM.
+     * - `'detached'` - wait for element to not be present in DOM.
+     * - `'visible'` - wait for element to have non-empty bounding box and no `visibility:hidden`. Note that element without
+     *   any content or with `display:none` has an empty bounding box and is not considered visible.
+     * - `'hidden'` - wait for element to be either detached from DOM, or have an empty bounding box or `visibility:hidden`.
+     *   This is opposite to the `'visible'` option.
+     */
+    state?: "attached"|"detached"|"visible"|"hidden";
+
+    /**
+     * Maximum time in milliseconds, defaults to 30 seconds, pass `0` to disable timeout. The default value can be changed by
+     * using the
+     * [browserContext.setDefaultTimeout(timeout)](https://playwright.dev/docs/api/class-browsercontext#browser-context-set-default-timeout)
+     * or [page.setDefaultTimeout(timeout)](https://playwright.dev/docs/api/class-page#page-set-default-timeout) methods.
+     */
+    timeout?: number;
   }): Promise<void>;}
 
 /**
@@ -28240,7 +28198,8 @@ export interface BrowserType<Unused = {}> {
    * context will automatically close the browser.
    * @param userDataDir Path to a User Data Directory, which stores browser session data like cookies and local storage. More details for [Chromium](https://chromium.googlesource.com/chromium/src/+/master/docs/user_data_dir.md#introduction) and
    * [Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options#User_Profile). Note that Chromium's user
-   * data directory is the **parent** directory of the "Profile Path" seen at `chrome://version`.
+   * data directory is the **parent** directory of the "Profile Path" seen at `chrome://version`. Pass an empty string to use
+   * a temporary directory instead.
    * @param options
    */
   launchPersistentContext(userDataDir: string, options?: {
@@ -28323,7 +28282,7 @@ export interface BrowserType<Unused = {}> {
     executablePath?: string;
 
     /**
-     * An object containing additional HTTP headers to be sent with every request. All header values must be strings.
+     * An object containing additional HTTP headers to be sent with every request.
      */
     extraHTTPHeaders?: { [key: string]: string; };
 
@@ -28397,7 +28356,7 @@ export interface BrowserType<Unused = {}> {
     ignoreDefaultArgs?: boolean|Array<string>;
 
     /**
-     * Whether to ignore HTTPS errors during navigation. Defaults to `false`.
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
      */
     ignoreHTTPSErrors?: boolean;
 
@@ -28446,7 +28405,7 @@ export interface BrowserType<Unused = {}> {
       server: string;
 
       /**
-       * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+       * Optional comma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
        */
       bypass?: string;
 
@@ -28725,7 +28684,7 @@ export interface BrowserType<Unused = {}> {
       server: string;
 
       /**
-       * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+       * Optional comma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
        */
       bypass?: string;
 
@@ -28944,7 +28903,6 @@ type AccessibilityNode = {
   children?: AccessibilityNode[];
 }
 
-export const selectors: Selectors;
 export const devices: Devices & DeviceDescriptor[];
 
 //@ts-ignore this will be any if electron is not installed
@@ -29253,12 +29211,8 @@ export type AndroidKey =
   'Copy' |
   'Paste';
 
-export const chromium: BrowserType;
-export const firefox: BrowserType;
-export const webkit: BrowserType;
 export const _electron: Electron;
 export const _android: Android;
-export const _newRequest: () => Promise<FetchRequest>;
 
 // This is required to not export everything by default. See https://github.com/Microsoft/TypeScript/issues/19545#issuecomment-340490459
 export {};
@@ -29518,7 +29472,7 @@ export interface AndroidDevice {
     deviceScaleFactor?: number;
 
     /**
-     * An object containing additional HTTP headers to be sent with every request. All header values must be strings.
+     * An object containing additional HTTP headers to be sent with every request.
      */
     extraHTTPHeaders?: { [key: string]: string; };
 
@@ -29563,7 +29517,7 @@ export interface AndroidDevice {
     };
 
     /**
-     * Whether to ignore HTTPS errors during navigation. Defaults to `false`.
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
      */
     ignoreHTTPSErrors?: boolean;
 
@@ -30143,6 +30097,651 @@ export interface AndroidWebView {
 }
 
 /**
+ * Exposes API that can be used for the Web API testing.
+ */
+export interface APIRequest {
+  /**
+   * Creates new instances of [APIRequestContext].
+   * @param options
+   */
+  newContext(options?: {
+    /**
+     * Methods like
+     * [apiRequestContext.get(url[, options])](https://playwright.dev/docs/api/class-apirequestcontext#api-request-context-get)
+     * take the base URL into consideration by using the [`URL()`](https://developer.mozilla.org/en-US/docs/Web/API/URL/URL)
+     * constructor for building the corresponding URL. Examples:
+     * - baseURL: `http://localhost:3000` and sending request to `/bar.html` results in `http://localhost:3000/bar.html`
+     * - baseURL: `http://localhost:3000/foo/` and sending request to `./bar.html` results in
+     *   `http://localhost:3000/foo/bar.html`
+     */
+    baseURL?: string;
+
+    /**
+     * An object containing additional HTTP headers to be sent with every request.
+     */
+    extraHTTPHeaders?: { [key: string]: string; };
+
+    /**
+     * Credentials for [HTTP authentication](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication).
+     */
+    httpCredentials?: {
+      username: string;
+
+      password: string;
+    };
+
+    /**
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
+     */
+    ignoreHTTPSErrors?: boolean;
+
+    /**
+     * Network proxy settings.
+     */
+    proxy?: {
+      /**
+       * Proxy to be used for all requests. HTTP and SOCKS proxies are supported, for example `http://myproxy.com:3128` or
+       * `socks5://myproxy.com:3128`. Short form `myproxy.com:3128` is considered an HTTP proxy.
+       */
+      server: string;
+
+      /**
+       * Optional comma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+       */
+      bypass?: string;
+
+      /**
+       * Optional username to use if HTTP proxy requires authentication.
+       */
+      username?: string;
+
+      /**
+       * Optional password to use if HTTP proxy requires authentication.
+       */
+      password?: string;
+    };
+
+    /**
+     * Populates context with given storage state. This option can be used to initialize context with logged-in information
+     * obtained via
+     * [browserContext.storageState([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-storage-state)
+     * or
+     * [apiRequestContext.storageState([options])](https://playwright.dev/docs/api/class-apirequestcontext#api-request-context-storage-state).
+     * Either a path to the file with saved storage, or the value returned by one of
+     * [browserContext.storageState([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-storage-state)
+     * or
+     * [apiRequestContext.storageState([options])](https://playwright.dev/docs/api/class-apirequestcontext#api-request-context-storage-state)
+     * methods.
+     */
+    storageState?: string|{
+      cookies: Array<{
+        name: string;
+
+        value: string;
+
+        domain: string;
+
+        path: string;
+
+        /**
+         * Unix time in seconds.
+         */
+        expires: number;
+
+        httpOnly: boolean;
+
+        secure: boolean;
+
+        sameSite: "Strict"|"Lax"|"None";
+      }>;
+
+      origins: Array<{
+        origin: string;
+
+        localStorage: Array<{
+          name: string;
+
+          value: string;
+        }>;
+      }>;
+    };
+
+    /**
+     * Maximum time in milliseconds to wait for the response. Defaults to `30000` (30 seconds). Pass `0` to disable timeout.
+     */
+    timeout?: number;
+
+    /**
+     * Specific user agent to use in this context.
+     */
+    userAgent?: string;
+  }): Promise<APIRequestContext>;
+}
+
+/**
+ * This API is used for the Web API testing. You can use it to trigger API endpoints, configure micro-services, prepare
+ * environment or the service to your e2e test. When used on [Page] or a [BrowserContext], this API will automatically use
+ * the cookies from the corresponding [BrowserContext]. This means that if you log in using this API, your e2e test will be
+ * logged in and vice versa.
+ */
+export interface APIRequestContext {
+  /**
+   * Sends HTTP(S) [DELETE](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE) request and returns its
+   * response. The method will populate request cookies from the context and update context cookies from the response. The
+   * method will automatically follow redirects.
+   * @param url Target URL.
+   * @param options
+   */
+  delete(url: string, options?: {
+    /**
+     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
+     */
+    failOnStatusCode?: boolean;
+
+    /**
+     * Allows to set HTTP headers.
+     */
+    headers?: { [key: string]: string; };
+
+    /**
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
+     */
+    ignoreHTTPSErrors?: boolean;
+
+    /**
+     * Query parameters to be send with the URL.
+     */
+    params?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Request timeout in milliseconds. Defaults to `30000` (30 seconds). Pass `0` to disable timeout.
+     */
+    timeout?: number;
+  }): Promise<APIResponse>;
+
+  /**
+   * All responses returned by
+   * [apiRequestContext.get(url[, options])](https://playwright.dev/docs/api/class-apirequestcontext#api-request-context-get)
+   * and similar methods are stored in the memory, so that you can later call
+   * [apiResponse.body()](https://playwright.dev/docs/api/class-apiresponse#api-response-body). This method discards all
+   * stored responses, and makes [apiResponse.body()](https://playwright.dev/docs/api/class-apiresponse#api-response-body)
+   * throw "Response disposed" error.
+   */
+  dispose(): Promise<void>;
+
+  /**
+   * Sends HTTP(S) request and returns its response. The method will populate request cookies from the context and update
+   * context cookies from the response. The method will automatically follow redirects.
+   * @param urlOrRequest Target URL or Request to get all parameters from.
+   * @param options
+   */
+  fetch(urlOrRequest: string|Request, options?: {
+    /**
+     * Allows to set post data of the request. If the data parameter is an object, it will be serialized to json string and
+     * `content-type` header will be set to `application/json` if not explicitly set. Otherwise the `content-type` header will
+     * be set to `application/octet-stream` if not explicitly set.
+     */
+    data?: string|Buffer|Serializable;
+
+    /**
+     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
+     */
+    failOnStatusCode?: boolean;
+
+    /**
+     * Provides an object that will be serialized as html form using `application/x-www-form-urlencoded` encoding and sent as
+     * this request body. If this parameter is specified `content-type` header will be set to
+     * `application/x-www-form-urlencoded` unless explicitly provided.
+     */
+    form?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Allows to set HTTP headers.
+     */
+    headers?: { [key: string]: string; };
+
+    /**
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
+     */
+    ignoreHTTPSErrors?: boolean;
+
+    /**
+     * If set changes the fetch method (e.g. [PUT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT) or
+     * [POST](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST)). If not specified, GET method is used.
+     */
+    method?: string;
+
+    /**
+     * Provides an object that will be serialized as html form using `multipart/form-data` encoding and sent as this request
+     * body. If this parameter is specified `content-type` header will be set to `multipart/form-data` unless explicitly
+     * provided. File values can be passed either as [`fs.ReadStream`](https://nodejs.org/api/fs.html#fs_class_fs_readstream)
+     * or as file-like object containing file name, mime-type and its content.
+     */
+    multipart?: { [key: string]: string|number|boolean|ReadStream|{
+      /**
+       * File name
+       */
+      name: string;
+
+      /**
+       * File type
+       */
+      mimeType: string;
+
+      /**
+       * File content
+       */
+      buffer: Buffer;
+    }; };
+
+    /**
+     * Query parameters to be send with the URL.
+     */
+    params?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Request timeout in milliseconds. Defaults to `30000` (30 seconds). Pass `0` to disable timeout.
+     */
+    timeout?: number;
+  }): Promise<APIResponse>;
+
+  /**
+   * Sends HTTP(S) [GET](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/GET) request and returns its response. The
+   * method will populate request cookies from the context and update context cookies from the response. The method will
+   * automatically follow redirects.
+   * @param url Target URL.
+   * @param options
+   */
+  get(url: string, options?: {
+    /**
+     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
+     */
+    failOnStatusCode?: boolean;
+
+    /**
+     * Allows to set HTTP headers.
+     */
+    headers?: { [key: string]: string; };
+
+    /**
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
+     */
+    ignoreHTTPSErrors?: boolean;
+
+    /**
+     * Query parameters to be send with the URL.
+     */
+    params?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Request timeout in milliseconds. Defaults to `30000` (30 seconds). Pass `0` to disable timeout.
+     */
+    timeout?: number;
+  }): Promise<APIResponse>;
+
+  /**
+   * Sends HTTP(S) [HEAD](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/HEAD) request and returns its response.
+   * The method will populate request cookies from the context and update context cookies from the response. The method will
+   * automatically follow redirects.
+   * @param url Target URL.
+   * @param options
+   */
+  head(url: string, options?: {
+    /**
+     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
+     */
+    failOnStatusCode?: boolean;
+
+    /**
+     * Allows to set HTTP headers.
+     */
+    headers?: { [key: string]: string; };
+
+    /**
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
+     */
+    ignoreHTTPSErrors?: boolean;
+
+    /**
+     * Query parameters to be send with the URL.
+     */
+    params?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Request timeout in milliseconds. Defaults to `30000` (30 seconds). Pass `0` to disable timeout.
+     */
+    timeout?: number;
+  }): Promise<APIResponse>;
+
+  /**
+   * Sends HTTP(S) [PATCH](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PATCH) request and returns its response.
+   * The method will populate request cookies from the context and update context cookies from the response. The method will
+   * automatically follow redirects.
+   * @param url Target URL.
+   * @param options
+   */
+  patch(url: string, options?: {
+    /**
+     * Allows to set post data of the request. If the data parameter is an object, it will be serialized to json string and
+     * `content-type` header will be set to `application/json` if not explicitly set. Otherwise the `content-type` header will
+     * be set to `application/octet-stream` if not explicitly set.
+     */
+    data?: string|Buffer|Serializable;
+
+    /**
+     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
+     */
+    failOnStatusCode?: boolean;
+
+    /**
+     * Provides an object that will be serialized as html form using `application/x-www-form-urlencoded` encoding and sent as
+     * this request body. If this parameter is specified `content-type` header will be set to
+     * `application/x-www-form-urlencoded` unless explicitly provided.
+     */
+    form?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Allows to set HTTP headers.
+     */
+    headers?: { [key: string]: string; };
+
+    /**
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
+     */
+    ignoreHTTPSErrors?: boolean;
+
+    /**
+     * Provides an object that will be serialized as html form using `multipart/form-data` encoding and sent as this request
+     * body. If this parameter is specified `content-type` header will be set to `multipart/form-data` unless explicitly
+     * provided. File values can be passed either as [`fs.ReadStream`](https://nodejs.org/api/fs.html#fs_class_fs_readstream)
+     * or as file-like object containing file name, mime-type and its content.
+     */
+    multipart?: { [key: string]: string|number|boolean|ReadStream|{
+      /**
+       * File name
+       */
+      name: string;
+
+      /**
+       * File type
+       */
+      mimeType: string;
+
+      /**
+       * File content
+       */
+      buffer: Buffer;
+    }; };
+
+    /**
+     * Query parameters to be send with the URL.
+     */
+    params?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Request timeout in milliseconds. Defaults to `30000` (30 seconds). Pass `0` to disable timeout.
+     */
+    timeout?: number;
+  }): Promise<APIResponse>;
+
+  /**
+   * Sends HTTP(S) [POST](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST) request and returns its response.
+   * The method will populate request cookies from the context and update context cookies from the response. The method will
+   * automatically follow redirects.
+   * @param url Target URL.
+   * @param options
+   */
+  post(url: string, options?: {
+    /**
+     * Allows to set post data of the request. If the data parameter is an object, it will be serialized to json string and
+     * `content-type` header will be set to `application/json` if not explicitly set. Otherwise the `content-type` header will
+     * be set to `application/octet-stream` if not explicitly set.
+     */
+    data?: string|Buffer|Serializable;
+
+    /**
+     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
+     */
+    failOnStatusCode?: boolean;
+
+    /**
+     * Provides an object that will be serialized as html form using `application/x-www-form-urlencoded` encoding and sent as
+     * this request body. If this parameter is specified `content-type` header will be set to
+     * `application/x-www-form-urlencoded` unless explicitly provided.
+     */
+    form?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Allows to set HTTP headers.
+     */
+    headers?: { [key: string]: string; };
+
+    /**
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
+     */
+    ignoreHTTPSErrors?: boolean;
+
+    /**
+     * Provides an object that will be serialized as html form using `multipart/form-data` encoding and sent as this request
+     * body. If this parameter is specified `content-type` header will be set to `multipart/form-data` unless explicitly
+     * provided. File values can be passed either as [`fs.ReadStream`](https://nodejs.org/api/fs.html#fs_class_fs_readstream)
+     * or as file-like object containing file name, mime-type and its content.
+     */
+    multipart?: { [key: string]: string|number|boolean|ReadStream|{
+      /**
+       * File name
+       */
+      name: string;
+
+      /**
+       * File type
+       */
+      mimeType: string;
+
+      /**
+       * File content
+       */
+      buffer: Buffer;
+    }; };
+
+    /**
+     * Query parameters to be send with the URL.
+     */
+    params?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Request timeout in milliseconds. Defaults to `30000` (30 seconds). Pass `0` to disable timeout.
+     */
+    timeout?: number;
+  }): Promise<APIResponse>;
+
+  /**
+   * Sends HTTP(S) [PUT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT) request and returns its response. The
+   * method will populate request cookies from the context and update context cookies from the response. The method will
+   * automatically follow redirects.
+   * @param url Target URL.
+   * @param options
+   */
+  put(url: string, options?: {
+    /**
+     * Allows to set post data of the request. If the data parameter is an object, it will be serialized to json string and
+     * `content-type` header will be set to `application/json` if not explicitly set. Otherwise the `content-type` header will
+     * be set to `application/octet-stream` if not explicitly set.
+     */
+    data?: string|Buffer|Serializable;
+
+    /**
+     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
+     */
+    failOnStatusCode?: boolean;
+
+    /**
+     * Provides an object that will be serialized as html form using `application/x-www-form-urlencoded` encoding and sent as
+     * this request body. If this parameter is specified `content-type` header will be set to
+     * `application/x-www-form-urlencoded` unless explicitly provided.
+     */
+    form?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Allows to set HTTP headers.
+     */
+    headers?: { [key: string]: string; };
+
+    /**
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
+     */
+    ignoreHTTPSErrors?: boolean;
+
+    /**
+     * Provides an object that will be serialized as html form using `multipart/form-data` encoding and sent as this request
+     * body. If this parameter is specified `content-type` header will be set to `multipart/form-data` unless explicitly
+     * provided. File values can be passed either as [`fs.ReadStream`](https://nodejs.org/api/fs.html#fs_class_fs_readstream)
+     * or as file-like object containing file name, mime-type and its content.
+     */
+    multipart?: { [key: string]: string|number|boolean|ReadStream|{
+      /**
+       * File name
+       */
+      name: string;
+
+      /**
+       * File type
+       */
+      mimeType: string;
+
+      /**
+       * File content
+       */
+      buffer: Buffer;
+    }; };
+
+    /**
+     * Query parameters to be send with the URL.
+     */
+    params?: { [key: string]: string|number|boolean; };
+
+    /**
+     * Request timeout in milliseconds. Defaults to `30000` (30 seconds). Pass `0` to disable timeout.
+     */
+    timeout?: number;
+  }): Promise<APIResponse>;
+
+  /**
+   * Returns storage state for this request context, contains current cookies and local storage snapshot if it was passed to
+   * the constructor.
+   * @param options
+   */
+  storageState(options?: {
+    /**
+     * The file path to save the storage state to. If `path` is a relative path, then it is resolved relative to current
+     * working directory. If no path is provided, storage state is still returned, but won't be saved to the disk.
+     */
+    path?: string;
+  }): Promise<{
+    cookies: Array<{
+      name: string;
+
+      value: string;
+
+      domain: string;
+
+      path: string;
+
+      /**
+       * Unix time in seconds.
+       */
+      expires: number;
+
+      httpOnly: boolean;
+
+      secure: boolean;
+
+      sameSite: "Strict"|"Lax"|"None";
+    }>;
+
+    origins: Array<{
+      origin: string;
+
+      localStorage: Array<{
+        name: string;
+
+        value: string;
+      }>;
+    }>;
+  }>;
+}
+
+/**
+ * [APIResponse] class represents responses returned by
+ * [apiRequestContext.get(url[, options])](https://playwright.dev/docs/api/class-apirequestcontext#api-request-context-get)
+ * and similar methods.
+ */
+export interface APIResponse {
+  /**
+   * Returns the buffer with response body.
+   */
+  body(): Promise<Buffer>;
+
+  /**
+   * Disposes the body of this response. If not called then the body will stay in memory until the context closes.
+   */
+  dispose(): Promise<void>;
+
+  /**
+   * An object with all the response HTTP headers associated with this response.
+   */
+  headers(): { [key: string]: string; };
+
+  /**
+   * An array with all the request HTTP headers associated with this response. Header names are not lower-cased. Headers with
+   * multiple entries, such as `Set-Cookie`, appear in the array multiple times.
+   */
+  headersArray(): Array<{
+    /**
+     * Name of the header.
+     */
+    name: string;
+
+    /**
+     * Value of the header.
+     */
+    value: string;
+  }>;
+
+  /**
+   * Returns the JSON representation of response body.
+   *
+   * This method will throw if the response body is not parsable via `JSON.parse`.
+   */
+  json(): Promise<Serializable>;
+
+  /**
+   * Contains a boolean stating whether the response was successful (status in the range 200-299) or not.
+   */
+  ok(): boolean;
+
+  /**
+   * Contains the status code of the response (e.g., 200 for a success).
+   */
+  status(): number;
+
+  /**
+   * Contains the status text of the response (e.g. usually an "OK" for a success).
+   */
+  statusText(): string;
+
+  /**
+   * Returns the text representation of response body.
+   */
+  text(): Promise<string>;
+
+  /**
+   * Contains the URL of the response.
+   */
+  url(): string;
+}
+
+/**
  * - extends: [EventEmitter]
  *
  * A Browser is created via
@@ -30294,7 +30893,7 @@ export interface Browser extends EventEmitter {
     deviceScaleFactor?: number;
 
     /**
-     * An object containing additional HTTP headers to be sent with every request. All header values must be strings.
+     * An object containing additional HTTP headers to be sent with every request.
      */
     extraHTTPHeaders?: { [key: string]: string; };
 
@@ -30339,7 +30938,7 @@ export interface Browser extends EventEmitter {
     };
 
     /**
-     * Whether to ignore HTTPS errors during navigation. Defaults to `false`.
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
      */
     ignoreHTTPSErrors?: boolean;
 
@@ -30392,7 +30991,7 @@ export interface Browser extends EventEmitter {
       server: string;
 
       /**
-       * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+       * Optional comma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
        */
       bypass?: string;
 
@@ -30485,53 +31084,42 @@ export interface Browser extends EventEmitter {
      */
     storageState?: string|{
       /**
-       * Optional cookies to set for context
+       * cookies to set for context
        */
-      cookies?: Array<{
+      cookies: Array<{
         name: string;
 
         value: string;
 
         /**
-         * Optional either url or domain / path are required
+         * domain and path are required
          */
-        url?: string;
+        domain: string;
 
         /**
-         * Optional either url or domain / path are required
+         * domain and path are required
          */
-        domain?: string;
+        path: string;
 
         /**
-         * Optional either url or domain / path are required
+         * Unix time in seconds.
          */
-        path?: string;
+        expires: number;
+
+        httpOnly: boolean;
+
+        secure: boolean;
 
         /**
-         * Optional Unix time in seconds.
+         * sameSite flag
          */
-        expires?: number;
-
-        /**
-         * Optional httpOnly flag
-         */
-        httpOnly?: boolean;
-
-        /**
-         * Optional secure flag
-         */
-        secure?: boolean;
-
-        /**
-         * Optional sameSite flag
-         */
-        sameSite?: "Strict"|"Lax"|"None";
+        sameSite: "Strict"|"Lax"|"None";
       }>;
 
       /**
-       * Optional localStorage to set for context
+       * localStorage to set for context
        */
-      origins?: Array<{
+      origins: Array<{
         origin: string;
 
         localStorage: Array<{
@@ -31100,7 +31688,7 @@ export interface Electron {
     executablePath?: string;
 
     /**
-     * An object containing additional HTTP headers to be sent with every request. All header values must be strings.
+     * An object containing additional HTTP headers to be sent with every request.
      */
     extraHTTPHeaders?: { [key: string]: string; };
 
@@ -31131,7 +31719,7 @@ export interface Electron {
     };
 
     /**
-     * Whether to ignore HTTPS errors during navigation. Defaults to `false`.
+     * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
      */
     ignoreHTTPSErrors?: boolean;
 
@@ -31206,195 +31794,6 @@ export interface Electron {
      */
     timezoneId?: string;
   }): Promise<ElectronApplication>;
-}
-
-/**
- * This API is used for Web API testing. You can use it to trigger API endpoints, configure micro-services, prepare
- * environment or the service to your e2e test. When used on [Page] or a [BrowserContext], this API will automatically use
- * the cookies from the corresponding [BrowserContext]. This means that if you log in using this API, your e2e test will be
- * logged in and vice versa.
- */
-export interface FetchRequest {
-  /**
-   * All responses received through
-   * [fetchRequest.fetch(urlOrRequest[, options])](https://playwright.dev/docs/api/class-fetchrequest#fetch-request-fetch),
-   * [fetchRequest.get(urlOrRequest[, options])](https://playwright.dev/docs/api/class-fetchrequest#fetch-request-get),
-   * [fetchRequest.post(urlOrRequest[, options])](https://playwright.dev/docs/api/class-fetchrequest#fetch-request-post) and
-   * other methods are stored in the memory, so that you can later call
-   * [fetchResponse.body()](https://playwright.dev/docs/api/class-fetchresponse#fetch-response-body). This method discards
-   * all stored responses, and makes
-   * [fetchResponse.body()](https://playwright.dev/docs/api/class-fetchresponse#fetch-response-body) throw "Response
-   * disposed" error.
-   */
-  dispose(): Promise<void>;
-
-  /**
-   * Sends HTTP(S) fetch and returns its response. The method will populate fetch cookies from the context and update context
-   * cookies from the response. The method will automatically follow redirects.
-   * @param urlOrRequest Target URL or Request to get all fetch parameters from.
-   * @param options
-   */
-  fetch(urlOrRequest: string|Request, options?: {
-    /**
-     * Allows to set post data of the fetch.
-     */
-    data?: string|Buffer;
-
-    /**
-     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
-     */
-    failOnStatusCode?: boolean;
-
-    /**
-     * Allows to set HTTP headers.
-     */
-    headers?: { [key: string]: string; };
-
-    /**
-     * If set changes the fetch method (e.g. PUT or POST). If not specified, GET method is used.
-     */
-    method?: string;
-
-    /**
-     * Query parameters to be send with the URL.
-     */
-    params?: { [key: string]: string; };
-
-    /**
-     * Request timeout in milliseconds.
-     */
-    timeout?: number;
-  }): Promise<FetchResponse>;
-
-  /**
-   * Sends HTTP(S) GET request and returns its response. The method will populate fetch cookies from the context and update
-   * context cookies from the response. The method will automatically follow redirects.
-   * @param urlOrRequest Target URL or Request to get all fetch parameters from.
-   * @param options
-   */
-  get(urlOrRequest: string|Request, options?: {
-    /**
-     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
-     */
-    failOnStatusCode?: boolean;
-
-    /**
-     * Allows to set HTTP headers.
-     */
-    headers?: { [key: string]: string; };
-
-    /**
-     * Query parameters to be send with the URL.
-     */
-    params?: { [key: string]: string; };
-
-    /**
-     * Request timeout in milliseconds.
-     */
-    timeout?: number;
-  }): Promise<FetchResponse>;
-
-  /**
-   * Sends HTTP(S) fetch and returns its response. The method will populate fetch cookies from the context and update context
-   * cookies from the response. The method will automatically follow redirects.
-   * @param urlOrRequest Target URL or Request to get all fetch parameters from.
-   * @param options
-   */
-  post(urlOrRequest: string|Request, options?: {
-    /**
-     * Allows to set post data of the fetch.
-     */
-    data?: string|Buffer;
-
-    /**
-     * Whether to throw on response codes other than 2xx and 3xx. By default response object is returned for all status codes.
-     */
-    failOnStatusCode?: boolean;
-
-    /**
-     * Allows to set HTTP headers.
-     */
-    headers?: { [key: string]: string; };
-
-    /**
-     * Query parameters to be send with the URL.
-     */
-    params?: { [key: string]: string; };
-
-    /**
-     * Request timeout in milliseconds.
-     */
-    timeout?: number;
-  }): Promise<FetchResponse>;
-}
-
-/**
- * [FetchResponse] class represents responses received from
- * [fetchRequest.fetch(urlOrRequest[, options])](https://playwright.dev/docs/api/class-fetchrequest#fetch-request-fetch).
- */
-export interface FetchResponse {
-  /**
-   * Returns the buffer with response body.
-   */
-  body(): Promise<Buffer>;
-
-  /**
-   * Disposes the body of this response. If not called then the body will stay in memory until the context closes.
-   */
-  dispose(): Promise<void>;
-
-  /**
-   * An object with all the response HTTP headers associated with this response.
-   */
-  headers(): { [key: string]: string; };
-
-  /**
-   * An array with all the request HTTP headers associated with this response. Header names are not lower-cased. Headers with
-   * multiple entries, such as `Set-Cookie`, appear in the array multiple times.
-   */
-  headersArray(): Array<{
-    /**
-     * Name of the header.
-     */
-    name: string;
-
-    /**
-     * Value of the header.
-     */
-    value: string;
-  }>;
-
-  /**
-   * Returns the JSON representation of response body.
-   *
-   * This method will throw if the response body is not parsable via `JSON.parse`.
-   */
-  json(): Promise<Serializable>;
-
-  /**
-   * Contains a boolean stating whether the response was successful (status in the range 200-299) or not.
-   */
-  ok(): boolean;
-
-  /**
-   * Contains the status code of the response (e.g., 200 for a success).
-   */
-  status(): number;
-
-  /**
-   * Contains the status text of the response (e.g. usually an "OK" for a success).
-   */
-  statusText(): string;
-
-  /**
-   * Returns the text representation of response body.
-   */
-  text(): Promise<string>;
-
-  /**
-   * Contains the URL of the response.
-   */
-  url(): string;
 }
 
 /**
@@ -31802,6 +32201,31 @@ export interface Mouse {
 }
 
 /**
+ * This object can be used to launch or connect to Chromium, returning instances of [Browser].
+ */
+export const chromium: BrowserType;
+
+/**
+ * This object can be used to launch or connect to Firefox, returning instances of [Browser].
+ */
+export const firefox: BrowserType;
+
+/**
+ * Exposes API that can be used for the Web API testing.
+ */
+export const request: APIRequest;
+
+/**
+ * Selectors can be used to install custom selector engines. See [Working with selectors](https://playwright.dev/docs/selectors) for more
+ * information.
+ */
+export const selectors: Selectors;
+
+/**
+ * This object can be used to launch or connect to WebKit, returning instances of [Browser].
+ */
+export const webkit: BrowserType;
+/**
  * Whenever the page sends a request for a network resource the following sequence of events are emitted by [Page]:
  * - [page.on('request')](https://playwright.dev/docs/api/class-page#page-event-request) emitted when the request is
  *   issued by the page.
@@ -31905,7 +32329,7 @@ export interface Request {
    * When the response is `application/x-www-form-urlencoded` then a key/value object of the values will be returned.
    * Otherwise it will be parsed as JSON.
    */
-  postDataJSON(): null|any;
+  postDataJSON(): null|Serializable;
 
   /**
    * Request that was redirected by the server to this one, if any.
@@ -32313,10 +32737,10 @@ export interface Route {
     path?: string;
 
     /**
-     * [FetchResponse] to fulfill route's request with. Individual fields of the response (such as headers) can be overridden
+     * [APIResponse] to fulfill route's request with. Individual fields of the response (such as headers) can be overridden
      * using fulfill options.
      */
-    response?: FetchResponse;
+    response?: APIResponse;
 
     /**
      * Response status code, defaults to `200`.
@@ -32790,7 +33214,7 @@ export interface BrowserContextOptions {
   deviceScaleFactor?: number;
 
   /**
-   * An object containing additional HTTP headers to be sent with every request. All header values must be strings.
+   * An object containing additional HTTP headers to be sent with every request.
    */
   extraHTTPHeaders?: { [key: string]: string; };
 
@@ -32816,7 +33240,7 @@ export interface BrowserContextOptions {
   httpCredentials?: HTTPCredentials;
 
   /**
-   * Whether to ignore HTTPS errors during navigation. Defaults to `false`.
+   * Whether to ignore HTTPS errors when sending network requests. Defaults to `false`.
    */
   ignoreHTTPSErrors?: boolean;
 
@@ -32869,7 +33293,7 @@ export interface BrowserContextOptions {
     server: string;
 
     /**
-     * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+     * Optional comma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
      */
     bypass?: string;
 
@@ -32962,53 +33386,42 @@ export interface BrowserContextOptions {
    */
   storageState?: string|{
     /**
-     * Optional cookies to set for context
+     * cookies to set for context
      */
-    cookies?: Array<{
+    cookies: Array<{
       name: string;
 
       value: string;
 
       /**
-       * Optional either url or domain / path are required
+       * domain and path are required
        */
-      url?: string;
+      domain: string;
 
       /**
-       * Optional either url or domain / path are required
+       * domain and path are required
        */
-      domain?: string;
+      path: string;
 
       /**
-       * Optional either url or domain / path are required
+       * Unix time in seconds.
        */
-      path?: string;
+      expires: number;
+
+      httpOnly: boolean;
+
+      secure: boolean;
 
       /**
-       * Optional Unix time in seconds.
+       * sameSite flag
        */
-      expires?: number;
-
-      /**
-       * Optional httpOnly flag
-       */
-      httpOnly?: boolean;
-
-      /**
-       * Optional secure flag
-       */
-      secure?: boolean;
-
-      /**
-       * Optional sameSite flag
-       */
-      sameSite?: "Strict"|"Lax"|"None";
+      sameSite: "Strict"|"Lax"|"None";
     }>;
 
     /**
-     * Optional localStorage to set for context
+     * localStorage to set for context
      */
-    origins?: Array<{
+    origins: Array<{
       origin: string;
 
       localStorage: Array<{
@@ -33196,7 +33609,7 @@ export interface LaunchOptions {
     server: string;
 
     /**
-     * Optional coma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
+     * Optional comma-separated domains to bypass proxy, for example `".com, chromium.org, .domain.com"`.
      */
     bypass?: string;
 
@@ -33492,6 +33905,14 @@ type Devices = {
   "iPhone 12 Pro landscape": DeviceDescriptor;
   "iPhone 12 Pro Max": DeviceDescriptor;
   "iPhone 12 Pro Max landscape": DeviceDescriptor;
+  "iPhone 13": DeviceDescriptor;
+  "iPhone 13 landscape": DeviceDescriptor;
+  "iPhone 13 Pro": DeviceDescriptor;
+  "iPhone 13 Pro landscape": DeviceDescriptor;
+  "iPhone 13 Pro Max": DeviceDescriptor;
+  "iPhone 13 Pro Max landscape": DeviceDescriptor;
+  "iPhone 13 Mini": DeviceDescriptor;
+  "iPhone 13 Mini landscape": DeviceDescriptor;
   "JioPhone 2": DeviceDescriptor;
   "JioPhone 2 landscape": DeviceDescriptor;
   "Kindle Fire HDX": DeviceDescriptor;
@@ -33554,14 +33975,6 @@ export const webkit: BrowserType<WebKitBrowser>;
     export const firefox: BrowserType<FirefoxBrowser>;
 }
 
-declare module 'playwright-chromium' {
-    export * from 'playwright';
-}
-
-declare module 'playwright-firefox' {
-    export * from 'playwright';
-}
-
-declare module 'playwright-webkit' {
-    export * from 'playwright';
+declare module 'playwright' {
+    export * from 'playwright-core';
 }

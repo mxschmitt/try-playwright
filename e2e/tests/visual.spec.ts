@@ -115,7 +115,7 @@ test.describe("Share functionality", () => {
 
     await page.reload()
     await page.click("text='Run'")
-    await page.waitForSelector("text=FolioAssert")
+    await expect(page.locator("text=FolioAssert")).toBeVisible();
   })
 })
 
@@ -132,9 +132,9 @@ test.describe("should handle platform core related features", () => {
     await page.keyboard.type("();")
 
     await page.click("text='Run'")
-    await page.waitForSelector("text=Execution timeout!", {
-      timeout: 70 * 1000
-    })
+    await expect(page.locator("text=Execution timeout!")).toBeVisible({
+      timeout: 70 * 1000,
+    });
   })
   test("should handle uncaughtException correctly", async ({ page }) => {
     await page.goto(ROOT_URL);
@@ -156,7 +156,7 @@ const playwright = require("playwright");
     })
     await page.waitForTimeout(200)
     await page.click("text='Run'")
-    await page.waitForSelector("text=Error: foobar!")
+    await expect(page.locator("text=Error: foobar!")).toBeVisible();
   })
   test("should prevent access to the control microservice from inside the worker", async ({ page }) => {
     await page.goto(ROOT_URL);

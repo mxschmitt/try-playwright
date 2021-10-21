@@ -1,8 +1,8 @@
-import { expect, test as base, ApiResponse } from '@playwright/test';
+import { expect, test as base, APIResponse } from '@playwright/test';
 import { ROOT_URL } from './utils';
 
 type TestFixtures = {
-  executeCode: (code: string, language: string) => Promise<ApiResponse>
+  executeCode: (code: string, language: string) => Promise<APIResponse>
 };
 
 const test = base.extend<TestFixtures>({

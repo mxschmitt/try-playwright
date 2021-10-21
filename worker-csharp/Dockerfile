@@ -1,4 +1,4 @@
-ARG PLAYWRIGHT_VERSION=1.14.0
+ARG PLAYWRIGHT_VERSION=1.16.0
 FROM golang:1.16-buster as builder
 WORKDIR /root
 COPY go.mod /root/
