@@ -13,16 +13,8 @@ read -r -d '' CUSTOM_SUFFIX << EOM
     export const firefox: BrowserType<FirefoxBrowser>;
 }
 
-declare module 'playwright-chromium' {
-    export * from 'playwright';
-}
-
-declare module 'playwright-firefox' {
-    export * from 'playwright';
-}
-
-declare module 'playwright-webkit' {
-    export * from 'playwright';
+declare module 'playwright' {
+    export * from 'playwright-core';
 }
 
 EOM
@@ -30,13 +22,13 @@ EOM
 set -e
 
 function get_playwright_file() {
-    echo "$(curl -sL https://unpkg.com/playwright/$1)"
+    echo "$(curl -sL https://unpkg.com/playwright-core/$1)"
 }
 
 function update_playwright_types {
     TYPES_FILE="frontend/src/components/Editor/types.txt"
     cat e2e/node_modules/@types/node/globals.d.ts > $TYPES_FILE
-    echo "declare module 'playwright' {" >> $TYPES_FILE
+    echo "declare module 'playwright-core' {" >> $TYPES_FILE
     echo "$(get_playwright_file types/protocol.d.ts)" >> $TYPES_FILE
     echo "$(get_playwright_file types/structs.d.ts)" | tail -n +19 >> $TYPES_FILE
     echo "$(get_playwright_file types/types.d.ts)" | tail -n +22 >> $TYPES_FILE
