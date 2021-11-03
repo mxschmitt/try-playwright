@@ -1,8 +1,7 @@
 import { expect, test, Page } from '@playwright/test';
-import { ROOT_URL } from './utils';
 
 const executeExample = async (page: Page, nth: number): Promise<void> => {
-  await page.goto(ROOT_URL, { waitUntil: "networkidle" });
+  await page.goto('/', { waitUntil: "networkidle" });
   await page.click(`.rs-panel-group > .rs-panel:nth-child(${nth})`);
   await Promise.all([
     page.waitForResponse("**/service/control/run"),
@@ -97,13 +96,13 @@ test.describe('Examples', () => {
 
 test.describe("Share functionality", () => {
   test("should not generate share URL for predefined example", async ({ page }) => {
-    await page.goto(ROOT_URL, { waitUntil: "networkidle" });
+    await page.goto('', { waitUntil: "networkidle" });
     await page.click("text='Share'")
     await page.waitForTimeout(500)
-    expect(page.url()).toBe(`${ROOT_URL}/?l=javascript&e=page-screenshot`)
+    await expect(page).toHaveURL('/?l=javascript&e=page-screenshot')
   })
-  test("should generate share URL", async ({ page }) => {
-    await page.goto(ROOT_URL, { waitUntil: "networkidle" });
+  test("should generate share URL", async ({ page, baseURL }) => {
+    await page.goto('', { waitUntil: "networkidle" });
 
     await page.click(".monaco-editor")
     await page.keyboard.press("Meta+KeyA")
@@ -111,7 +110,7 @@ test.describe("Share functionality", () => {
 
     await page.click("text='Share'")
     await page.waitForTimeout(500)
-    expect(page.url().startsWith(`${ROOT_URL}/?l=javascript&s=`)).toBeTruthy()
+    expect(page.url().startsWith(`${baseURL}/?l=javascript&s=`)).toBeTruthy()
 
     await page.reload()
     await page.click("text='Run'")
@@ -123,7 +122,7 @@ test.describe("should handle platform core related features", () => {
   test("should handle the timeout correctly", async ({ page }) => {
     const CODE = `(async () => {
   await new Promise(resolve => setTimeout(resolve, 70 * 1000))`
-    await page.goto(ROOT_URL, { waitUntil: "networkidle" });
+    await page.goto('', { waitUntil: "networkidle" });
     await page.click(".monaco-editor")
     await page.keyboard.press("Meta+KeyA")
     await page.keyboard.type(CODE)
@@ -137,7 +136,7 @@ test.describe("should handle platform core related features", () => {
     });
   })
   test("should handle uncaughtException correctly", async ({ page }) => {
-    await page.goto(ROOT_URL);
+    await page.goto('');
     await page.waitForTimeout(200)
     await page.evaluate(() => {
       // @ts-ignore
@@ -159,7 +158,7 @@ const playwright = require("playwright");
     await expect(page.locator("text=Error: foobar!")).toBeVisible();
   })
   test("should prevent access to the control microservice from inside the worker", async ({ page }) => {
-    await page.goto(ROOT_URL);
+    await page.goto('');
     await page.waitForTimeout(200)
     await page.evaluate(() => {
       // @ts-ignore
