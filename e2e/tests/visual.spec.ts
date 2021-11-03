@@ -114,7 +114,7 @@ test.describe("Share functionality", () => {
 
     await page.reload()
     await page.click("text='Run'")
-    await expect(page.locator("text=FolioAssert")).toBeVisible();
+    await expect(page.locator("data-testid=right-panel >> text=FolioAssert")).toBeVisible();
   })
 })
 
