@@ -1,5 +1,4 @@
 import { expect, test as base, APIResponse } from '@playwright/test';
-import { ROOT_URL } from './utils';
 
 type TestFixtures = {
   executeCode: (code: string, language: string) => Promise<APIResponse>
@@ -8,7 +7,7 @@ type TestFixtures = {
 const test = base.extend<TestFixtures>({
   executeCode: async ({ request }, use) => {
     await use(async (code: string, language: string) => {
-      return await request.post(`${ROOT_URL}/service/control/run`, {
+      return await request.post('/service/control/run', {
         data: {
           code,
           language

@@ -32,7 +32,7 @@ const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
                 </>
             }
         >
-            <div className={styles.rightPanelWrapper}>
+            <div className={styles.rightPanelWrapper} data-testid='right-panel'>
                 {rightPanelMode ? <RightExamplesPanel /> : <RightOutputPanel resp={resp} />}
             </div>
         </Panel>

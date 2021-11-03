@@ -16,6 +16,7 @@ const config: PlaywrightTestConfig = {
       width: 1920,
       height: 1080,
     },
+    baseURL: process.env.ROOT_TEST_URL || "http://localhost:8080"
   },
   projects: [
     {
