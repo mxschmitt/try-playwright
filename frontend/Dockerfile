@@ -1,4 +1,4 @@
-FROM node:15-buster-slim as client-builder
+FROM node:16-buster-slim as client-builder
 
 WORKDIR /frontend
 
@@ -12,7 +12,7 @@ COPY frontend/src /frontend/src
 
 RUN npm run build
 
-FROM caddy:2.2.1-alpine
+FROM caddy:2.4.6-alpine
 
 COPY frontend/Caddyfile /etc/caddy/Caddyfile
 

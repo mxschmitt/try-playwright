@@ -8,8 +8,7 @@ import useDarkMode from "../../hooks/useDarkMode"
 import { CodeContext } from '../CodeContext';
 import styles from './index.module.css'
 
-// eslint-disable-next-line import/no-webpack-loader-syntax
-import staticTypes from '!!raw-loader!./types.txt';
+import staticTypes from './types.txt';
 
 const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
     minimap: {
