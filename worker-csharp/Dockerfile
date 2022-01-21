@@ -13,13 +13,14 @@ FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-focal
 
 ARG PLAYWRIGHT_VERSION
 ENV PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 RUN curl -o packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb && \
     dpkg -i packages-microsoft-prod.deb && \
     apt-get update && \
     apt-get install -y apt-transport-https && \
     apt-get update && \
-    apt-get install -y aspnetcore-runtime-5.0 dotnet-sdk-5.0
+    apt-get install -y aspnetcore-runtime-6.0 dotnet-sdk-6.0
 
 RUN apt-get remove -y python3.8 python3-pip git ssh xvfb curl nodejs && \
     apt-get autoremove -y
