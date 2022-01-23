@@ -15,10 +15,10 @@ export interface Example extends MetaExample {
 }
 
 const injectCode = (language: CodeLanguage, extension: string) => (example: MetaExample): Example => {
-  const code = require(`!!raw-loader!./${language}/${example.id}.${extension}`)
+  const code = require(`./${language}/${example.id}.${extension}`)
   return {
     ...example,
-    code: code.default
+    code,
   }
 }
 

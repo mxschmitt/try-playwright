@@ -86,7 +86,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     // Workaround for https://github.com/react-monaco-editor/react-monaco-editor/issues/325
     useEffect(()=>{
         if (code !== ref.current?.getValue()) {
-            ref.current?.setValue(code)
+            ref.current?.setValue(code || '')
         }
     }, [code, ref])
 

@@ -12,8 +12,13 @@ module.exports = function override(/** @type{import('webpack').Configuration} */
   else
     assert(config.module.rules.length === 1);
   /** @type{import('webpack').RuleSetRule} */(config.module.rules[config.module.rules.length - 1]).oneOf.unshift({
-    test: /\.txt/,
-    type: 'asset/source',
-  });
+      test: /\.txt/,
+      type: 'asset/source',
+    });
+    /** @type{import('webpack').RuleSetRule} */(config.module.rules[config.module.rules.length - 1]).oneOf.unshift({
+      test: /examples\/\w+\/.*\.(cs|py|js|java)/,
+      type: 'asset/source',
+    });
+  // frontend/src/examples 
   return config;
 }
