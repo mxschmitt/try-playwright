@@ -41,7 +41,6 @@
     "@sentry/types": "6.16.1",
     "cross-env": "^7.0.3",
     "eslint": "^8.7.0",
-    "raw-loader": "4.0.2",
     "react-app-rewired": "2.1.11"
   },
   "eslintConfig": {
