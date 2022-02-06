@@ -1,16 +1,17 @@
 from playwright.sync_api import sync_playwright
 
 with sync_playwright() as p:
-    iphone_11 = p.devices["iPhone 11 Pro"]
-    browser = p.webkit.launch()
+    pixel_5 = p.devices["Pixel 5"]
+    browser = p.chromium.launch()
     context = browser.new_context(
-        **iphone_11,
+        **pixel_5,
         locale="en-US",
         geolocation={"longitude": 12.492507, "latitude": 41.889938},
         permissions=["geolocation"]
     )
     page = context.new_page()
-    page.goto("https://maps.google.com")
-    page.click("text=Your location")
+    page.goto("https://www.openstreetmap.org")
+    page.click("a[data-original-title='Show My Location']")
+    page.wait_for_timeout(1000)
     page.screenshot(path="colosseum-iphone.png")
     browser.close()
