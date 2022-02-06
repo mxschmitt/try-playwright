@@ -2,19 +2,17 @@
 const playwright = require('playwright');
 
 (async () => {
-  const { webkit, devices } = playwright;
-  const iPhone11 = devices['iPhone 11 Pro'];
-  const browser = await webkit.launch();
+  const { chromium, devices } = playwright;
+  const pixel5 = devices['Pixel 5'];
+  const browser = await chromium.launch();
   const context = await browser.newContext({
-    viewport: iPhone11.viewport,
-    userAgent: iPhone11.userAgent,
+    ...pixel5,
     geolocation: { longitude: 12.492507, latitude: 41.889938 },
     permissions: ['geolocation']
   });
   const page = await context.newPage();
-  await page.goto('https://maps.google.com');
-  await page.click('.ml-my-location-fab button');
-  await page.waitForRequest(/.*preview\/pwa/);
+  await page.goto('https://www.openstreetmap.org');
+  await page.click('a[data-original-title="Show My Location"]');
   await page.screenshot({ path: 'colosseum-iphone.png' });
   await browser.close();
 })();
