@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Only the HEAD of the latest master version is supported which is deployed on production on [try.playwright.tech](https://try.playwright.tech).
+Only the HEAD of the latest `main` version is supported which is deployed on production on [try.playwright.tech](https://try.playwright.tech).
 
 ## Reporting a Vulnerability
 

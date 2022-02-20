@@ -78,7 +78,7 @@ The worker infra got rewritten, since the workers would share a lot of code each
   - [./worker-python/Dockerfile](./worker-python/Dockerfile)
 1. Update the badge in the [./README.md](./README.md)
 1. Create and merge the PR
-1. Wait until PR is built on the `master` branch
+1. Wait until PR is built on the `main` branch
 1. Exeute the following on the host:
   - `k3s crictl img`
   - `k3s crictl rmi <image-ids>`

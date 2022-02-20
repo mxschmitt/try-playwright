@@ -11,6 +11,6 @@ fi
 [[ "$GITHUB_REF" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
 # Use Docker `latest` tag convention
-[ "$VERSION" == "master" ] && VERSION=latest
+[ "$VERSION" == "main" ] && VERSION=latest
 
 echo "$VERSION"
