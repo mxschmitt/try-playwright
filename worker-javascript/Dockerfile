@@ -1,5 +1,5 @@
-ARG PLAYWRIGHT_VERSION=1.19.1
-FROM golang:1.16-buster as builder
+ARG PLAYWRIGHT_VERSION=1.20.0
+FROM golang:1.18-buster as builder
 WORKDIR /root
 COPY go.mod /root/
 COPY go.sum /root/
@@ -14,7 +14,7 @@ FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-focal
 ARG PLAYWRIGHT_VERSION
 ENV PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION
 
-RUN apt-get remove -y python3.8 python3-pip git ssh xvfb curl && \
+RUN apt-get remove -y git ssh xvfb curl && \
     apt-get autoremove -y
 
 WORKDIR /home/pwuser/

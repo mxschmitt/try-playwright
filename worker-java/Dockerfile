@@ -1,5 +1,5 @@
-ARG PLAYWRIGHT_VERSION=1.19.0
-FROM golang:1.16-buster as builder
+ARG PLAYWRIGHT_VERSION=1.20.0
+FROM golang:1.18-buster as builder
 WORKDIR /root
 COPY go.mod /root/
 COPY go.sum /root/
@@ -11,15 +11,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app
 
 FROM mcr.microsoft.com/playwright/java:v$PLAYWRIGHT_VERSION-focal
 
-RUN apt-get remove -y python3.8 python3-pip git ssh xvfb curl nodejs && \
+RUN apt-get remove -y git ssh xvfb curl && \
     apt-get autoremove -y
 
 ARG PLAYWRIGHT_VERSION
 ENV PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION
-
-RUN adduser pwuser
-
-RUN chown pwuser -R /ms-playwright
 
 USER pwuser
 WORKDIR /home/pwuser/
