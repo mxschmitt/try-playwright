@@ -25,10 +25,8 @@ USER pwuser
 RUN mkdir /home/pwuser/project/ && \
     cd /home/pwuser/project/ && \
     dotnet new console && \
-    dotnet tool install --global Microsoft.Playwright.CLI && \
     dotnet add package Microsoft.Playwright --version ${PLAYWRIGHT_VERSION} && \
     dotnet build && \
-    /home/pwuser/.dotnet/tools/playwright install && \
     rm Program.cs
 
 COPY --from=builder /app /app
