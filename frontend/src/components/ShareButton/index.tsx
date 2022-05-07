@@ -1,5 +1,6 @@
 import { useEffect, useContext } from 'react'
-import { IconButton, Icon, Notification } from 'rsuite'
+import { IconButton, Notification, toaster } from 'rsuite'
+import ShareIcon from '@rsuite/icons/ShareOutline';
 import * as clipboard from 'clipboard-polyfill'
 import { CodeContext } from '../CodeContext'
 import styles from './index.module.css'
@@ -21,14 +22,18 @@ const ShareButton: React.FunctionComponent = () => {
             })
             if (!resp.ok) {
                 if (resp.status === 429) {
-                    Notification.error({
-                        title: "You are rate limited, please try again in a few minutes."
-                    })
+                    toaster.push(
+                        <Notification type="error" header="info">
+                            You are rate limited, please try again in a few minutes.
+                        </Notification>
+                    );
                     return
                 }
-                Notification.error({
-                    title: "Creating of a Share link was not successful",
-                });
+                toaster.push(
+                    <Notification type="error" header="info">
+                        Creating of a Share link was not successful
+                    </Notification>
+                );
                 return
             }
             const body = await resp.json()
@@ -39,14 +44,18 @@ const ShareButton: React.FunctionComponent = () => {
         const newURL = pushNewURL(urlParams)
         clipboard.writeText(newURL)
             .then(() => {
-                Notification.success({
-                    title: "Successfully copied link to the clipboard",
-                });
+                toaster.push(
+                    <Notification type="success" header="info">
+                        Successfully copied link to the clipboard
+                    </Notification>
+                );
             })
             .catch(() => {
-                Notification.error({
-                    title: "Failed to copy link to the clipboard",
-                });
+                toaster.push(
+                    <Notification type="error" header="info">
+                        Failed to copy link to the clipboard
+                    </Notification>
+                );
             })
     }
     useEffect(() => {
@@ -70,7 +79,7 @@ const ShareButton: React.FunctionComponent = () => {
             window.removeEventListener("keyup", keyupHandler)
         }
     })
-    return (<IconButton className={styles.iconButton} onClick={handleOnClick} icon={<Icon icon="share" />}>
+    return (<IconButton className={styles.iconButton} onClick={handleOnClick} icon={<ShareIcon />}>
         Share
     </IconButton>)
 }

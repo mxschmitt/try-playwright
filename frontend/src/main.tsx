@@ -1,7 +1,6 @@
-import React from 'react'
 import ReactDOM from 'react-dom/client'
 import * as Sentry from '@sentry/browser';
-import './index.css'
+import 'rsuite/dist/rsuite.min.css';
 import App from './components/App';
 import CodeContextProvider from './components/CodeContext';
 
