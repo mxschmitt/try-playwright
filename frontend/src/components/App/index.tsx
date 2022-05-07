@@ -2,7 +2,7 @@ import { useState, useContext, useRef } from 'react';
 import { Col, Grid, IconButton, Loader, Panel, CustomProvider } from 'rsuite'
 import PlayIcon from '@rsuite/icons/PlayOutline';
 
-import { runCode, trackEvent } from '../../utils'
+import { ExecutionResponse, runCode, trackEvent } from '../../utils'
 import RightPanel from '../RightPanel'
 import Header from '../Header'
 import Editor from '../Editor'
@@ -13,7 +13,7 @@ import CodeLanguageSelector from '../CodeLanguageSelector';
 import useDarkMode from '../../hooks/useDarkMode';
 
 const App: React.FunctionComponent = () => {
-  const { code, onChangeRightPanelMode } = useContext(CodeContext)
+  const { code, onChangeRightPanelMode, codeLanguage, onLanguageChange } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<ExecutionResponse|null>(null)
   const handleExecutionRef = useRef<() => Promise<void>>()
@@ -43,7 +43,7 @@ const App: React.FunctionComponent = () => {
               <>
                 Editor
                 <div className={styles.codeHeaderButtons}>
-                  <CodeLanguageSelector />
+                  <CodeLanguageSelector codeLanguage={codeLanguage} onLanguageChange={onLanguageChange} />
                   <IconButton onClick={handleExecution} icon={<PlayIcon />}>
                       Run
                   </IconButton>

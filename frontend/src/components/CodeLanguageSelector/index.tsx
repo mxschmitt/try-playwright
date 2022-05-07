@@ -1,7 +1,5 @@
-import { useContext } from "react";
 import { SelectPicker } from "rsuite";
 import { CodeLanguage } from "../../constants";
-import { CodeContext } from "../CodeContext";
 
 
 const data = [
@@ -23,18 +21,22 @@ const data = [
   },
 ]
 
-const CodeLanguageSelector: React.FC = () => {
-  const { codeLanguage, onLanguageChange } = useContext(CodeContext)
-    return (
-        <SelectPicker
-            data={data}
-            style={{ width: 120 }}
-            searchable={false}
-            cleanable={false}
-            onChange={onLanguageChange}
-            value={codeLanguage}
-        />
-    )
+type CodeLanguageSelectorProps = {
+  onLanguageChange: (newLanguage: CodeLanguage) => void;
+  codeLanguage: CodeLanguage;
+}
+
+const CodeLanguageSelector: React.FC<CodeLanguageSelectorProps> = ({ onLanguageChange, codeLanguage }) => {
+  return (
+    <SelectPicker<CodeLanguage>
+      data={data}
+      style={{ width: 120 }}
+      searchable={false}
+      cleanable={false}
+      onChange={value => onLanguageChange(value)}
+      value={codeLanguage}
+    />
+  )
 }
 
 export default CodeLanguageSelector

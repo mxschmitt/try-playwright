@@ -31,8 +31,7 @@ type CodeContextProviderProps = {
 }
 
 const CodeContextProvider: React.FC<CodeContextProviderProps> = ({ children }) => {
-    // keep some value in there due a bug with react-monaco-editor
-    const [code, setCode] = useState<string>(" ")
+    const [code, setCode] = useState<string>("")
     const [rightPanelMode, setRightPanelMode] = useState(true)
     const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>(determineLanguage())
 

@@ -1,4 +1,5 @@
 import React from 'react'
+import type { ExecutionResponse } from '../../../utils';
 
 import ResponseFile from '../../ResponseFile'
 

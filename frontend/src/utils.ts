@@ -1,6 +1,21 @@
 import { CodeLanguage, LANGUAGES } from "./constants";
 import { Example } from "./examples";
 
+export interface FileWrapper {
+  publicURL: string;
+  fileName?: string;
+  extension: string;
+}
+
+export type ExecutionResponse = Partial<{
+  success: boolean
+  error: string
+  version: string;
+  duration?: number;
+  files: FileWrapper[];
+  output: string;
+}>
+
 export const runCode = async (code: string): Promise<ExecutionResponse> => {
   const resp = await fetch("/service/control/run", {
     method: "POST",
