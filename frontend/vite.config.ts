@@ -6,5 +6,11 @@ export default defineConfig({
   plugins: [react()],
   define: {
     'process.env': {}
+  },
+  server: {
+    proxy: {
+      '/service/': 'https://try.playwright.tech',
+      '/file-uploads/': 'https://try.playwright.tech'
+    }
   }
 })

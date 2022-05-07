@@ -23,8 +23,8 @@ const ResponseFile: React.FunctionComponent<ResponseFileProps> = ({ file }) => {
                 <source src={publicURL} type="video/webm" />
             </video>
         </> : <>
-                        <img src={publicURL} alt={fileName} className={styles.image} />
-                    </>}
+            <img src={publicURL} alt={fileName} className={styles.image} />
+        </>}
     </p>
 }
 
