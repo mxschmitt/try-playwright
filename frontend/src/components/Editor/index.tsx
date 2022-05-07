@@ -1,14 +1,37 @@
 
 
 import { useEffect, useContext, useRef } from 'react'
-import MonacoEditor from 'react-monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
 import useDarkMode from "../../hooks/useDarkMode"
 import { CodeContext } from '../CodeContext';
 import styles from './index.module.css'
 
-import staticTypes from './types.txt';
+import * as monaco from 'monaco-editor';
+
+declare global {
+    interface Window {
+        MonacoEnvironment: {
+            getWorker: (workerId: string, label: string) => Worker;
+        }
+    }
+}
+
+self.MonacoEnvironment = {
+	getWorker: function (workerId, label) {
+		switch (label) {
+			case 'javascript':
+            case 'typescript':
+                return new tsWorker()
+            default:
+				return new editorWorker();
+		}
+	}
+};
+
+import staticTypes from './types.txt?raw';
 
 const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
     minimap: {
@@ -20,37 +43,39 @@ const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
     scrollbar: {
         vertical: "hidden"
     },
-    wordWrap: "on"
+    wordWrap: "on",
 }
+
+monaco.editor.defineTheme('custom-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    colors: {
+        'editor.background': '#0f131a',
+    },
+    rules: []
+});
 
 interface EditorProps {
     onExecution: React.MutableRefObject<(() => Promise<void>) | undefined>;
 }
 
 const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
-    const monacoEditorRef = useRef<typeof monacoEditor|null>(null)
     const [darkMode] = useDarkMode()
+    const rootNode = useRef<HTMLDivElement>(null);
     const { code, onChange, codeLanguage } = useContext(CodeContext)
-    const ref = useRef<monacoEditor.editor.IStandaloneCodeEditor>()
+    const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor>()
     useEffect(() => {
-        monacoEditor.editor.defineTheme('custom-dark', {
-            base: 'vs-dark',
-            inherit: true,
-            colors: {
-                'editor.background': '#0f131a',
-            },
-            rules: []
+        if (!rootNode.current)
+            return;
+        const editor = monaco.editor.create(rootNode.current, {
+            value: code,
+            language: codeLanguage,
+            ...MONACO_OPTIONS,
         });
-    })
-    useEffect(() => {
-        if (ref.current) {
-            const resizeListener = () => ref.current?.layout()
-            window.addEventListener('resize', resizeListener);
-            return () => window.removeEventListener('resize', resizeListener);
-        }
-    }, [ref])
-    const handleEditorDidMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: typeof monacoEditor): Promise<void> => {
-        ref.current = editor
+        editorRef.current = editor;
+        editor.onDidChangeModelContent(() => {
+            onChange(editor!.getValue())
+        });
         editor.getModel()?.updateOptions({
             tabSize: 2
         })
@@ -68,39 +93,40 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
 
         // @ts-ignore
         editor._standaloneKeybindingService.addDynamicKeybinding("-expandLineSelection",null,() => {});
-        monacoEditorRef.current = monaco
         editor.focus()
-    }
+    }, [rootNode])
 
+    useEffect(() => {
+        if (editorRef.current) {
+            const resizeListener = () => editorRef.current?.layout()
+            window.addEventListener('resize', resizeListener);
+            return () => window.removeEventListener('resize', resizeListener);
+        }
+    }, [editorRef])
     const tsTypesAlreadyLoaded = useRef(false)
     useEffect(()=>{
-        if (monacoEditorRef.current && codeLanguage === "javascript" && tsTypesAlreadyLoaded.current === false) {
+        if (editorRef.current)
+            monaco.editor.setModelLanguage(editorRef.current.getModel()!, codeLanguage)
+        if (codeLanguage === "javascript" && tsTypesAlreadyLoaded.current === false) {
             tsTypesAlreadyLoaded.current = true
-            monacoEditorRef.current.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
-            monacoEditorRef.current.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+            monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
+            monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
                 diagnosticCodesToIgnore: [80001, 7044]
             })
         }
     }, [codeLanguage])
 
-    // Workaround for https://github.com/react-monaco-editor/react-monaco-editor/issues/325
     useEffect(()=>{
-        if (code !== ref.current?.getValue()) {
-            ref.current?.setValue(code || '')
-        }
-    }, [code, ref])
+        if (code !== editorRef.current?.getValue())
+            editorRef.current?.setValue(code || '')
+    }, [code, editorRef])
+
+    useEffect(() => {
+        monaco.editor.setTheme(darkMode ? 'custom-dark' : 'vs')
+    }, [darkMode])
 
     return (
-        <div className={styles.monacoEditorWrapper}>
-            <MonacoEditor
-                onChange={onChange}
-                language={codeLanguage}
-                theme={darkMode ? "custom-dark" : "vs"}
-                options={MONACO_OPTIONS}
-                editorDidMount={handleEditorDidMount}
-                height="100%"
-            />
-        </div>
+        <div className={styles.monacoEditorWrapper} ref={rootNode} />
     )
 }
 

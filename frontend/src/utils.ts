@@ -25,6 +25,12 @@ export const runCode = async (code: string): Promise<ExecutionResponse> => {
   return await resp.json()
 }
 
+declare global {
+  interface Window {
+    gtag?: (kind: string, event: string, metaData: Record<string, string>) => void
+  }
+}
+
 export const trackEvent = (): void => {
   if (window.gtag && process.env.NODE_ENV === "production") {
     window.gtag('event', "execute", {

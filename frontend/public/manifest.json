@@ -1,9 +1,0 @@
-{
-  "short_name": "Try Playwright",
-  "name": "Interactive playground for Playwright to run examples directly from your browser.",
-  "icons": [],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
-}

@@ -26,7 +26,11 @@ export const CodeContext = createContext<CodeContextContent>({
     onChangeRightPanelMode: () => null,
 })
 
-const CodeContextProvider: React.FunctionComponent = ({ children }) => {
+type CodeContextProviderProps = {
+    children: React.ReactNode;
+}
+
+const CodeContextProvider: React.FC<CodeContextProviderProps> = ({ children }) => {
     // keep some value in there due a bug with react-monaco-editor
     const [code, setCode] = useState<string>(" ")
     const [rightPanelMode, setRightPanelMode] = useState(true)
