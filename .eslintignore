@@ -1,6 +1,5 @@
 frontend/build
 frontend/public/types.d.ts
-frontend/config-overrides.js
 worker/lib
 node_modules
 frontend/src/examples/

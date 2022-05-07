@@ -1,9 +1,7 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
 import * as Sentry from '@sentry/browser';
-
 import './index.css'
-
 import App from './components/App';
 import CodeContextProvider from './components/CodeContext';
 
@@ -14,6 +12,6 @@ if (process.env.NODE_ENV === "production" && window.location.hostname !== "local
     });
 }
 
-ReactDOM.render(<CodeContextProvider>
+ReactDOM.createRoot(document.getElementById('app')!).render(<CodeContextProvider>
     <App />
-</CodeContextProvider>, document.getElementById('root'));
+</CodeContextProvider>);
