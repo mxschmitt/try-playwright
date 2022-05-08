@@ -8,6 +8,7 @@ import RightExamplesPanel from './RightExamplesPanel'
 import { CodeContext } from '../CodeContext'
 
 import styles from './index.module.css'
+import type { ExecutionResponse } from '../../utils'
 
 interface RightPanelProps {
     resp: ExecutionResponse | null;

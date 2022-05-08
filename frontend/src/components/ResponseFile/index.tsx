@@ -1,4 +1,5 @@
 import React from 'react'
+import type { FileWrapper } from '../../utils';
 
 import styles from './index.module.css'
 
