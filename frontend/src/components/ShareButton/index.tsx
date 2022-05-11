@@ -1,7 +1,6 @@
 import { useEffect, useContext } from 'react'
 import { IconButton, Notification, toaster } from 'rsuite'
 import ShareIcon from '@rsuite/icons/ShareOutline';
-import * as clipboard from 'clipboard-polyfill'
 import { CodeContext } from '../CodeContext'
 import styles from './index.module.css'
 import { pushNewURL } from '../../utils'
@@ -42,7 +41,7 @@ const ShareButton: React.FunctionComponent = () => {
             urlParams.set("e", example.id)
         }
         const newURL = pushNewURL(urlParams)
-        clipboard.writeText(newURL)
+        navigator.clipboard.writeText(newURL)
             .then(() => {
                 toaster.push(
                     <Notification type="success" header="info">
