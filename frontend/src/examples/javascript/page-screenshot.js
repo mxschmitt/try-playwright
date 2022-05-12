@@ -2,14 +2,13 @@
 const playwright = require('playwright');
 
 (async () => {
-  // Try to add 'firefox' to the list ↓
-  for (const browserType of ['chromium', 'webkit']) {
-    /** @type {import('playwright').Browser} */
-    const browser = await playwright[browserType].launch();
+  // Try to add 'playwright.firefox' to the list ↓
+  for (const browserType of [playwright.chromium, playwright.webkit]) {
+    const browser = await browserType.launch();
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.goto('http://whatsmyuseragent.org/');
-    await page.screenshot({ path: `example-${browserType}.png` });
+    await page.screenshot({ path: `example-${browserType.name()}.png` });
     await browser.close();
   }
 })();

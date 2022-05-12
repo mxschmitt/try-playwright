@@ -30,10 +30,6 @@ Minio is used to store the artifacts (screenshots, videos, downloads) and delete
 
 Etcd is used to store the shared snippets.
 
-### Frontend
-
-Its a React.js web application for the user.
-
 ### Squid
 
 The Kubernetes Pods are isolated from the external internet and only http traffic is allowed. This gets proxied over the Squid proxy.
@@ -70,12 +66,7 @@ The worker infra got rewritten, since the workers would share a lot of code each
 
 ## Updating Playwright
 
-1. Execute `bash update_pw.sh`
-1. Update the Docker images
-  - [./worker-csharp/Dockerfile](./worker-csharp/Dockerfile)
-  - [./worker-java/Dockerfile](./worker-java/Dockerfile)
-  - [./worker-javascript/Dockerfile](./worker-javascript/Dockerfile)
-  - [./worker-python/Dockerfile](./worker-python/Dockerfile)
+1. Execute `bash update_pw.sh 1.21`
 1. Update the badge in the [./README.md](./README.md)
 1. Create and merge the PR
 1. Wait until PR is built on the `main` branch

@@ -4,6 +4,10 @@ import { CodeLanguage } from "../../constants";
 
 const data = [
   {
+    "label": "Playwright Test",
+    "value": CodeLanguage.PLAYWRIGHT_TEST,
+  },
+  {
     "label": "JavaScript",
     "value": CodeLanguage.JAVASCRIPT,
   },
@@ -30,7 +34,7 @@ const CodeLanguageSelector: React.FC<CodeLanguageSelectorProps> = ({ onLanguageC
   return (
     <SelectPicker<CodeLanguage>
       data={data}
-      style={{ width: 120 }}
+      style={{ width: 140 }}
       searchable={false}
       cleanable={false}
       onChange={value => onLanguageChange(value)}

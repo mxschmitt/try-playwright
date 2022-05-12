@@ -19,7 +19,7 @@ RUN apt-get remove -y git ssh xvfb curl && \
 
 WORKDIR /home/pwuser/
 
-RUN npm install -g playwright@${PLAYWRIGHT_VERSION}
+RUN npm install -g playwright@${PLAYWRIGHT_VERSION} @playwright/test@${PLAYWRIGHT_VERSION} ts-node
 
 USER pwuser
 

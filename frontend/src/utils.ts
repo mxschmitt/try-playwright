@@ -16,7 +16,9 @@ export type ExecutionResponse = Partial<{
   output: string;
 }>
 
-export const runCode = async (code: string): Promise<ExecutionResponse> => {
+export const runCode = async (code: string, codeLanguage: CodeLanguage): Promise<ExecutionResponse> => {
+  if (codeLanguage === CodeLanguage.PLAYWRIGHT_TEST)
+    codeLanguage = CodeLanguage.JAVASCRIPT
   const resp = await fetch("/service/control/run", {
     method: "POST",
     headers: {
@@ -24,7 +26,7 @@ export const runCode = async (code: string): Promise<ExecutionResponse> => {
     },
     body: JSON.stringify({
       code,
-      language: determineLanguage()
+      language: codeLanguage,
     })
   })
 
