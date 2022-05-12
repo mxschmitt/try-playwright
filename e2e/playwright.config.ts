@@ -2,21 +2,32 @@ import path from 'path'
 
 import { PlaywrightTestConfig } from '@playwright/test';
 
+let baseURL = 'http://localhost:8080';
+{
+  const { ROOT_TEST_URL } = process.env;
+  if (ROOT_TEST_URL) {
+    if (ROOT_TEST_URL.at(-1) === '/')
+      baseURL = ROOT_TEST_URL.slice(0, -1);
+    else
+      baseURL = ROOT_TEST_URL;
+  }
+}
+
 const config: PlaywrightTestConfig = {
   timeout: 120 * 1000,
   testDir: path.join(__dirname, 'tests'),
   forbidOnly: !!process.env.CI,
-  retries: 2,
+  retries: process.env.CI ? 2 : undefined,
   reporter: 'list',
   workers: 1,
   use: {
-    trace: 'retry-with-trace',
+    trace: process.env.CI ? 'retry-with-trace' : 'off',
     ignoreHTTPSErrors: true,
     viewport: {
       width: 1920,
       height: 1080,
     },
-    baseURL: process.env.ROOT_TEST_URL || "http://localhost:8080"
+    baseURL,
   },
   projects: [
     {
