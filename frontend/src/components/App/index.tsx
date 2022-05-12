@@ -24,7 +24,7 @@ const App: React.FunctionComponent = () => {
     setResponse(null)
 
     trackEvent()
-    setResponse(await runCode(code))
+    setResponse(await runCode(code, codeLanguage))
     setLoading(false)
     onChangeRightPanelMode(false)
   }

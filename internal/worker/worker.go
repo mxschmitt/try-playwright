@@ -23,19 +23,20 @@ type executionHandler func(worker *Worker, code string) error
 type Worker struct {
 	options *WorkerExectionOptions
 	channel *amqp.Channel
-	tmpDir  string
+	TmpDir  string
 	output  *bytes.Buffer
 	files   []string
+	env     []string
 }
 
 var queue_name = fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
 
 func (w *Worker) Run() {
 	if w.options.ExecutionDirectory != "" {
-		w.tmpDir = w.options.ExecutionDirectory
+		w.TmpDir = w.options.ExecutionDirectory
 	} else {
 		var err error
-		w.tmpDir, err = os.MkdirTemp("", "try-pw")
+		w.TmpDir, err = os.MkdirTemp("", "try-pw")
 		if err != nil {
 			log.Fatalf("could not create tmp dir: %v", err)
 		}
@@ -69,30 +70,43 @@ func (w *Worker) Run() {
 	defer w.channel.Close()
 }
 
+func (w *Worker) AddEnv(key, value string) {
+	w.env = append(w.env, fmt.Sprintf("%s=%s", key, value))
+}
 func (w *Worker) ExecCommand(name string, args ...string) error {
 	path, err := exec.LookPath(name)
 	if err != nil {
 		return fmt.Errorf("could not command lookup path: %w", err)
 	}
-	collector, err := newFilesCollector(w.tmpDir, w.options.IgnoreFilePatterns)
+	collector, err := newFilesCollector(w.TmpDir, w.options.IgnoreFilePatterns)
 	if err != nil {
 		return fmt.Errorf("could not create file collector: %w", err)
 	}
 	workerProxy := os.Getenv("WORKER_HTTP_PROXY")
-	c := exec.Cmd{
-		Dir:    w.tmpDir,
-		Path:   path,
-		Args:   append([]string{name}, args...),
-		Stdout: io.MultiWriter(os.Stdout, w.output),
-		Stderr: io.MultiWriter(os.Stderr, w.output),
-		Env: append(
-			os.Environ(),
+	envSlices := [][]string{
+		os.Environ(),
+		w.env,
+		{
 			fmt.Sprintf("http_proxy=%s", workerProxy),
 			fmt.Sprintf("HTTPS_PROXY=%s", workerProxy),
 			// Firefox needs it currently in lower-case. See
 			// https://github.com/microsoft/playwright/issues/6094
 			fmt.Sprintf("https_proxy=%s", workerProxy),
-		),
+		},
+	}
+
+	var env []string
+	for _, e := range envSlices {
+		env = append(env, e...)
+	}
+
+	c := exec.Cmd{
+		Dir:    w.TmpDir,
+		Path:   path,
+		Args:   append([]string{name}, args...),
+		Stdout: io.MultiWriter(os.Stdout, w.output),
+		Stderr: io.MultiWriter(os.Stderr, w.output),
+		Env:    env,
 	}
 	if err := c.Run(); err != nil {
 		return errors.New("could not run command")
@@ -206,6 +220,7 @@ func NewWorker(options *WorkerExectionOptions) *Worker {
 		options: options,
 		output:  new(bytes.Buffer),
 		files:   make([]string, 0),
+		env:     make([]string, 0),
 	}
 }
 

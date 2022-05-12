@@ -5,6 +5,7 @@ import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
+import { CodeLanguage, CODE_LANG_2_MONACO_LANG } from '../../constants';
 import useDarkMode from "../../hooks/useDarkMode"
 import { CodeContext } from '../CodeContext';
 import styles from './index.module.css'
@@ -106,8 +107,8 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     const tsTypesAlreadyLoaded = useRef(false)
     useEffect(()=>{
         if (editorRef.current)
-            monaco.editor.setModelLanguage(editorRef.current.getModel()!, codeLanguage)
-        if (codeLanguage === "javascript" && tsTypesAlreadyLoaded.current === false) {
+            monaco.editor.setModelLanguage(editorRef.current.getModel()!, CODE_LANG_2_MONACO_LANG[codeLanguage])
+        if ([CodeLanguage.PLAYWRIGHT_TEST, CodeLanguage.JAVASCRIPT].includes(codeLanguage) && tsTypesAlreadyLoaded.current === false) {
             tsTypesAlreadyLoaded.current = true
             monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
             monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
