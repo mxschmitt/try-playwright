@@ -131,15 +131,16 @@ test.describe("Share functionality", () => {
 
 test.describe("should handle platform core related features", () => {
   test("should handle the timeout correctly", async ({ page }) => {
-    const CODE = `(async () => {
-  await new Promise(resolve => setTimeout(resolve, 70 * 1000))`
     await page.goto('?l=javascript');
-    await page.click(".monaco-editor")
-    await page.keyboard.press("Meta+KeyA")
-    await page.keyboard.type(CODE)
-    await page.keyboard.press("ArrowDown")
-    await page.keyboard.press("ArrowDown")
-    await page.keyboard.type("();")
+    await page.waitForTimeout(500)
+    await page.evaluate(() => {
+      // @ts-ignore
+      window.monacoEditorModel.setValue(`// @ts-check
+      (async () => {
+        await new Promise(resolve => setTimeout(resolve, 70 * 1000))
+      })();
+      `)
+    })
 
     await page.click("text='Run'")
     await expect(page.locator("text=Execution timeout!")).toBeVisible({
