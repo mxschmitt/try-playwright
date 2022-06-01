@@ -13,7 +13,7 @@
   },
   "homepage": "https://github.com/mxschmitt/try-playwright#readme",
   "devDependencies": {
-    "@playwright/test": "^1.22.0-alpha-may-7-2022"
+    "@playwright/test": "^1.22.2"
   },
   "private": true
 }
