@@ -16,7 +16,7 @@
     "rsuite": "^5.15.2"
   },
   "devDependencies": {
-    "@playwright/experimental-ct-react": "1.23.1",
+    "@playwright/experimental-ct-react": "^1.23.1-beta-1657145110000",
     "@types/node": "^18.0.1",
     "@types/react": "^18.0.14",
     "@types/react-dom": "^18.0.5",
