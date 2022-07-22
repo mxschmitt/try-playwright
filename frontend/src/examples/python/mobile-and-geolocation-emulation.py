@@ -11,7 +11,7 @@ with sync_playwright() as p:
     )
     page = context.new_page()
     page.goto("https://www.openstreetmap.org")
-    page.click("a[data-original-title='Show My Location']")
+    page.click("[aria-label='Show My Location']")
     page.wait_for_timeout(1000)
     page.screenshot(path="colosseum-iphone.png")
     browser.close()
