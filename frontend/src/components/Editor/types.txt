@@ -19238,33 +19238,6 @@ Error was thrown.
     "Schema.getDomains": Schema.getDomainsReturnValue;
   }
 }
-/**
- * Can be converted to JSON
- */
-export type Serializable = any;
-/**
- * Can be converted to JSON, but may also contain JSHandles.
- */
-export type EvaluationArgument = {};
-
-export type NoHandles<Arg> = Arg extends JSHandle ? never : (Arg extends object ? { [Key in keyof Arg]: NoHandles<Arg[Key]> } : Arg);
-export type Unboxed<Arg> =
-  Arg extends ElementHandle<infer T> ? T :
-  Arg extends JSHandle<infer T> ? T :
-  Arg extends NoHandles<Arg> ? Arg :
-  Arg extends [infer A0] ? [Unboxed<A0>] :
-  Arg extends [infer A0, infer A1] ? [Unboxed<A0>, Unboxed<A1>] :
-  Arg extends [infer A0, infer A1, infer A2] ? [Unboxed<A0>, Unboxed<A1>, Unboxed<A2>] :
-  Arg extends [infer A0, infer A1, infer A2, infer A3] ? [Unboxed<A0>, Unboxed<A1>, Unboxed<A2>, Unboxed<A3>] :
-  Arg extends Array<infer T> ? Array<Unboxed<T>> :
-  Arg extends object ? { [Key in keyof Arg]: Unboxed<Arg[Key]> } :
-  Arg;
-export type PageFunction0<R> = string | (() => R | Promise<R>);
-export type PageFunction<Arg, R> = string | ((arg: Unboxed<Arg>) => R | Promise<R>);
-export type PageFunctionOn<On, Arg2, R> = string | ((on: On, arg2: Unboxed<Arg2>) => R | Promise<R>);
-export type SmartHandle<T> = T extends Node ? ElementHandle<T> : JSHandle<T>;
-export type ElementHandleForTag<K extends keyof HTMLElementTagNameMap> = ElementHandle<HTMLElementTagNameMap[K]>;
-export type BindingSource = { context: BrowserContext, page: Page, frame: Frame };
 
 type PageWaitForSelectorOptionsNotHidden = PageWaitForSelectorOptions & {
   state?: 'visible'|'attached';
@@ -21385,8 +21358,8 @@ export interface Page {
   }): Promise<void>;
 
   /**
-   * @param source
-   * @param target
+   * @param source A selector to search for an element to drag. If there are multiple elements satisfying the selector, the first will be used. See [working with selectors](https://playwright.dev/docs/selectors) for more details.
+   * @param target A selector to search for an element to drop onto. If there are multiple elements satisfying the selector, the first will be used. See [working with selectors](https://playwright.dev/docs/selectors) for more details.
    * @param options
    */
   dragAndDrop(source: string, target: string, options?: {
@@ -22437,7 +22410,7 @@ export interface Page {
 
     /**
      * A glob pattern, regular expression or predicate to match the request URL. Only requests with URL matching the pattern
-     * will be surved from the HAR file. If not specified, all requests are served from the HAR file.
+     * will be served from the HAR file. If not specified, all requests are served from the HAR file.
      */
     url?: string|RegExp;
   }): Promise<void>;
@@ -24430,8 +24403,8 @@ export interface Frame {
   }): Promise<void>;
 
   /**
-   * @param source
-   * @param target
+   * @param source A selector to search for an element to drag. If there are multiple elements satisfying the selector, the first will be used. See [working with selectors](https://playwright.dev/docs/selectors) for more details.
+   * @param target A selector to search for an element to drop onto. If there are multiple elements satisfying the selector, the first will be used. See [working with selectors](https://playwright.dev/docs/selectors) for more details.
    * @param options
    */
   dragAndDrop(source: string, target: string, options?: {
@@ -25622,7 +25595,7 @@ export interface BrowserContext {
    *     <button onclick="onClick()">Click me</button>
    *     <div></div>
    *   `);
-   *   await page.click('button');
+   *   await page.locator('button').click();
    * })();
    * ```
    *
@@ -25676,7 +25649,7 @@ export interface BrowserContext {
    *     <button onclick="onClick()">Click me</button>
    *     <div></div>
    *   `);
-   *   await page.click('button');
+   *   await page.locator('button').click();
    * })();
    * ```
    *
@@ -25732,7 +25705,7 @@ export interface BrowserContext {
    * ```js
    * const [newPage] = await Promise.all([
    *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
+   *   page.locator('a[target=_blank]').click(),
    * ]);
    * console.log(await newPage.evaluate('location.href'));
    * ```
@@ -25859,7 +25832,7 @@ export interface BrowserContext {
    * ```js
    * const [newPage] = await Promise.all([
    *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
+   *   page.locator('a[target=_blank]').click(),
    * ]);
    * console.log(await newPage.evaluate('location.href'));
    * ```
@@ -26026,7 +25999,7 @@ export interface BrowserContext {
    * ```js
    * const [newPage] = await Promise.all([
    *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
+   *   page.locator('a[target=_blank]').click(),
    * ]);
    * console.log(await newPage.evaluate('location.href'));
    * ```
@@ -26248,7 +26221,7 @@ export interface BrowserContext {
    *     <button onclick="onClick()">Click me</button>
    *     <div></div>
    *   `);
-   *   await page.click('button');
+   *   await page.locator('button').click();
    * })();
    * ```
    *
@@ -26394,7 +26367,7 @@ export interface BrowserContext {
 
     /**
      * A glob pattern, regular expression or predicate to match the request URL. Only requests with URL matching the pattern
-     * will be surved from the HAR file. If not specified, all requests are served from the HAR file.
+     * will be served from the HAR file. If not specified, all requests are served from the HAR file.
      */
     url?: string|RegExp;
   }): Promise<void>;
@@ -26581,7 +26554,7 @@ export interface BrowserContext {
    * ```js
    * const [newPage] = await Promise.all([
    *   context.waitForEvent('page'),
-   *   page.click('a[target=_blank]'),
+   *   page.locator('a[target=_blank]').click(),
    * ]);
    * console.log(await newPage.evaluate('location.href'));
    * ```
@@ -27268,7 +27241,7 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    * This method returns the bounding box of the element, or `null` if the element is not visible. The bounding box is
    * calculated relative to the main frame viewport - which is usually the same as the browser window.
    *
-   * Scrolling affects the returned bonding box, similarly to
+   * Scrolling affects the returned bounding box, similarly to
    * [Element.getBoundingClientRect](https://developer.mozilla.org/en-US/docs/Web/API/Element/getBoundingClientRect). That
    * means `x` and/or `y` may be negative.
    *
@@ -28360,7 +28333,7 @@ export interface Locator {
    * This method returns the bounding box of the element, or `null` if the element is not visible. The bounding box is
    * calculated relative to the main frame viewport - which is usually the same as the browser window.
    *
-   * Scrolling affects the returned bonding box, similarly to
+   * Scrolling affects the returned bounding box, similarly to
    * [Element.getBoundingClientRect](https://developer.mozilla.org/en-US/docs/Web/API/Element/getBoundingClientRect). That
    * means `x` and/or `y` may be negative.
    *
@@ -30311,7 +30284,7 @@ export namespace errors {
  *   const context = await browser.newContext();
  *   const page = await context.newPage();
  *   try {
- *     await page.click("text=Foo", {
+ *     await page.locator("text=Foo").click({
  *       timeout: 100,
  *     })
  *   } catch (error) {
@@ -32469,6 +32442,12 @@ export interface Browser extends EventEmitter {
    * In case this browser is connected to, clears all created contexts belonging to this browser and disconnects from the
    * browser server.
    *
+   * > NOTE: This is similar to force quitting the browser. Therefore, you should call
+   * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) on any
+   * [BrowserContext]'s you explicitly created earlier with
+   * [browser.newContext([options])](https://playwright.dev/docs/api/class-browser#browser-new-context) **before** calling
+   * [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close).
+   *
    * The [Browser] object itself is considered to be disposed and cannot be used anymore.
    */
   close(): Promise<void>;
@@ -32502,6 +32481,12 @@ export interface Browser extends EventEmitter {
   /**
    * Creates a new browser context. It won't share cookies/cache with other browser contexts.
    *
+   * > NOTE: If directly using this method to create [BrowserContext]s, it is best practice to explicilty close the returned
+   * context via [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) when
+   * your code is done with the [BrowserContext], and before calling
+   * [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close). This will ensure the `context` is closed
+   * gracefully and any artifacts—like HARs and videos—are fully flushed and saved.
+   *
    * ```js
    * (async () => {
    *   const browser = await playwright.firefox.launch();  // Or 'chromium' or 'webkit'.
@@ -32510,6 +32495,10 @@ export interface Browser extends EventEmitter {
    *   // Create a new page in a pristine context.
    *   const page = await context.newPage();
    *   await page.goto('https://example.com');
+   *
+   *   // Gracefully close up everything
+   *   await context.close();
+   *   await browser.close();
    * })();
    * ```
    *
@@ -34229,6 +34218,13 @@ export interface Request {
   response(): Promise<null|Response>;
 
   /**
+   * > NOTE: This field is Chromium only. It's safe to call when using other browsers, but it will always be `null`.
+   *
+   * The Service [Worker] that is performing the request.
+   */
+  serviceWorker(): null|Worker;
+
+  /**
    * Returns resource size information for given request.
    */
   sizes(): Promise<{
@@ -34550,7 +34546,7 @@ export interface Route {
 
   /**
    * When several routes match the given pattern, they run in the order opposite to their registration. That way the last
-   * registered route can always override all the previos ones. In the example below, request will be handled by the
+   * registered route can always override all the previous ones. In the example below, request will be handled by the
    * bottom-most handler first, then it'll fall back to the previous one and in the end will be aborted by the first
    * registered route.
    *
@@ -34732,7 +34728,7 @@ export interface Selectors {
    *   // Use the selector prefixed with its name.
    *   const button = page.locator('tag=button');
    *   // Combine it with other selector engines.
-   *   await page.click('tag=div >> text="Click me"');
+   *   await page.locator('tag=div >> text="Click me"').click();
    *   // Can use it in any methods supporting selectors.
    *   const buttonCount = await page.locator('tag=button').count();
    *
@@ -34849,7 +34845,7 @@ export interface Tracing {
    * await page.goto('https://playwright.dev');
    *
    * await context.tracing.startChunk();
-   * await page.click('text=Get Started');
+   * await page.locator('text=Get Started').click();
    * // Everything between startChunk and stopChunk will be recorded in the trace.
    * await context.tracing.stopChunk({ path: 'trace1.zip' });
    *
@@ -36891,17 +36887,19 @@ interface TestConfig {
    */
   reporter?: LiteralUnion<'list'|'dot'|'line'|'github'|'json'|'junit'|'null'|'html', string> | ReporterDescription[];
   /**
-   * Launch a development web server during the tests.
+   * Launch a development web server (or multiple) during the tests.
    *
-   * If the port is specified, the server will wait for it to be available on `127.0.0.1` or `::1`, before running the tests.
-   * If the url is specified, the server will wait for the URL to return a 2xx status code before running the tests.
+   * If the port is specified, Playwright Test will wait for it to be available on `127.0.0.1` or `::1`, before running the
+   * tests. If the url is specified, Playwright Test will wait for the URL to return a 2xx, 3xx, 400, 401, 402, or 403 status
+   * code before running the tests.
    *
    * For continuous integration, you may want to use the `reuseExistingServer: !process.env.CI` option which does not use an
    * existing server on the CI. To see the stdout, you can set the `DEBUG=pw:webserver` environment variable.
    *
    * The `port` (but not the `url`) gets passed over to Playwright as a
    * [testOptions.baseURL](https://playwright.dev/docs/api/class-testoptions#test-options-base-url). For example port `8080`
-   * produces `baseURL` equal `http://localhost:8080`.
+   * produces `baseURL` equal `http://localhost:8080`. If `webServer` is specified as an array, you must explicitly configure
+   * the `baseURL` (even if it only has one entry).
    *
    * > NOTE: It is also recommended to specify
    * [testOptions.baseURL](https://playwright.dev/docs/api/class-testoptions#test-options-base-url) in the config, so that
@@ -36934,6 +36932,33 @@ interface TestConfig {
    *   // This will result in http://localhost:3000/foo
    *   await page.goto('/foo');
    * });
+   * ```
+   *
+   * Multiple web servers (or background processes) can be launched:
+   *
+   * ```js
+   * // playwright.config.ts
+   * import type { PlaywrightTestConfig } from '@playwright/test';
+   * const config: PlaywrightTestConfig = {
+   *   webServer: [
+   *     {
+   *       command: 'npm run start',
+   *       port: 3000,
+   *       timeout: 120 * 1000,
+   *       reuseExistingServer: !process.env.CI,
+   *     },
+   *     {
+   *       command: 'npm run backend',
+   *       port: 3333,
+   *       timeout: 120 * 1000,
+   *       reuseExistingServer: !process.env.CI,
+   *     }
+   *   ],
+   *   use: {
+   *     baseURL: 'http://localhost:3000/',
+   *   },
+   * };
+   * export default config;
    * ```
    *
    */
@@ -37666,17 +37691,19 @@ export interface FullConfig<TestArgs = {}, WorkerArgs = {}> {
    */
   workers: number;
   /**
-   * Launch a development web server during the tests.
+   * Launch a development web server (or multiple) during the tests.
    *
-   * If the port is specified, the server will wait for it to be available on `127.0.0.1` or `::1`, before running the tests.
-   * If the url is specified, the server will wait for the URL to return a 2xx status code before running the tests.
+   * If the port is specified, Playwright Test will wait for it to be available on `127.0.0.1` or `::1`, before running the
+   * tests. If the url is specified, Playwright Test will wait for the URL to return a 2xx, 3xx, 400, 401, 402, or 403 status
+   * code before running the tests.
    *
    * For continuous integration, you may want to use the `reuseExistingServer: !process.env.CI` option which does not use an
    * existing server on the CI. To see the stdout, you can set the `DEBUG=pw:webserver` environment variable.
    *
    * The `port` (but not the `url`) gets passed over to Playwright as a
    * [testOptions.baseURL](https://playwright.dev/docs/api/class-testoptions#test-options-base-url). For example port `8080`
-   * produces `baseURL` equal `http://localhost:8080`.
+   * produces `baseURL` equal `http://localhost:8080`. If `webServer` is specified as an array, you must explicitly configure
+   * the `baseURL` (even if it only has one entry).
    *
    * > NOTE: It is also recommended to specify
    * [testOptions.baseURL](https://playwright.dev/docs/api/class-testoptions#test-options-base-url) in the config, so that
@@ -37709,6 +37736,33 @@ export interface FullConfig<TestArgs = {}, WorkerArgs = {}> {
    *   // This will result in http://localhost:3000/foo
    *   await page.goto('/foo');
    * });
+   * ```
+   *
+   * Multiple web servers (or background processes) can be launched:
+   *
+   * ```js
+   * // playwright.config.ts
+   * import type { PlaywrightTestConfig } from '@playwright/test';
+   * const config: PlaywrightTestConfig = {
+   *   webServer: [
+   *     {
+   *       command: 'npm run start',
+   *       port: 3000,
+   *       timeout: 120 * 1000,
+   *       reuseExistingServer: !process.env.CI,
+   *     },
+   *     {
+   *       command: 'npm run backend',
+   *       port: 3333,
+   *       timeout: 120 * 1000,
+   *       reuseExistingServer: !process.env.CI,
+   *     }
+   *   ],
+   *   use: {
+   *     baseURL: 'http://localhost:3000/',
+   *   },
+   * };
+   * export default config;
    * ```
    *
    */
@@ -37788,7 +37842,7 @@ export interface TestInfo {
   project: FullProject;
   /**
    * The list of annotations applicable to the current test. Includes annotations from the test, annotations from all
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) groups the test belongs to
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) groups the test belongs to
    * and file-level annotations for the test file.
    *
    * Learn more about [test annotations](https://playwright.dev/docs/test-annotations).
@@ -38185,7 +38239,48 @@ export interface TestInfo {
   workerIndex: number;}
 
 interface SuiteFunction {
+  /**
+   * Declares a group of tests.
+   *
+   * ```js
+   * test.describe('two tests', () => {
+   *   test('one', async ({ page }) => {
+   *     // ...
+   *   });
+   *
+   *   test('two', async ({ page }) => {
+   *     // ...
+   *   });
+   * });
+   * ```
+   *
+   * @param title Group title.
+   * @param callback A callback that is run immediately when calling [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1). Any tests added in this
+   * callback will belong to the group.
+   */
   (title: string, callback: () => void): void;
+  /**
+   * Declares an anonymous group of tests. This is convenient to give a group of tests a common option with
+   * [test.use(options)](https://playwright.dev/docs/api/class-test#test-use).
+   *
+   * ```js
+   * test.describe(() => {
+   *   test.use({ colorScheme: 'dark' });
+   *
+   *   test('one', async ({ page }) => {
+   *     // ...
+   *   });
+   *
+   *   test('two', async ({ page }) => {
+   *     // ...
+   *   });
+   * });
+   * ```
+   *
+   * @param callback A callback that is run immediately when calling [test.describe(callback)](https://playwright.dev/docs/api/class-test#test-describe-2). Any tests added in this callback
+   * will belong to the group.
+   */
+  (callback: () => void): void;
 }
 
 interface TestFunction<TestArgs> {
@@ -38237,7 +38332,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
    * ```
    *
    * @param title Group title.
-   * @param callback A callback that is run immediately when calling [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe). Any tests added in this
+   * @param callback A callback that is run immediately when calling [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1). Any tests added in this
    * callback will belong to the group.
    */
   describe: SuiteFunction & {
@@ -38262,7 +38357,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   only: SuiteFunction;
     /**
    * Declares a skipped test group, similarly to
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe). Tests in the skipped group
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1). Tests in the skipped group
    * are never run.
    *
    * ```js
@@ -38412,7 +38507,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
    * ```
    *
    * Unconditionally skip all tests in a file or
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group:
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group:
    *
    * ```js
    * import { test, expect } from '@playwright/test';
@@ -38458,7 +38553,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   skip(condition: boolean, description?: string): void;
   /**
    * Conditionally skips all tests in a file or
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group.
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group.
    *
    * ```js
    * import { test, expect } from '@playwright/test';
@@ -38506,7 +38601,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
    * });
    * ```
    *
-   * Mark all tests in a file or [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe)
+   * Mark all tests in a file or [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1)
    * group as "fixme".
    *
    * ```js
@@ -38542,7 +38637,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   fixme(condition: boolean, description?: string): void;
   /**
    * Conditionally mark all tests in a file or
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group as "fixme".
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group as "fixme".
    *
    * ```js
    * import { test, expect } from '@playwright/test';
@@ -38594,7 +38689,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   fail(condition: boolean, description?: string): void;
   /**
    * Conditionally mark all tests in a file or
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group as "should fail".
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group as "should fail".
    *
    * ```js
    * import { test, expect } from '@playwright/test';
@@ -38647,7 +38742,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   slow(condition: boolean, description?: string): void;
   /**
    * Conditionally mark all tests in a file or
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group as "slow". Slow tests
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group as "slow". Slow tests
    * will be given triple the default timeout.
    *
    * ```js
@@ -38703,7 +38798,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
    * ```
    *
    * Changing timeout for all tests in a
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group.
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group.
    *
    * ```js
    * import { test, expect } from '@playwright/test';
@@ -38726,8 +38821,8 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   /**
    * Declares a `beforeEach` hook that is executed before each test. When called in the scope of a test file, runs before
    * each test in the file. When called inside a
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group, runs before each test
-   * in the group.  If multiple `beforeEach` hooks are added, they will run in the order of their registration.
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group, runs before each
+   * test in the group.  If multiple `beforeEach` hooks are added, they will run in the order of their registration.
    *
    * You can access all the same [Fixtures] as the test function itself, and also the [TestInfo] object that gives a lot of
    * useful information. For example, you can navigate the page before starting the test.
@@ -38754,7 +38849,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   /**
    * Declares an `afterEach` hook that is executed after each test. When called in the scope of a test file, runs after each
    * test in the file. When called inside a
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group, runs after each test
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group, runs after each test
    * in the group. If multiple `afterEach` hooks are added, they will run in the order of their registration.
    *
    * You can access all the same [Fixtures] as the test function itself, and also the [TestInfo] object that gives a lot of
@@ -38782,8 +38877,8 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   /**
    * Declares a `beforeAll` hook that is executed once per worker process before all tests. When called in the scope of a
    * test file, runs before all tests in the file. When called inside a
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group, runs before all tests
-   * in the group. If multiple `beforeAll` hooks are added, they will run in the order of their registration.
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group, runs before all
+   * tests in the group. If multiple `beforeAll` hooks are added, they will run in the order of their registration.
    *
    * ```js
    * // example.spec.ts
@@ -38813,7 +38908,7 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   /**
    * Declares an `afterAll` hook that is executed once per worker after all tests. When called in the scope of a test file,
    * runs after all tests in the file. When called inside a
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group, runs after all tests
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group, runs after all tests
    * in the group. If multiple `afterAll` hooks are added, they will run in the order of their registration.
    *
    * Note that worker process is restarted on test failures, and `afterAll` hook runs again in the new worker. Learn more
@@ -38823,9 +38918,9 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   afterAll(inner: (args: TestArgs & WorkerArgs, testInfo: TestInfo) => Promise<any> | any): void;
   /**
    * Specifies options or fixtures to use in a single test file or a
-   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe) group. Most useful to set an
-   * option, for example set `locale` to configure `context` fixture. `test.use` can be called either in the global scope or
-   * inside `test.describe`, it's is an error to call it within `beforeEach` or `beforeAll`.
+   * [test.describe(title, callback)](https://playwright.dev/docs/api/class-test#test-describe-1) group. Most useful to set
+   * an option, for example set `locale` to configure `context` fixture. `test.use` can be called either in the global scope
+   * or inside `test.describe`, it's is an error to call it within `beforeEach` or `beforeAll`.
    *
    * ```js
    * import { test, expect } from '@playwright/test';
@@ -39371,9 +39466,9 @@ export interface PlaywrightTestArgs {
    *
    * test('basic test', async ({ page }) => {
    *   await page.goto('/signin');
-   *   await page.fill('#username', 'User');
-   *   await page.fill('#password', 'pwd');
-   *   await page.click('text=Sign in');
+   *   await page.locator('#username').fill('User');
+   *   await page.locator('#password').fill('pwd');
+   *   await page.locator('text=Sign in').click();
    *   // ...
    * });
    * ```
@@ -39409,6 +39504,23 @@ import type { Suite } from '@playwright/test/types/testReporter';
 
 type AsymmetricMatcher = Record<string, any>;
 
+type AsymmetricMatchers = {
+  any(sample: unknown): AsymmetricMatcher;
+  anything(): AsymmetricMatcher;
+  arrayContaining(sample: Array<unknown>): AsymmetricMatcher;
+  closeTo(sample: number, precision?: number): AsymmetricMatcher;
+  objectContaining(sample: Record<string, unknown>): AsymmetricMatcher;
+  stringContaining(sample: string): AsymmetricMatcher;
+  stringMatching(sample: string | RegExp): AsymmetricMatcher;
+}
+
+type Inverse<Matchers> = {
+  /**
+   * Inverse next matcher. If you know how to test something, `.not` lets you test its opposite.
+   */
+  not: Matchers;
+};
+
 type IfAny<T, Y, N> = 0 extends (1 & T) ? Y : N;
 type ExtraMatchers<T, Type, Matchers> = T extends Type ? Matchers : IfAny<T, Matchers, {}>;
 
@@ -39434,6 +39546,16 @@ type MakeMatchers<R, T> = BaseMatchers<R, T> & {
   ExtraMatchers<T, Locator, LocatorAssertions> &
   ExtraMatchers<T, APIResponse, APIResponseAssertions>;
 
+type BaseExpect = {
+  // Removed following methods because they rely on a test-runner integration from Jest which we don't support:
+  // assertions(numberOfAssertions: number): void;
+  // extractExpectedAssertionsErrors(): ExpectedAssertionsErrors;
+  // hasAssertions(): void;
+  extend(matchers: any): void;
+  getState(): expectType.MatcherState;
+  setState(state: Partial<expectType.MatcherState>): void;
+}
+
 export type Expect = {
   <T = unknown>(actual: T, messageOrOptions?: string | { message?: string }): MakeMatchers<void, T>;
   soft: <T = unknown>(actual: T, messageOrOptions?: string | { message?: string }) => MakeMatchers<void, T>;
@@ -39443,23 +39565,9 @@ export type Expect = {
      */
      not: BaseMatchers<Promise<void>, T>;
   };
-
-  extend(arg0: any): void;
-  getState(): expectType.MatcherState;
-  setState(state: Partial<expectType.MatcherState>): void;
-  any(expectedObject: any): AsymmetricMatcher;
-  anything(): AsymmetricMatcher;
-  arrayContaining(sample: Array<unknown>): AsymmetricMatcher;
-  objectContaining(sample: Record<string, unknown>): AsymmetricMatcher;
-  stringContaining(expected: string): AsymmetricMatcher;
-  stringMatching(expected: string | RegExp): AsymmetricMatcher;
-  /**
-   * Removed following methods because they rely on a test-runner integration from Jest which we don't support:
-   * - assertions()
-   * - extractExpectedAssertionsErrors()
-   * – hasAssertions()
-   */
-};
+} & BaseExpect &
+  AsymmetricMatchers &
+  Inverse<Omit<AsymmetricMatchers, 'any' | 'anything'>>;
 
 type Awaited<T> = T extends PromiseLike<infer U> ? U : T;
 
@@ -39535,7 +39643,7 @@ interface APIResponseAssertions {
  *
  * test('status becomes submitted', async ({ page }) => {
  *   // ...
- *   await page.click('#submit-button');
+ *   await page.locator('#submit-button').click();
  *   await expect(page.locator('.status')).toHaveText('Submitted');
  * });
  * ```
@@ -39752,11 +39860,17 @@ interface LocatorAssertions {
   }): Promise<void>;
 
   /**
-   * Ensures the [Locator] points to an element with given CSS class.
+   * Ensures the [Locator] points to an element with given CSS classes. This needs to be a full match or using a relaxed
+   * regular expression.
+   *
+   * ```html
+   * <div class='selected row' id='component'></div>
+   * ```
    *
    * ```js
    * const locator = page.locator('#component');
    * await expect(locator).toHaveClass(/selected/);
+   * await expect(locator).toHaveClass('selected row');
    * ```
    *
    * Note that if array is passed as an expected value, entire lists of elements can be asserted:
@@ -40097,7 +40211,7 @@ interface LocatorAssertions {
  *
  * test('navigates to login', async ({ page }) => {
  *   // ...
- *   await page.click('#login');
+ *   await page.locator('#login').click();
  *   await expect(page).toHaveURL(/.*\/login/);
  * });
  * ```
@@ -40348,7 +40462,7 @@ interface PageAssertions {
    * await expect(page).toHaveURL(/.*checkout/);
    * ```
    *
-   * @param urlOrRegExp Expected substring or RegExp.
+   * @param urlOrRegExp Expected URL string or RegExp.
    * @param options
    */
   toHaveURL(urlOrRegExp: string|RegExp, options?: {
