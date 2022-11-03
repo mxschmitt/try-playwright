@@ -8,11 +8,11 @@ const playwright = require('playwright');
 
   // Get all the entries on the page with a CSS selector in this case identified
   // by the class name.
-  const entries = await page.$$('.athing');
+  const entries = page.locator('.athing');
 
-  for (let i = 0; i < entries.length; i++) {
+  for (let i = 0; i < await entries.count(); i++) {
     // Query for the next title element on the page
-    const title = await entries[i].$('td.title > a');
+    const title = entries.nth(i).locator('td.title .titleline > a');
     // Write the entry to the console
     console.log(`${i + 1}: ${await title.innerText()}`);
   }
