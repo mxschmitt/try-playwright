@@ -7,7 +7,7 @@ const playwright = require('playwright');
   const page = await context.newPage();
 
   // Log and continue all network requests
-  page.route('**', (route, request) => {
+  await page.route('**', (route, request) => {
     console.log(request.url());
     route.continue();
   });

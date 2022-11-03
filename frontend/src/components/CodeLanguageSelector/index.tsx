@@ -37,7 +37,10 @@ const CodeLanguageSelector: React.FC<CodeLanguageSelectorProps> = ({ onLanguageC
       style={{ width: 140 }}
       searchable={false}
       cleanable={false}
-      onChange={value => onLanguageChange(value)}
+      onChange={value => {
+        if (value)
+          onLanguageChange(value)
+      }}
       value={codeLanguage}
     />
   )

@@ -5,7 +5,10 @@ const IMAGE_URL = 'https://via.placeholder.com/300x70/e74c3c/2c3e50/?text=Yey%20
 
 (async () => {
   const browser = await playwright.chromium.launch();
-  const context = await browser.newContext();
+  const context = await browser.newContext({
+    // Cloudflare does block us otherwise
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36'
+  });
   const page = await context.newPage();
   // Open the exact same page on which we are right now
   await page.goto('https://try.playwright.tech');
@@ -39,12 +42,15 @@ const IMAGE_URL = 'https://via.placeholder.com/300x70/e74c3c/2c3e50/?text=Yey%20
     // route.continue()
   })
 
-  await page.click('"Run"')
-
-  // Wait until the image is fully loaded
-  await page.waitForResponse(response => (
-    response.url().endsWith(IMAGE_URL) || response.url().endsWith('.png')
-  ))
+  await Promise.all([
+    // Wait until the image is fully loaded
+    page.waitForResponse(response => (
+      response.url().endsWith(IMAGE_URL) || response.url().endsWith('.png')
+    )),
+    page.getByRole('button', {
+      name: 'Run'
+    }).click(),
+  ]);
 
   // Make a screenshot in the end to see the result
   await page.screenshot({ path: `window.png` });

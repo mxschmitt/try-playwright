@@ -12,14 +12,6 @@ import styles from './index.module.css'
 
 import * as monaco from 'monaco-editor';
 
-declare global {
-    interface Window {
-        MonacoEnvironment: {
-            getWorker: (workerId: string, label: string) => Worker;
-        }
-    }
-}
-
 self.MonacoEnvironment = {
 	getWorker: function (workerId, label) {
 		switch (label) {

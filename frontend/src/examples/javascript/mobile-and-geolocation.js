@@ -12,7 +12,7 @@ const playwright = require('playwright');
   });
   const page = await context.newPage();
   await page.goto('https://www.openstreetmap.org');
-  await page.click('[aria-label="Show My Location"]');
+  await page.locator('[aria-label="Show My Location"]').click();
   await page.screenshot({ path: 'colosseum-iphone.png' });
   await browser.close();
 })();
