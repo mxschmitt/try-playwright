@@ -8,7 +8,7 @@
 ## Setting up a Try Playwright environment with [k3s](https://k3s.io)
 
 ```sh
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--no-deploy traefik" sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable traefik" sh -
 apt update
 apt install -y git
 git clone https://github.com/mxschmitt/try-playwright.git

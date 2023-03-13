@@ -1,9 +1,9 @@
-FROM alpine:3
+FROM alpine:3.16
 
 EXPOSE 3128
 
 ADD ./squid/squid.conf /etc/squid/squid.con
 
-RUN apk add squid
+RUN apk add squid=5.5-r0
 
 ENTRYPOINT ["squid", "-f", "/etc/squid/squid.conf", "-NYCd", "1"]
