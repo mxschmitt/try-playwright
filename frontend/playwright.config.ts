@@ -1,10 +1,9 @@
-import type { PlaywrightTestConfig } from '@playwright/experimental-ct-react';
-import { devices } from '@playwright/experimental-ct-react';
+import { defineConfig, devices } from '@playwright/experimental-ct-react';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
-const config: PlaywrightTestConfig = {
+const config = defineConfig({
   testDir: './',
   /* Maximum time one test can run for. */
   timeout: 10 * 1000,
@@ -46,6 +45,6 @@ const config: PlaywrightTestConfig = {
       },
     },
   ],
-};
+});
 
 export default config;

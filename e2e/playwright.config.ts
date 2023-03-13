@@ -1,6 +1,6 @@
 import path from 'path'
 
-import { PlaywrightTestConfig } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 
 let baseURL = 'http://localhost:8080';
 {
@@ -13,7 +13,7 @@ let baseURL = 'http://localhost:8080';
   }
 }
 
-const config: PlaywrightTestConfig = {
+const config = defineConfig({
   timeout: 120 * 1000,
   testDir: path.join(__dirname, 'tests'),
   forbidOnly: !!process.env.CI,
@@ -56,6 +56,6 @@ const config: PlaywrightTestConfig = {
       testMatch: /api/,
     },
   ],
-};
+});
 
 export default config
