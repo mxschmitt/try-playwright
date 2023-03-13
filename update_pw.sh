@@ -1,5 +1,8 @@
 #!/bin/sh
 
+set -e
+set -o pipefail
+
 PLAYWRIGHT_VERSION="$1"
 
 if [ -z "$PLAYWRIGHT_VERSION" ]; then
@@ -14,10 +17,20 @@ function update_dependencies {
     cd ..
 }
 
-set -e
-
 function get_npm_file() {
-    echo "$(curl -sL https://unpkg.com/$1/$2)"
+    if [ -z "$1" ] || [ -z "$2" ]; then
+        echo "Usage: get_npm_file <package> <file>"
+        exit 1
+    fi
+    tmp_file="$(mktemp)"
+    http_status_code=$(curl -s -L -o $tmp_file -w "%{http_code}" https://unpkg.com/$1/$2)
+    if [[ $http_status_code != 200 && $http_status_code != 302 ]]; then
+        echo "------------------------------------------------------------------------------------------"
+        echo "Error: Could not download $1/$2"
+        echo "------------------------------------------------------------------------------------------"
+        exit 1
+    fi
+    cat $tmp_file
 }
 
 function update_playwright_types {
