@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [build]
     timeout-minutes: 60
     steps:
@@ -45,7 +45,7 @@ jobs:
       run: |
         kubectl wait --timeout 10m --for=condition=ready pods --all
         FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}')
-        FRONTEND_URL="http://localhost:$FRONTEND_PORT"
+        FRONTEND_URL="http://127.0.0.1:$FRONTEND_PORT"
         echo "Host: $FRONTEND_URL"
         npx wait-on "$FRONTEND_URL/service/control/health"
         kubectl wait --timeout 10m --for=condition=ready pod -l role=worker
