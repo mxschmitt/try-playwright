@@ -7,7 +7,7 @@ class TryPlaywrightPage {
     await this.page.locator(`.rs-panel-group > .rs-panel:nth-child(${nth})`).click();
     await Promise.all([
       this.page.waitForResponse("**/service/control/run"),
-      this.page.locator('text="Run"').click(),
+      this.page.getByText('Run', { exact: true }).click(),
     ])
   }
   async getConsoleLines(): Promise<string[]> {
@@ -21,7 +21,11 @@ class TryPlaywrightPage {
   fileNames = this.page.locator('p[data-test-id="file"] span.file-name')
 }
 
-
+declare global {
+  interface Window {
+    monacoEditorModel?: any;
+  }
+}
 
 const test = base.extend<{ tpPage: TryPlaywrightPage }>({
   tpPage: async ({ page }, using) => {
@@ -48,7 +52,7 @@ test.describe('Examples', () => {
       "colosseum-iphone.png"
     ])
   })
-  test("3: should be able to generate a PDF file", async ({ page, tpPage }) => {
+  test("3: should be able to generate a PDF file", async ({ tpPage }) => {
     await tpPage.executeExample(3)
     await expect(tpPage.pdfs).toHaveCount(1)
     await expect(tpPage.images).toHaveCount(0)
@@ -57,7 +61,7 @@ test.describe('Examples', () => {
       "document.pdf"
     ])
   })
-  test("4: should be able to record a video", async ({ page, tpPage }) => {
+  test("4: should be able to record a video", async ({ tpPage }) => {
     await tpPage.executeExample(4)
     await expect(tpPage.images).toHaveCount(0)
     await expect(tpPage.videos).toHaveCount(1)
@@ -107,24 +111,21 @@ test.describe('Examples', () => {
 test.describe("Share functionality", () => {
   test("should not generate share URL for predefined example", async ({ page }) => {
     await page.goto('?l=javascript');
-    await page.click("text='Share'")
-    await page.waitForTimeout(500)
+    await page.getByText('Share', { exact: true }).click()
     await expect(page).toHaveURL('/?l=javascript&e=page-screenshot')
   })
   test("should generate share URL", async ({ page, baseURL }) => {
     await page.goto('?l=javascript');
 
-    await page.click(".monaco-editor")
+    await page.locator(".monaco-editor").click()
     await page.keyboard.press("Meta+KeyA")
     await page.keyboard.type('console.log("FolioAssert")')
 
-    await page.click("text='Share'")
-    await page.waitForTimeout(500)
+    await page.getByText('Share', { exact: true }).click()
     await expect(page).toHaveURL(/\/\?l=javascript&s=.*/)
 
     await page.reload()
-    await page.waitForTimeout(500);
-    await page.click("text='Run'")
+    await page.getByText('Run', { exact: true }).click()
     await expect(page.locator("data-testid=right-panel >> text=FolioAssert")).toBeVisible();
   })
 })
@@ -134,7 +135,6 @@ test.describe("should handle platform core related features", () => {
     await page.goto('?l=javascript');
     await page.waitForTimeout(500)
     await page.evaluate(() => {
-      // @ts-ignore
       window.monacoEditorModel.setValue(`// @ts-check
       (async () => {
         await new Promise(resolve => setTimeout(resolve, 70 * 1000))
@@ -142,8 +142,8 @@ test.describe("should handle platform core related features", () => {
       `)
     })
 
-    await page.click("text='Run'")
-    await expect(page.locator("text=Execution timeout!")).toBeVisible({
+    await page.getByText('Run', { exact: true }).click()
+    await expect(page.getByText("Execution timeout!")).toBeVisible({
       timeout: 70 * 1000,
     });
   })
@@ -151,14 +151,13 @@ test.describe("should handle platform core related features", () => {
     await page.goto('?l=javascript');
     await page.waitForTimeout(200)
     await page.evaluate(() => {
-      // @ts-ignore
       window.monacoEditorModel.setValue(`// @ts-check
 const playwright = require("playwright");
 
 (async () => {
   const browser = await playwright.chromium.launch();
   const page = await browser.newPage();
-  page.route("**/*", () => {
+  await page.route("**/*", () => {
     throw new Error("foobar!")
   })
   await page.goto("https://example.com")
@@ -166,7 +165,7 @@ const playwright = require("playwright");
 })();`)
     })
     await page.waitForTimeout(200)
-    await page.click("text='Run'")
+    await page.getByText('Run', { exact: true }).click()
     await expect(page.locator("text=Error: foobar!")).toBeVisible();
   })
   test("should prevent access to the control microservice from inside the worker", async ({ page }) => {
@@ -187,8 +186,8 @@ const playwright = require('playwright');
     })
     await page.waitForTimeout(200)
     await Promise.all([
-      page.waitForSelector("text=Status: 500"),
-      page.click("text='Run'")
+      page.getByText("Status: 500").waitFor(),
+      page.getByText('Run', { exact: true })
     ])
   })
 })
