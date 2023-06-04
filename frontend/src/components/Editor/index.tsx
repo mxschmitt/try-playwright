@@ -83,9 +83,8 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
                 }
             }
         });
-
         // @ts-ignore
-        editor._standaloneKeybindingService.addDynamicKeybinding("-expandLineSelection",null,() => {});
+        editor._standaloneKeybindingService.addDynamicKeybinding("-expandLineSelection", 0, () => {});
         editor.focus()
     }, [rootNode])
 
