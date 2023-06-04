@@ -116,6 +116,7 @@ test.describe("Share functionality", () => {
 
     await page.click(".monaco-editor")
     await page.keyboard.press("Meta+KeyA")
+    await page.waitForTimeout(500);
     await page.keyboard.type('console.log("FolioAssert")')
 
     await page.click("text='Share'")
