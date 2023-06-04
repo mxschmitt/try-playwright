@@ -48,7 +48,7 @@ For each of the languages, there are individual Docker images and worker impleme
 
 ## Generate / Update autocompletion
 
-- Execute the `update_pw.sh` script and adjust in it the Playwright version
+- Execute the `update_pw.mjs` script.
 
 ## Infrastructure evolution
 
