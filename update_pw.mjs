@@ -101,7 +101,15 @@ async function updateWorkers() {
     await updateWorker('python', await getVersionForLanguageBinding('python'));
 }
 
+async function updateMainReadMeBadge() {
+    const readMeFile = path.join(dirname, 'README.md');
+    const readMeContent = (await fs.promises.readFile(readMeFile)).toString();
+    const newReadMeContent = readMeContent.replace(/Playwright-\d+\.\d+\.\d+-blue\.svg/, `Playwright-${await getVersionForLanguageBinding('js')}-blue.svg`);
+    await fs.promises.writeFile(readMeFile, newReadMeContent);
+}
+
 await updateDependencies('frontend');
 await updateDependencies('e2e');
 await updateFrontendTypes();
 await updateWorkers();
+await updateMainReadMeBadge();

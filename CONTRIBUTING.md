@@ -66,8 +66,7 @@ The worker infra got rewritten, since the workers would share a lot of code each
 
 ## Updating Playwright
 
-1. Execute `bash update_pw.sh 1.21`
-1. Update the badge in the [./README.md](./README.md)
+1. Execute `bash update_pw.mjs`
 1. Create and merge the PR
 1. Wait until PR is built on the `main` branch
 1. Exeute the following on the host:
