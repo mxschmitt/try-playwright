@@ -43,12 +43,12 @@ export default Header;
 function determineDocumentationLink(codeLanguage: CodeLanguage):string {
   switch (codeLanguage) {
     case CodeLanguage.JAVA:
-      return "https://playwright.dev/java/docs/intro/"
+      return "https://playwright.dev/java/docs/intro"
     case CodeLanguage.PYTHON:
-      return "https://playwright.dev/python/docs/intro/"
+      return "https://playwright.dev/python/docs/intro"
     case CodeLanguage.DOTNET:
-        return "https://playwright.dev/dotnet/docs/intro/"
+        return "https://playwright.dev/dotnet/docs/intro"
     default:
-      return "https://playwright.dev/docs/intro/"
+      return "https://playwright.dev/docs/intro"
   }
 }
