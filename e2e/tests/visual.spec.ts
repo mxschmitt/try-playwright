@@ -7,7 +7,7 @@ class TryPlaywrightPage {
     await this.page.locator(`.rs-panel-group > .rs-panel:nth-child(${nth})`).click();
     await Promise.all([
       this.page.waitForResponse("**/service/control/run"),
-      this.page.getByText('Run', { exact: true }).click(),
+      this.page.getByRole('button', { name: 'Run' }).click(),
     ])
   }
   async getConsoleLines(): Promise<string[]> {
@@ -106,7 +106,7 @@ test.describe('Examples', () => {
 test.describe("Share functionality", () => {
   test("should not generate share URL for predefined example", async ({ page }) => {
     await page.goto('?l=javascript');
-    await page.getByText('Share', { exact: true }).click();
+    await page.getByRole('button', { name: 'Share' }).click();
     await expect(page).toHaveURL('/?l=javascript&e=page-screenshot')
   })
   test("should generate share URL", async ({ page, baseURL }) => {
@@ -117,11 +117,11 @@ test.describe("Share functionality", () => {
       window.monacoEditorModel.setValue(`console.log("FolioAssert")`)
     })
 
-    await page.getByText('Share', { exact: true }).click()
+    await page.getByRole('button', { name: 'Share' }).click()
     await expect(page).toHaveURL(/\/\?l=javascript&s=.*/)
 
     await page.reload()
-    await page.getByText('Run', { exact: true }).click()
+    await page.getByRole('button', { name: 'Run' }).click()
 
     await expect(page.getByTestId('right-panel').getByText('FolioAssert')).toBeVisible();
   })
