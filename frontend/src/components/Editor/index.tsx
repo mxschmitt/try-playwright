@@ -22,7 +22,8 @@ self.MonacoEnvironment = {
 				return new editorWorker();
 		}
 	},
-    createTrustedTypesPolicy: () => undefined
+    // Can removed once https://github.com/microsoft/vscode/pull/185454 is released.
+    createTrustedTypesPolicy: () => undefined,
 };
 
 import staticTypes from './types.txt?raw';
