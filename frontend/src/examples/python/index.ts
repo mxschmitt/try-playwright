@@ -7,12 +7,12 @@ export default [
   {
     id: "screenshot-sync",
     title: "Screenshot Sync",
-    description: "This example navigates to whatsmyuseragent.org and saves a screenshot of the page to the disk with the Sync API.",
+    description: "This example navigates to playwright.dev and saves a screenshot of the page to the disk with the Sync API.",
     code: codeScreenshotSync,
   },{
     id: "screenshot-async",
     title: "Screenshot with Async API",
-    description: "This example navigates to whatsmyuseragent.org and saves a screenshot of the page to the disk with the Async API.",
+    description: "This example navigates to playwright.dev and saves a screenshot of the page to the disk with the Async API.",
     code: codeScreenshotAsync,
   },
   {

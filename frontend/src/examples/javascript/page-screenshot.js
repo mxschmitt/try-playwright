@@ -7,7 +7,7 @@ const playwright = require('playwright');
     const browser = await browserType.launch();
     const context = await browser.newContext();
     const page = await context.newPage();
-    await page.goto('http://whatsmyuseragent.org/');
+    await page.goto('https://playwright.dev');
     await page.screenshot({ path: `example-${browserType.name()}.png` });
     await browser.close();
   }
