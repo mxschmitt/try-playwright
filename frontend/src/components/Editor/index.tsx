@@ -21,7 +21,8 @@ self.MonacoEnvironment = {
             default:
 				return new editorWorker();
 		}
-	}
+	},
+    createTrustedTypesPolicy: () => undefined
 };
 
 import staticTypes from './types.txt?raw';

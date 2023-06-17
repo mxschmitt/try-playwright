@@ -18,7 +18,7 @@ const execSyncAndLog = (command, options) => {
  */
 async function updateDependencies(folder) {
     const cwd = path.join(dirname, folder)
-    execSyncAndLog('npx npm-check-updates -u', { cwd  });
+    execSyncAndLog('npx -y npm-check-updates -u', { cwd  });
     execSyncAndLog('npm install', { cwd });
 }
 
