@@ -9,7 +9,7 @@ export default [
   {
     id: "webkit-screenshot",
     title: "WebKit screenshot",
-    description: "This examples navigates to whatsmyuseragent.com and saves a screenshot to the disk using WebKit.",
+    description: "This examples navigates to playwright.dev and saves a screenshot to the disk using WebKit.",
     code: codeWebKitScreenshot,
   }, {
     id: "evaluate-in-browser-context",
@@ -29,7 +29,7 @@ export default [
   }, {
     id: "page-screenshot",
     title: "Screenshot on Chromium, Firefox, and WebKit",
-    description: "This example navigates to whatsmyuseragent.com and makes a screenshot in all three browsers.",
+    description: "This example navigates to playwright.dev and makes a screenshot in all three browsers.",
     code: codePageScreenshot,
   }, {
     id: "print-title",
