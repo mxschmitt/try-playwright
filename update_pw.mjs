@@ -48,7 +48,7 @@ async function updateFrontendTypes() {
     typesBuffer += '  export * from \'playwright-core\';\n';
     typesBuffer += '}\n';
     typesBuffer += 'declare module \'@playwright/test\' {\n';
-    typesBuffer += (await getNpmFile('@playwright/test', 'types/test.d.ts')).split('\n').map(line => line.replace('@playwright/test/types/expect-types', '@playwright/test-expect')).join('\n');
+    typesBuffer += (await getNpmFile('playwright', 'types/test.d.ts')).split('\n').map(line => line.replace('@playwright/test/types/expect-types', '@playwright/test-expect')).join('\n');
     typesBuffer += '}\n';
     fs.writeFileSync(typesFile, typesBuffer);
 }
