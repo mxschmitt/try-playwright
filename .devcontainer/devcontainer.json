@@ -1,0 +1,13 @@
+{
+    "name": "Node.js & privledged Docker",
+    "image": "mcr.microsoft.com/devcontainers/typescript-node",
+    "postCreateCommand": "curl -fsSL https://get.docker.com | bash -",
+    "remoteUser": "root",
+    "runArgs": [
+        "--privileged",
+        "--init",
+        "--shm-size=1g",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock"
+    ]
+}
