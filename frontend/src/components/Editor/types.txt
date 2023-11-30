@@ -320,7 +320,65 @@ declare namespace NodeJS {
     interface ReadOnlyDict<T> {
         readonly [key: string]: T | undefined;
     }
+
+    namespace fetch {
+        type _Request = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").Request;
+        type _Response = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").Response;
+        type _FormData = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").FormData;
+        type _Headers = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").Headers;
+        type _RequestInit = typeof globalThis extends { onmessage: any } ? {}
+            : import("undici-types").RequestInit;
+        type Request = globalThis.Request;
+        type Response = globalThis.Response;
+        type Headers = globalThis.Headers;
+        type FormData = globalThis.FormData;
+        type RequestInit = globalThis.RequestInit;
+        type RequestInfo = import("undici-types").RequestInfo;
+        type HeadersInit = import("undici-types").HeadersInit;
+        type BodyInit = import("undici-types").BodyInit;
+        type RequestRedirect = import("undici-types").RequestRedirect;
+        type RequestCredentials = import("undici-types").RequestCredentials;
+        type RequestMode = import("undici-types").RequestMode;
+        type ReferrerPolicy = import("undici-types").ReferrerPolicy;
+        type Dispatcher = import("undici-types").Dispatcher;
+        type RequestDuplex = import("undici-types").RequestDuplex;
+    }
 }
+
+interface RequestInit extends NodeJS.fetch._RequestInit {}
+
+declare function fetch(
+    input: NodeJS.fetch.RequestInfo,
+    init?: RequestInit,
+): Promise<Response>;
+
+interface Request extends NodeJS.fetch._Request {}
+declare var Request: typeof globalThis extends {
+    onmessage: any;
+    Request: infer T;
+} ? T
+    : typeof import("undici-types").Request;
+
+interface Response extends NodeJS.fetch._Response {}
+declare var Response: typeof globalThis extends {
+    onmessage: any;
+    Response: infer T;
+} ? T
+    : typeof import("undici-types").Response;
+
+interface FormData extends NodeJS.fetch._FormData {}
+declare var FormData: typeof globalThis extends {
+    onmessage: any;
+    FormData: infer T;
+} ? T
+    : typeof import("undici-types").FormData;
+
+interface Headers extends NodeJS.fetch._Headers {}
+declare var Headers: typeof globalThis extends {
+    onmessage: any;
+    Headers: infer T;
+} ? T
+    : typeof import("undici-types").Headers;
 declare module 'playwright-core' {
 // This is generated from /utils/protocol-types-generator/index.js
 type binary = string;
@@ -971,7 +1029,7 @@ animation/transition.
       frameId: Page.FrameId;
     }
     export type CookieExclusionReason = "ExcludeSameSiteUnspecifiedTreatedAsLax"|"ExcludeSameSiteNoneInsecure"|"ExcludeSameSiteLax"|"ExcludeSameSiteStrict"|"ExcludeInvalidSameParty"|"ExcludeSamePartyCrossPartyContext"|"ExcludeDomainNonASCII"|"ExcludeThirdPartyCookieBlockedInFirstPartySet"|"ExcludeThirdPartyPhaseout";
-    export type CookieWarningReason = "WarnSameSiteUnspecifiedCrossSiteContext"|"WarnSameSiteNoneInsecure"|"WarnSameSiteUnspecifiedLaxAllowUnsafe"|"WarnSameSiteStrictLaxDowngradeStrict"|"WarnSameSiteStrictCrossDowngradeStrict"|"WarnSameSiteStrictCrossDowngradeLax"|"WarnSameSiteLaxCrossDowngradeStrict"|"WarnSameSiteLaxCrossDowngradeLax"|"WarnAttributeValueExceedsMaxSize"|"WarnDomainNonASCII"|"WarnThirdPartyPhaseout";
+    export type CookieWarningReason = "WarnSameSiteUnspecifiedCrossSiteContext"|"WarnSameSiteNoneInsecure"|"WarnSameSiteUnspecifiedLaxAllowUnsafe"|"WarnSameSiteStrictLaxDowngradeStrict"|"WarnSameSiteStrictCrossDowngradeStrict"|"WarnSameSiteStrictCrossDowngradeLax"|"WarnSameSiteLaxCrossDowngradeStrict"|"WarnSameSiteLaxCrossDowngradeLax"|"WarnAttributeValueExceedsMaxSize"|"WarnDomainNonASCII"|"WarnThirdPartyPhaseout"|"WarnCrossSiteRedirectDowngradeChangesInclusion";
     export type CookieOperation = "SetCookie"|"ReadCookie";
     /**
      * This information is currently necessary, as the front-end has a difficult
@@ -1182,6 +1240,16 @@ redirect chain, the site reported would be `example.test`.
     export interface BounceTrackingIssueDetails {
       trackingSites: string[];
     }
+    /**
+     * This issue warns about third-party sites that are accessing cookies on the
+current page, and have been permitted due to having a global metadata grant.
+Note that in this context 'site' means eTLD+1. For example, if the URL
+`https://example.test:80/web_page` was accessing cookies, the site reported
+would be `example.test`.
+     */
+    export interface CookieDeprecationMetadataIssueDetails {
+      allowedSites: string[];
+    }
     export type ClientHintIssueReason = "MetaTagAllowListInvalidOrigin"|"MetaTagModifiedHTML";
     export interface FederatedAuthRequestIssueDetails {
       federatedAuthRequestIssueReason: FederatedAuthRequestIssueReason;
@@ -1192,7 +1260,7 @@ Should be updated alongside RequestIdTokenStatus in
 third_party/blink/public/mojom/devtools/inspector_issue.mojom to include
 all cases except for success.
      */
-    export type FederatedAuthRequestIssueReason = "ShouldEmbargo"|"TooManyRequests"|"WellKnownHttpNotFound"|"WellKnownNoResponse"|"WellKnownInvalidResponse"|"WellKnownListEmpty"|"WellKnownInvalidContentType"|"ConfigNotInWellKnown"|"WellKnownTooBig"|"ConfigHttpNotFound"|"ConfigNoResponse"|"ConfigInvalidResponse"|"ConfigInvalidContentType"|"ClientMetadataHttpNotFound"|"ClientMetadataNoResponse"|"ClientMetadataInvalidResponse"|"ClientMetadataInvalidContentType"|"DisabledInSettings"|"ErrorFetchingSignin"|"InvalidSigninResponse"|"AccountsHttpNotFound"|"AccountsNoResponse"|"AccountsInvalidResponse"|"AccountsListEmpty"|"AccountsInvalidContentType"|"IdTokenHttpNotFound"|"IdTokenNoResponse"|"IdTokenInvalidResponse"|"IdTokenInvalidRequest"|"IdTokenInvalidContentType"|"ErrorIdToken"|"Canceled"|"RpPageNotVisible"|"SilentMediationFailure"|"ThirdPartyCookiesBlocked";
+    export type FederatedAuthRequestIssueReason = "ShouldEmbargo"|"TooManyRequests"|"WellKnownHttpNotFound"|"WellKnownNoResponse"|"WellKnownInvalidResponse"|"WellKnownListEmpty"|"WellKnownInvalidContentType"|"ConfigNotInWellKnown"|"WellKnownTooBig"|"ConfigHttpNotFound"|"ConfigNoResponse"|"ConfigInvalidResponse"|"ConfigInvalidContentType"|"ClientMetadataHttpNotFound"|"ClientMetadataNoResponse"|"ClientMetadataInvalidResponse"|"ClientMetadataInvalidContentType"|"DisabledInSettings"|"ErrorFetchingSignin"|"InvalidSigninResponse"|"AccountsHttpNotFound"|"AccountsNoResponse"|"AccountsInvalidResponse"|"AccountsListEmpty"|"AccountsInvalidContentType"|"IdTokenHttpNotFound"|"IdTokenNoResponse"|"IdTokenInvalidResponse"|"IdTokenIdpErrorResponse"|"IdTokenCrossSiteIdpErrorResponse"|"IdTokenInvalidRequest"|"IdTokenInvalidContentType"|"ErrorIdToken"|"Canceled"|"RpPageNotVisible"|"SilentMediationFailure"|"ThirdPartyCookiesBlocked"|"NotSignedInWithIdp";
     export interface FederatedAuthUserInfoRequestIssueDetails {
       federatedAuthUserInfoRequestIssueReason: FederatedAuthUserInfoRequestIssueReason;
     }
@@ -1263,7 +1331,7 @@ registrations being ignored.
 optional fields in InspectorIssueDetails to convey more specific
 information about the kind of issue.
      */
-    export type InspectorIssueCode = "CookieIssue"|"MixedContentIssue"|"BlockedByResponseIssue"|"HeavyAdIssue"|"ContentSecurityPolicyIssue"|"SharedArrayBufferIssue"|"LowTextContrastIssue"|"CorsIssue"|"AttributionReportingIssue"|"QuirksModeIssue"|"NavigatorUserAgentIssue"|"GenericIssue"|"DeprecationIssue"|"ClientHintIssue"|"FederatedAuthRequestIssue"|"BounceTrackingIssue"|"StylesheetLoadingIssue"|"FederatedAuthUserInfoRequestIssue"|"PropertyRuleIssue";
+    export type InspectorIssueCode = "CookieIssue"|"MixedContentIssue"|"BlockedByResponseIssue"|"HeavyAdIssue"|"ContentSecurityPolicyIssue"|"SharedArrayBufferIssue"|"LowTextContrastIssue"|"CorsIssue"|"AttributionReportingIssue"|"QuirksModeIssue"|"NavigatorUserAgentIssue"|"GenericIssue"|"DeprecationIssue"|"ClientHintIssue"|"FederatedAuthRequestIssue"|"BounceTrackingIssue"|"CookieDeprecationMetadataIssue"|"StylesheetLoadingIssue"|"FederatedAuthUserInfoRequestIssue"|"PropertyRuleIssue";
     /**
      * This struct holds a list of optional fields with additional information
 specific to the kind of issue. When adding a new issue code, please also
@@ -1286,6 +1354,7 @@ add a new optional field to this type.
       clientHintIssueDetails?: ClientHintIssueDetails;
       federatedAuthRequestIssueDetails?: FederatedAuthRequestIssueDetails;
       bounceTrackingIssueDetails?: BounceTrackingIssueDetails;
+      cookieDeprecationMetadataIssueDetails?: CookieDeprecationMetadataIssueDetails;
       stylesheetLoadingIssueDetails?: StylesheetLoadingIssueDetails;
       propertyRuleIssueDetails?: PropertyRuleIssueDetails;
       federatedAuthUserInfoRequestIssueDetails?: FederatedAuthUserInfoRequestIssueDetails;
@@ -5126,10 +5195,9 @@ EventTarget.
   }
   
   /**
-   * EventBreakpoints permits setting breakpoints on particular operations and
-events in targets that run JavaScript but do not have a DOM.
-JavaScript execution will stop on these operations as if there was a regular
-breakpoint set.
+   * EventBreakpoints permits setting JavaScript breakpoints on operations and events
+occurring in native code invoked from JavaScript. Once breakpoint is hit, it is
+reported through Debugger domain, similarly to regular breakpoints being hit.
    */
   export module EventBreakpoints {
     
@@ -5155,6 +5223,13 @@ breakpoint set.
       eventName: string;
     }
     export type removeInstrumentationBreakpointReturnValue = {
+    }
+    /**
+     * Removes all breakpoints
+     */
+    export type disableParameters = {
+    }
+    export type disableReturnValue = {
     }
   }
   
@@ -5963,6 +6038,35 @@ Missing optional values will be filled in by the target with what it would norma
       wow64?: boolean;
     }
     /**
+     * Used to specify sensor types to emulate.
+See https://w3c.github.io/sensors/#automation for more information.
+     */
+    export type SensorType = "absolute-orientation"|"accelerometer"|"ambient-light"|"gravity"|"gyroscope"|"linear-acceleration"|"magnetometer"|"proximity"|"relative-orientation";
+    export interface SensorMetadata {
+      available?: boolean;
+      minimumFrequency?: number;
+      maximumFrequency?: number;
+    }
+    export interface SensorReadingSingle {
+      value: number;
+    }
+    export interface SensorReadingXYZ {
+      x: number;
+      y: number;
+      z: number;
+    }
+    export interface SensorReadingQuaternion {
+      x: number;
+      y: number;
+      z: number;
+      w: number;
+    }
+    export interface SensorReading {
+      single?: SensorReadingSingle;
+      xyz?: SensorReadingXYZ;
+      quaternion?: SensorReadingQuaternion;
+    }
+    /**
      * Enum of image types that can be disabled.
      */
     export type DisabledImageType = "avif"|"webp";
@@ -6189,6 +6293,36 @@ unavailable.
       accuracy?: number;
     }
     export type setGeolocationOverrideReturnValue = {
+    }
+    export type getOverriddenSensorInformationParameters = {
+      type: SensorType;
+    }
+    export type getOverriddenSensorInformationReturnValue = {
+      requestedSamplingFrequency: number;
+    }
+    /**
+     * Overrides a platform sensor of a given type. If |enabled| is true, calls to
+Sensor.start() will use a virtual sensor as backend rather than fetching
+data from a real hardware sensor. Otherwise, existing virtual
+sensor-backend Sensor objects will fire an error event and new calls to
+Sensor.start() will attempt to use a real sensor instead.
+     */
+    export type setSensorOverrideEnabledParameters = {
+      enabled: boolean;
+      type: SensorType;
+      metadata?: SensorMetadata;
+    }
+    export type setSensorOverrideEnabledReturnValue = {
+    }
+    /**
+     * Updates the sensor readings reported by a sensor type previously overriden
+by setSensorOverrideEnabled.
+     */
+    export type setSensorOverrideReadingsParameters = {
+      type: SensorType;
+      reading: SensorReading;
+    }
+    export type setSensorOverrideReadingsReturnValue = {
     }
     /**
      * Overrides the Idle state.
@@ -10599,6 +10733,23 @@ should be omitted for worker targets.
        */
       outlineColor?: DOM.RGBA;
     }
+    /**
+     * Configuration for Window Controls Overlay
+     */
+    export interface WindowControlsOverlayConfig {
+      /**
+       * Whether the title bar CSS should be shown when emulating the Window Controls Overlay.
+       */
+      showCSS: boolean;
+      /**
+       * Seleted platforms to show the overlay.
+       */
+      selectedPlatform: string;
+      /**
+       * The theme color defined in app manifest.
+       */
+      themeColor: string;
+    }
     export interface ContainerQueryHighlightConfig {
       /**
        * A descriptor for the highlight appearance of container query containers.
@@ -11058,6 +11209,17 @@ Backend then generates 'inspectNodeRequested' event upon element selection.
       isolatedElementHighlightConfigs: IsolatedElementHighlightConfig[];
     }
     export type setShowIsolatedElementsReturnValue = {
+    }
+    /**
+     * Show Window Controls Overlay for PWA
+     */
+    export type setShowWindowControlsOverlayParameters = {
+      /**
+       * Window Controls Overlay data, null means hide Window Controls Overlay
+       */
+      windowControlsOverlayConfig?: WindowControlsOverlayConfig;
+    }
+    export type setShowWindowControlsOverlayReturnValue = {
     }
   }
   
@@ -11583,6 +11745,24 @@ Example URLs: http://www.google.com/file.html -> "google.com"
      * Types of not restored reasons for back-forward cache.
      */
     export type BackForwardCacheNotRestoredReasonType = "SupportPending"|"PageSupportNeeded"|"Circumstantial";
+    export interface BackForwardCacheBlockingDetails {
+      /**
+       * Url of the file where blockage happened. Optional because of tests.
+       */
+      url?: string;
+      /**
+       * Function name where blockage happened. Optional because of anonymous functions and tests.
+       */
+      function?: string;
+      /**
+       * Line number in the script (0-based).
+       */
+      lineNumber: number;
+      /**
+       * Column number in the script (0-based).
+       */
+      columnNumber: number;
+    }
     export interface BackForwardCacheNotRestoredExplanation {
       /**
        * Type of the reason
@@ -11598,6 +11778,7 @@ dependent on the reason:
 - EmbedderExtensionSentMessageToCachedFrame: the extension ID.
        */
       context?: string;
+      details?: BackForwardCacheBlockingDetails[];
     }
     export interface BackForwardCacheNotRestoredExplanationTree {
       /**
@@ -13711,22 +13892,18 @@ SharedStorageAccessType.workletSet.
        */
       ends: number[];
     }
+    export type AttributionReportingTriggerDataMatching = "exact"|"modulus";
     export interface AttributionReportingSourceRegistration {
       time: Network.TimeSinceEpoch;
       /**
        * duration in seconds
        */
-      expiry?: number;
-      /**
-       * eventReportWindow and eventReportWindows are mutually exclusive
-duration in seconds
-       */
-      eventReportWindow?: number;
-      eventReportWindows?: AttributionReportingEventReportWindows;
+      expiry: number;
+      eventReportWindows: AttributionReportingEventReportWindows;
       /**
        * duration in seconds
        */
-      aggregatableReportWindow?: number;
+      aggregatableReportWindow: number;
       type: AttributionReportingSourceType;
       sourceOrigin: string;
       reportingOrigin: string;
@@ -13736,6 +13913,7 @@ duration in seconds
       filterData: AttributionReportingFilterDataEntry[];
       aggregationKeys: AttributionReportingAggregationKeysEntry[];
       debugKey?: UnsignedInt64AsBase10;
+      triggerDataMatching: AttributionReportingTriggerDataMatching;
     }
     export type AttributionReportingSourceRegistrationResult = "success"|"internalError"|"insufficientSourceCapacity"|"insufficientUniqueDestinationCapacity"|"excessiveReportingOrigins"|"prohibitedByBrowserPolicy"|"successNoised"|"destinationReportingLimitReached"|"destinationGlobalLimitReached"|"destinationBothLimitsReached"|"reportingOriginsPerSiteLimitReached"|"exceedsMaxChannelCapacity";
     
@@ -16286,7 +16464,7 @@ possible for mulitple rule sets and links to trigger a single attempt.
     /**
      * List of FinalStatus reasons for Prerender2.
      */
-    export type PrerenderFinalStatus = "Activated"|"Destroyed"|"LowEndDevice"|"InvalidSchemeRedirect"|"InvalidSchemeNavigation"|"NavigationRequestBlockedByCsp"|"MainFrameNavigation"|"MojoBinderPolicy"|"RendererProcessCrashed"|"RendererProcessKilled"|"Download"|"TriggerDestroyed"|"NavigationNotCommitted"|"NavigationBadHttpStatus"|"ClientCertRequested"|"NavigationRequestNetworkError"|"CancelAllHostsForTesting"|"DidFailLoad"|"Stop"|"SslCertificateError"|"LoginAuthRequested"|"UaChangeRequiresReload"|"BlockedByClient"|"AudioOutputDeviceRequested"|"MixedContent"|"TriggerBackgrounded"|"MemoryLimitExceeded"|"DataSaverEnabled"|"TriggerUrlHasEffectiveUrl"|"ActivatedBeforeStarted"|"InactivePageRestriction"|"StartFailed"|"TimeoutBackgrounded"|"CrossSiteRedirectInInitialNavigation"|"CrossSiteNavigationInInitialNavigation"|"SameSiteCrossOriginRedirectNotOptInInInitialNavigation"|"SameSiteCrossOriginNavigationNotOptInInInitialNavigation"|"ActivationNavigationParameterMismatch"|"ActivatedInBackground"|"EmbedderHostDisallowed"|"ActivationNavigationDestroyedBeforeSuccess"|"TabClosedByUserGesture"|"TabClosedWithoutUserGesture"|"PrimaryMainFrameRendererProcessCrashed"|"PrimaryMainFrameRendererProcessKilled"|"ActivationFramePolicyNotCompatible"|"PreloadingDisabled"|"BatterySaverEnabled"|"ActivatedDuringMainFrameNavigation"|"PreloadingUnsupportedByWebContents"|"CrossSiteRedirectInMainFrameNavigation"|"CrossSiteNavigationInMainFrameNavigation"|"SameSiteCrossOriginRedirectNotOptInInMainFrameNavigation"|"SameSiteCrossOriginNavigationNotOptInInMainFrameNavigation"|"MemoryPressureOnTrigger"|"MemoryPressureAfterTriggered"|"PrerenderingDisabledByDevTools"|"ResourceLoadBlockedByClient"|"SpeculationRuleRemoved"|"ActivatedWithAuxiliaryBrowsingContexts"|"MaxNumOfRunningEagerPrerendersExceeded"|"MaxNumOfRunningNonEagerPrerendersExceeded"|"MaxNumOfRunningEmbedderPrerendersExceeded"|"PrerenderingUrlHasEffectiveUrl"|"RedirectedPrerenderingUrlHasEffectiveUrl"|"ActivationUrlHasEffectiveUrl";
+    export type PrerenderFinalStatus = "Activated"|"Destroyed"|"LowEndDevice"|"InvalidSchemeRedirect"|"InvalidSchemeNavigation"|"NavigationRequestBlockedByCsp"|"MainFrameNavigation"|"MojoBinderPolicy"|"RendererProcessCrashed"|"RendererProcessKilled"|"Download"|"TriggerDestroyed"|"NavigationNotCommitted"|"NavigationBadHttpStatus"|"ClientCertRequested"|"NavigationRequestNetworkError"|"CancelAllHostsForTesting"|"DidFailLoad"|"Stop"|"SslCertificateError"|"LoginAuthRequested"|"UaChangeRequiresReload"|"BlockedByClient"|"AudioOutputDeviceRequested"|"MixedContent"|"TriggerBackgrounded"|"MemoryLimitExceeded"|"DataSaverEnabled"|"TriggerUrlHasEffectiveUrl"|"ActivatedBeforeStarted"|"InactivePageRestriction"|"StartFailed"|"TimeoutBackgrounded"|"CrossSiteRedirectInInitialNavigation"|"CrossSiteNavigationInInitialNavigation"|"SameSiteCrossOriginRedirectNotOptInInInitialNavigation"|"SameSiteCrossOriginNavigationNotOptInInInitialNavigation"|"ActivationNavigationParameterMismatch"|"ActivatedInBackground"|"EmbedderHostDisallowed"|"ActivationNavigationDestroyedBeforeSuccess"|"TabClosedByUserGesture"|"TabClosedWithoutUserGesture"|"PrimaryMainFrameRendererProcessCrashed"|"PrimaryMainFrameRendererProcessKilled"|"ActivationFramePolicyNotCompatible"|"PreloadingDisabled"|"BatterySaverEnabled"|"ActivatedDuringMainFrameNavigation"|"PreloadingUnsupportedByWebContents"|"CrossSiteRedirectInMainFrameNavigation"|"CrossSiteNavigationInMainFrameNavigation"|"SameSiteCrossOriginRedirectNotOptInInMainFrameNavigation"|"SameSiteCrossOriginNavigationNotOptInInMainFrameNavigation"|"MemoryPressureOnTrigger"|"MemoryPressureAfterTriggered"|"PrerenderingDisabledByDevTools"|"SpeculationRuleRemoved"|"ActivatedWithAuxiliaryBrowsingContexts"|"MaxNumOfRunningEagerPrerendersExceeded"|"MaxNumOfRunningNonEagerPrerendersExceeded"|"MaxNumOfRunningEmbedderPrerendersExceeded"|"PrerenderingUrlHasEffectiveUrl"|"RedirectedPrerenderingUrlHasEffectiveUrl"|"ActivationUrlHasEffectiveUrl";
     /**
      * Preloading status values, see also PreloadingTriggeringOutcome. This
 status is shared by prefetchStatusUpdated and prerenderStatusUpdated.
@@ -19423,6 +19601,7 @@ Error was thrown.
     "DOMDebugger.setXHRBreakpoint": DOMDebugger.setXHRBreakpointParameters;
     "EventBreakpoints.setInstrumentationBreakpoint": EventBreakpoints.setInstrumentationBreakpointParameters;
     "EventBreakpoints.removeInstrumentationBreakpoint": EventBreakpoints.removeInstrumentationBreakpointParameters;
+    "EventBreakpoints.disable": EventBreakpoints.disableParameters;
     "DOMSnapshot.disable": DOMSnapshot.disableParameters;
     "DOMSnapshot.enable": DOMSnapshot.enableParameters;
     "DOMSnapshot.getSnapshot": DOMSnapshot.getSnapshotParameters;
@@ -19454,6 +19633,9 @@ Error was thrown.
     "Emulation.setEmulatedMedia": Emulation.setEmulatedMediaParameters;
     "Emulation.setEmulatedVisionDeficiency": Emulation.setEmulatedVisionDeficiencyParameters;
     "Emulation.setGeolocationOverride": Emulation.setGeolocationOverrideParameters;
+    "Emulation.getOverriddenSensorInformation": Emulation.getOverriddenSensorInformationParameters;
+    "Emulation.setSensorOverrideEnabled": Emulation.setSensorOverrideEnabledParameters;
+    "Emulation.setSensorOverrideReadings": Emulation.setSensorOverrideReadingsParameters;
     "Emulation.setIdleOverride": Emulation.setIdleOverrideParameters;
     "Emulation.clearIdleOverride": Emulation.clearIdleOverrideParameters;
     "Emulation.setNavigatorOverrides": Emulation.setNavigatorOverridesParameters;
@@ -19583,6 +19765,7 @@ Error was thrown.
     "Overlay.setShowViewportSizeOnResize": Overlay.setShowViewportSizeOnResizeParameters;
     "Overlay.setShowHinge": Overlay.setShowHingeParameters;
     "Overlay.setShowIsolatedElements": Overlay.setShowIsolatedElementsParameters;
+    "Overlay.setShowWindowControlsOverlay": Overlay.setShowWindowControlsOverlayParameters;
     "Page.addScriptToEvaluateOnLoad": Page.addScriptToEvaluateOnLoadParameters;
     "Page.addScriptToEvaluateOnNewDocument": Page.addScriptToEvaluateOnNewDocumentParameters;
     "Page.bringToFront": Page.bringToFrontParameters;
@@ -19997,6 +20180,7 @@ Error was thrown.
     "DOMDebugger.setXHRBreakpoint": DOMDebugger.setXHRBreakpointReturnValue;
     "EventBreakpoints.setInstrumentationBreakpoint": EventBreakpoints.setInstrumentationBreakpointReturnValue;
     "EventBreakpoints.removeInstrumentationBreakpoint": EventBreakpoints.removeInstrumentationBreakpointReturnValue;
+    "EventBreakpoints.disable": EventBreakpoints.disableReturnValue;
     "DOMSnapshot.disable": DOMSnapshot.disableReturnValue;
     "DOMSnapshot.enable": DOMSnapshot.enableReturnValue;
     "DOMSnapshot.getSnapshot": DOMSnapshot.getSnapshotReturnValue;
@@ -20028,6 +20212,9 @@ Error was thrown.
     "Emulation.setEmulatedMedia": Emulation.setEmulatedMediaReturnValue;
     "Emulation.setEmulatedVisionDeficiency": Emulation.setEmulatedVisionDeficiencyReturnValue;
     "Emulation.setGeolocationOverride": Emulation.setGeolocationOverrideReturnValue;
+    "Emulation.getOverriddenSensorInformation": Emulation.getOverriddenSensorInformationReturnValue;
+    "Emulation.setSensorOverrideEnabled": Emulation.setSensorOverrideEnabledReturnValue;
+    "Emulation.setSensorOverrideReadings": Emulation.setSensorOverrideReadingsReturnValue;
     "Emulation.setIdleOverride": Emulation.setIdleOverrideReturnValue;
     "Emulation.clearIdleOverride": Emulation.clearIdleOverrideReturnValue;
     "Emulation.setNavigatorOverrides": Emulation.setNavigatorOverridesReturnValue;
@@ -20157,6 +20344,7 @@ Error was thrown.
     "Overlay.setShowViewportSizeOnResize": Overlay.setShowViewportSizeOnResizeReturnValue;
     "Overlay.setShowHinge": Overlay.setShowHingeReturnValue;
     "Overlay.setShowIsolatedElements": Overlay.setShowIsolatedElementsReturnValue;
+    "Overlay.setShowWindowControlsOverlay": Overlay.setShowWindowControlsOverlayReturnValue;
     "Page.addScriptToEvaluateOnLoad": Page.addScriptToEvaluateOnLoadReturnValue;
     "Page.addScriptToEvaluateOnNewDocument": Page.addScriptToEvaluateOnNewDocumentReturnValue;
     "Page.bringToFront": Page.bringToFrontReturnValue;
@@ -22427,6 +22615,11 @@ export interface Page {
    */
   close(options?: {
     /**
+     * The reason to be reported to the operations interrupted by the page closure.
+     */
+    reason?: string;
+
+    /**
      * Defaults to `false`. Whether to run the
      * [before unload](https://developer.mozilla.org/en-US/docs/Web/Events/beforeunload) page handlers.
      */
@@ -22544,13 +22737,16 @@ export interface Page {
    * properties and dispatches it on the element. Events are `composed`, `cancelable` and bubble by default.
    *
    * Since `eventInit` is event-specific, please refer to the events documentation for the lists of initial properties:
+   * - [DeviceMotionEvent](https://developer.mozilla.org/en-US/docs/Web/API/DeviceMotionEvent/DeviceMotionEvent)
+   * - [DeviceOrientationEvent](https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent/DeviceOrientationEvent)
    * - [DragEvent](https://developer.mozilla.org/en-US/docs/Web/API/DragEvent/DragEvent)
+   * - [Event](https://developer.mozilla.org/en-US/docs/Web/API/Event/Event)
    * - [FocusEvent](https://developer.mozilla.org/en-US/docs/Web/API/FocusEvent/FocusEvent)
    * - [KeyboardEvent](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/KeyboardEvent)
    * - [MouseEvent](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/MouseEvent)
    * - [PointerEvent](https://developer.mozilla.org/en-US/docs/Web/API/PointerEvent/PointerEvent)
    * - [TouchEvent](https://developer.mozilla.org/en-US/docs/Web/API/TouchEvent/TouchEvent)
-   * - [Event](https://developer.mozilla.org/en-US/docs/Web/API/Event/Event)
+   * - [WheelEvent](https://developer.mozilla.org/en-US/docs/Web/API/WheelEvent/WheelEvent)
    *
    * You can also specify `JSHandle` as the property value if you want live objects to be passed into the event:
    *
@@ -24052,7 +24248,8 @@ export interface Page {
     /**
      * If specified, updates the given HAR with the actual network information instead of serving from file. The file is
      * written to disk when
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) is called.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) is
+     * called.
      */
     update?: boolean;
 
@@ -25126,6 +25323,8 @@ export interface Page {
   request: APIRequestContext;
 
   touchscreen: Touchscreen;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 /**
@@ -26153,13 +26352,16 @@ export interface Frame {
    * properties and dispatches it on the element. Events are `composed`, `cancelable` and bubble by default.
    *
    * Since `eventInit` is event-specific, please refer to the events documentation for the lists of initial properties:
+   * - [DeviceMotionEvent](https://developer.mozilla.org/en-US/docs/Web/API/DeviceMotionEvent/DeviceMotionEvent)
+   * - [DeviceOrientationEvent](https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent/DeviceOrientationEvent)
    * - [DragEvent](https://developer.mozilla.org/en-US/docs/Web/API/DragEvent/DragEvent)
+   * - [Event](https://developer.mozilla.org/en-US/docs/Web/API/Event/Event)
    * - [FocusEvent](https://developer.mozilla.org/en-US/docs/Web/API/FocusEvent/FocusEvent)
    * - [KeyboardEvent](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/KeyboardEvent)
    * - [MouseEvent](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/MouseEvent)
    * - [PointerEvent](https://developer.mozilla.org/en-US/docs/Web/API/PointerEvent/PointerEvent)
    * - [TouchEvent](https://developer.mozilla.org/en-US/docs/Web/API/TouchEvent/TouchEvent)
-   * - [Event](https://developer.mozilla.org/en-US/docs/Web/API/Event/Event)
+   * - [WheelEvent](https://developer.mozilla.org/en-US/docs/Web/API/WheelEvent/WheelEvent)
    *
    * You can also specify `JSHandle` as the property value if you want live objects to be passed into the event:
    *
@@ -27981,7 +28183,7 @@ export interface BrowserContext {
    * Emitted when Browser context gets closed. This might happen because of one of the following:
    * - Browser context is closed.
    * - Browser application is closed or crashed.
-   * - The [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
+   * - The [browser.close([options])](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
    */
   on(event: 'close', listener: (browserContext: BrowserContext) => void): this;
 
@@ -28052,12 +28254,6 @@ export interface BrowserContext {
   on(event: 'page', listener: (page: Page) => void): this;
 
   /**
-   * Emitted when exception is unhandled in any of the pages in this context. To listen for errors from a particular
-   * page, use [page.on('pageerror')](https://playwright.dev/docs/api/class-page#page-event-page-error) instead.
-   */
-  on(event: 'weberror', listener: (webError: WebError) => void): this;
-
-  /**
    * Emitted when a request is issued from any pages created through this context. The [request] object is read-only. To
    * only listen for requests from a particular page, use
    * [page.on('request')](https://playwright.dev/docs/api/class-page#page-event-request).
@@ -28103,6 +28299,12 @@ export interface BrowserContext {
   on(event: 'serviceworker', listener: (worker: Worker) => void): this;
 
   /**
+   * Emitted when exception is unhandled in any of the pages in this context. To listen for errors from a particular
+   * page, use [page.on('pageerror')](https://playwright.dev/docs/api/class-page#page-event-page-error) instead.
+   */
+  on(event: 'weberror', listener: (webError: WebError) => void): this;
+
+  /**
    * Adds an event listener that will be automatically removed after it is triggered once. See `addListener` for more information about this event.
    */
   once(event: 'backgroundpage', listener: (page: Page) => void): this;
@@ -28130,11 +28332,6 @@ export interface BrowserContext {
   /**
    * Adds an event listener that will be automatically removed after it is triggered once. See `addListener` for more information about this event.
    */
-  once(event: 'weberror', listener: (webError: WebError) => void): this;
-
-  /**
-   * Adds an event listener that will be automatically removed after it is triggered once. See `addListener` for more information about this event.
-   */
   once(event: 'request', listener: (request: Request) => void): this;
 
   /**
@@ -28158,6 +28355,11 @@ export interface BrowserContext {
   once(event: 'serviceworker', listener: (worker: Worker) => void): this;
 
   /**
+   * Adds an event listener that will be automatically removed after it is triggered once. See `addListener` for more information about this event.
+   */
+  once(event: 'weberror', listener: (webError: WebError) => void): this;
+
+  /**
    * **NOTE** Only works with Chromium browser's persistent context.
    *
    * Emitted when new background page is created in the context.
@@ -28173,7 +28375,7 @@ export interface BrowserContext {
    * Emitted when Browser context gets closed. This might happen because of one of the following:
    * - Browser context is closed.
    * - Browser application is closed or crashed.
-   * - The [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
+   * - The [browser.close([options])](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
    */
   addListener(event: 'close', listener: (browserContext: BrowserContext) => void): this;
 
@@ -28244,12 +28446,6 @@ export interface BrowserContext {
   addListener(event: 'page', listener: (page: Page) => void): this;
 
   /**
-   * Emitted when exception is unhandled in any of the pages in this context. To listen for errors from a particular
-   * page, use [page.on('pageerror')](https://playwright.dev/docs/api/class-page#page-event-page-error) instead.
-   */
-  addListener(event: 'weberror', listener: (webError: WebError) => void): this;
-
-  /**
    * Emitted when a request is issued from any pages created through this context. The [request] object is read-only. To
    * only listen for requests from a particular page, use
    * [page.on('request')](https://playwright.dev/docs/api/class-page#page-event-request).
@@ -28295,6 +28491,12 @@ export interface BrowserContext {
   addListener(event: 'serviceworker', listener: (worker: Worker) => void): this;
 
   /**
+   * Emitted when exception is unhandled in any of the pages in this context. To listen for errors from a particular
+   * page, use [page.on('pageerror')](https://playwright.dev/docs/api/class-page#page-event-page-error) instead.
+   */
+  addListener(event: 'weberror', listener: (webError: WebError) => void): this;
+
+  /**
    * Removes an event listener added by `on` or `addListener`.
    */
   removeListener(event: 'backgroundpage', listener: (page: Page) => void): this;
@@ -28318,11 +28520,6 @@ export interface BrowserContext {
    * Removes an event listener added by `on` or `addListener`.
    */
   removeListener(event: 'page', listener: (page: Page) => void): this;
-
-  /**
-   * Removes an event listener added by `on` or `addListener`.
-   */
-  removeListener(event: 'weberror', listener: (webError: WebError) => void): this;
 
   /**
    * Removes an event listener added by `on` or `addListener`.
@@ -28352,6 +28549,11 @@ export interface BrowserContext {
   /**
    * Removes an event listener added by `on` or `addListener`.
    */
+  removeListener(event: 'weberror', listener: (webError: WebError) => void): this;
+
+  /**
+   * Removes an event listener added by `on` or `addListener`.
+   */
   off(event: 'backgroundpage', listener: (page: Page) => void): this;
 
   /**
@@ -28373,11 +28575,6 @@ export interface BrowserContext {
    * Removes an event listener added by `on` or `addListener`.
    */
   off(event: 'page', listener: (page: Page) => void): this;
-
-  /**
-   * Removes an event listener added by `on` or `addListener`.
-   */
-  off(event: 'weberror', listener: (webError: WebError) => void): this;
 
   /**
    * Removes an event listener added by `on` or `addListener`.
@@ -28405,6 +28602,11 @@ export interface BrowserContext {
   off(event: 'serviceworker', listener: (worker: Worker) => void): this;
 
   /**
+   * Removes an event listener added by `on` or `addListener`.
+   */
+  off(event: 'weberror', listener: (webError: WebError) => void): this;
+
+  /**
    * **NOTE** Only works with Chromium browser's persistent context.
    *
    * Emitted when new background page is created in the context.
@@ -28420,7 +28622,7 @@ export interface BrowserContext {
    * Emitted when Browser context gets closed. This might happen because of one of the following:
    * - Browser context is closed.
    * - Browser application is closed or crashed.
-   * - The [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
+   * - The [browser.close([options])](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
    */
   prependListener(event: 'close', listener: (browserContext: BrowserContext) => void): this;
 
@@ -28491,12 +28693,6 @@ export interface BrowserContext {
   prependListener(event: 'page', listener: (page: Page) => void): this;
 
   /**
-   * Emitted when exception is unhandled in any of the pages in this context. To listen for errors from a particular
-   * page, use [page.on('pageerror')](https://playwright.dev/docs/api/class-page#page-event-page-error) instead.
-   */
-  prependListener(event: 'weberror', listener: (webError: WebError) => void): this;
-
-  /**
    * Emitted when a request is issued from any pages created through this context. The [request] object is read-only. To
    * only listen for requests from a particular page, use
    * [page.on('request')](https://playwright.dev/docs/api/class-page#page-event-request).
@@ -28540,6 +28736,12 @@ export interface BrowserContext {
    * Emitted when new service worker is created in the context.
    */
   prependListener(event: 'serviceworker', listener: (worker: Worker) => void): this;
+
+  /**
+   * Emitted when exception is unhandled in any of the pages in this context. To listen for errors from a particular
+   * page, use [page.on('pageerror')](https://playwright.dev/docs/api/class-page#page-event-page-error) instead.
+   */
+  prependListener(event: 'weberror', listener: (webError: WebError) => void): this;
 
   /**
    * Adds cookies into this browser context. All pages within this context will have these cookies installed. Cookies
@@ -28633,8 +28835,14 @@ export interface BrowserContext {
    * Closes the browser context. All the pages that belong to the browser context will be closed.
    *
    * **NOTE** The default browser context cannot be closed.
+   * @param options
    */
-  close(): Promise<void>;
+  close(options?: {
+    /**
+     * The reason to be reported to the operations interrupted by the context closure.
+     */
+    reason?: string;
+  }): Promise<void>;
 
   /**
    * If no URLs are specified, this method returns all cookies. If URLs are specified, only cookies that affect those
@@ -28820,7 +29028,8 @@ export interface BrowserContext {
     /**
      * If specified, updates the given HAR with the actual network information instead of serving from file. The file is
      * written to disk when
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) is called.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) is
+     * called.
      */
     update?: boolean;
 
@@ -29012,7 +29221,7 @@ export interface BrowserContext {
    * Emitted when Browser context gets closed. This might happen because of one of the following:
    * - Browser context is closed.
    * - Browser application is closed or crashed.
-   * - The [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
+   * - The [browser.close([options])](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
    */
   waitForEvent(event: 'close', optionsOrPredicate?: { predicate?: (browserContext: BrowserContext) => boolean | Promise<boolean>, timeout?: number } | ((browserContext: BrowserContext) => boolean | Promise<boolean>)): Promise<BrowserContext>;
 
@@ -29083,12 +29292,6 @@ export interface BrowserContext {
   waitForEvent(event: 'page', optionsOrPredicate?: { predicate?: (page: Page) => boolean | Promise<boolean>, timeout?: number } | ((page: Page) => boolean | Promise<boolean>)): Promise<Page>;
 
   /**
-   * Emitted when exception is unhandled in any of the pages in this context. To listen for errors from a particular
-   * page, use [page.on('pageerror')](https://playwright.dev/docs/api/class-page#page-event-page-error) instead.
-   */
-  waitForEvent(event: 'weberror', optionsOrPredicate?: { predicate?: (webError: WebError) => boolean | Promise<boolean>, timeout?: number } | ((webError: WebError) => boolean | Promise<boolean>)): Promise<WebError>;
-
-  /**
    * Emitted when a request is issued from any pages created through this context. The [request] object is read-only. To
    * only listen for requests from a particular page, use
    * [page.on('request')](https://playwright.dev/docs/api/class-page#page-event-request).
@@ -29133,6 +29336,12 @@ export interface BrowserContext {
    */
   waitForEvent(event: 'serviceworker', optionsOrPredicate?: { predicate?: (worker: Worker) => boolean | Promise<boolean>, timeout?: number } | ((worker: Worker) => boolean | Promise<boolean>)): Promise<Worker>;
 
+  /**
+   * Emitted when exception is unhandled in any of the pages in this context. To listen for errors from a particular
+   * page, use [page.on('pageerror')](https://playwright.dev/docs/api/class-page#page-event-page-error) instead.
+   */
+  waitForEvent(event: 'weberror', optionsOrPredicate?: { predicate?: (webError: WebError) => boolean | Promise<boolean>, timeout?: number } | ((webError: WebError) => boolean | Promise<boolean>)): Promise<WebError>;
+
 
   /**
    * API testing helper associated with this context. Requests made with this API will use context cookies.
@@ -29140,6 +29349,8 @@ export interface BrowserContext {
   request: APIRequestContext;
 
   tracing: Tracing;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 /**
@@ -29404,6 +29615,8 @@ export interface JSHandle<T = any> {
    * @param propertyName property to get
    */
   getProperty(propertyName: string): Promise<JSHandle>;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 /**
@@ -30060,13 +30273,16 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    * properties and dispatches it on the element. Events are `composed`, `cancelable` and bubble by default.
    *
    * Since `eventInit` is event-specific, please refer to the events documentation for the lists of initial properties:
+   * - [DeviceMotionEvent](https://developer.mozilla.org/en-US/docs/Web/API/DeviceMotionEvent/DeviceMotionEvent)
+   * - [DeviceOrientationEvent](https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent/DeviceOrientationEvent)
    * - [DragEvent](https://developer.mozilla.org/en-US/docs/Web/API/DragEvent/DragEvent)
+   * - [Event](https://developer.mozilla.org/en-US/docs/Web/API/Event/Event)
    * - [FocusEvent](https://developer.mozilla.org/en-US/docs/Web/API/FocusEvent/FocusEvent)
    * - [KeyboardEvent](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/KeyboardEvent)
    * - [MouseEvent](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/MouseEvent)
    * - [PointerEvent](https://developer.mozilla.org/en-US/docs/Web/API/PointerEvent/PointerEvent)
    * - [TouchEvent](https://developer.mozilla.org/en-US/docs/Web/API/TouchEvent/TouchEvent)
-   * - [Event](https://developer.mozilla.org/en-US/docs/Web/API/Event/Event)
+   * - [WheelEvent](https://developer.mozilla.org/en-US/docs/Web/API/WheelEvent/WheelEvent)
    *
    * You can also specify `JSHandle` as the property value if you want live objects to be passed into the event:
    *
@@ -31001,7 +31217,7 @@ export interface Locator {
    * Returns an array of `node.innerText` values for all matching nodes.
    *
    * **NOTE** If you need to assert text on the page, prefer
-   * [locatorAssertions.toHaveText(expected[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-text)
+   * [expect(locator).toHaveText(expected[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-text)
    * with `useInnerText` option to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -31017,7 +31233,7 @@ export interface Locator {
    * Returns an array of `node.textContent` values for all matching nodes.
    *
    * **NOTE** If you need to assert text on the page, prefer
-   * [locatorAssertions.toHaveText(expected[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-text)
+   * [expect(locator).toHaveText(expected[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-text)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -31323,7 +31539,7 @@ export interface Locator {
    * Returns the number of elements matching the locator.
    *
    * **NOTE** If you need to assert the number of elements on the page, prefer
-   * [locatorAssertions.toHaveCount(count[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-count)
+   * [expect(locator).toHaveCount(count[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-count)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -31429,13 +31645,16 @@ export interface Locator {
    * properties and dispatches it on the element. Events are `composed`, `cancelable` and bubble by default.
    *
    * Since `eventInit` is event-specific, please refer to the events documentation for the lists of initial properties:
+   * - [DeviceMotionEvent](https://developer.mozilla.org/en-US/docs/Web/API/DeviceMotionEvent/DeviceMotionEvent)
+   * - [DeviceOrientationEvent](https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent/DeviceOrientationEvent)
    * - [DragEvent](https://developer.mozilla.org/en-US/docs/Web/API/DragEvent/DragEvent)
+   * - [Event](https://developer.mozilla.org/en-US/docs/Web/API/Event/Event)
    * - [FocusEvent](https://developer.mozilla.org/en-US/docs/Web/API/FocusEvent/FocusEvent)
    * - [KeyboardEvent](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/KeyboardEvent)
    * - [MouseEvent](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/MouseEvent)
    * - [PointerEvent](https://developer.mozilla.org/en-US/docs/Web/API/PointerEvent/PointerEvent)
    * - [TouchEvent](https://developer.mozilla.org/en-US/docs/Web/API/TouchEvent/TouchEvent)
-   * - [Event](https://developer.mozilla.org/en-US/docs/Web/API/Event/Event)
+   * - [WheelEvent](https://developer.mozilla.org/en-US/docs/Web/API/WheelEvent/WheelEvent)
    *
    * You can also specify {@link JSHandle} as the property value if you want live objects to be passed into the event:
    *
@@ -31674,7 +31893,7 @@ export interface Locator {
    * Returns the matching element's attribute value.
    *
    * **NOTE** If you need to assert an element's attribute, prefer
-   * [locatorAssertions.toHaveAttribute(name, value[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-attribute)
+   * [expect(locator).toHaveAttribute(name, value[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-attribute)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    * @param name Attribute name to get the value for.
    * @param options
@@ -32093,7 +32312,7 @@ export interface Locator {
    * Returns the [`element.innerText`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/innerText).
    *
    * **NOTE** If you need to assert text on the page, prefer
-   * [locatorAssertions.toHaveText(expected[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-text)
+   * [expect(locator).toHaveText(expected[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-text)
    * with `useInnerText` option to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    * @param options
    */
@@ -32111,7 +32330,7 @@ export interface Locator {
    * Returns the value for the matching `<input>` or `<textarea>` or `<select>` element.
    *
    * **NOTE** If you need to assert input value, prefer
-   * [locatorAssertions.toHaveValue(value[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-value)
+   * [expect(locator).toHaveValue(value[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-value)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -32142,7 +32361,7 @@ export interface Locator {
    * Returns whether the element is checked. Throws if the element is not a checkbox or radio input.
    *
    * **NOTE** If you need to assert that checkbox is checked, prefer
-   * [locatorAssertions.toBeChecked([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-checked)
+   * [expect(locator).toBeChecked([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-checked)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -32167,7 +32386,7 @@ export interface Locator {
    * Returns whether the element is disabled, the opposite of [enabled](https://playwright.dev/docs/actionability#enabled).
    *
    * **NOTE** If you need to assert that an element is disabled, prefer
-   * [locatorAssertions.toBeDisabled([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-disabled)
+   * [expect(locator).toBeDisabled([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-disabled)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -32192,7 +32411,7 @@ export interface Locator {
    * Returns whether the element is [editable](https://playwright.dev/docs/actionability#editable).
    *
    * **NOTE** If you need to assert that an element is editable, prefer
-   * [locatorAssertions.toBeEditable([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-editable)
+   * [expect(locator).toBeEditable([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-editable)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -32217,7 +32436,7 @@ export interface Locator {
    * Returns whether the element is [enabled](https://playwright.dev/docs/actionability#enabled).
    *
    * **NOTE** If you need to assert that an element is enabled, prefer
-   * [locatorAssertions.toBeEnabled([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-enabled)
+   * [expect(locator).toBeEnabled([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-enabled)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -32242,7 +32461,7 @@ export interface Locator {
    * Returns whether the element is hidden, the opposite of [visible](https://playwright.dev/docs/actionability#visible).
    *
    * **NOTE** If you need to assert that element is hidden, prefer
-   * [locatorAssertions.toBeHidden([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-hidden)
+   * [expect(locator).toBeHidden([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-hidden)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -32266,7 +32485,7 @@ export interface Locator {
    * Returns whether the element is [visible](https://playwright.dev/docs/actionability#visible).
    *
    * **NOTE** If you need to assert that element is visible, prefer
-   * [locatorAssertions.toBeVisible([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-visible)
+   * [expect(locator).toBeVisible([options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-be-visible)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    *
    * **Usage**
@@ -32870,7 +33089,7 @@ export interface Locator {
    * Returns the [`node.textContent`](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent).
    *
    * **NOTE** If you need to assert text on the page, prefer
-   * [locatorAssertions.toHaveText(expected[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-text)
+   * [expect(locator).toHaveText(expected[, options])](https://playwright.dev/docs/api/class-locatorassertions#locator-assertions-to-have-text)
    * to avoid flakiness. See [assertions guide](https://playwright.dev/docs/test-assertions) for more details.
    * @param options
    */
@@ -33248,6 +33467,12 @@ export interface BrowserType<Unused = {}> {
     extraHTTPHeaders?: { [key: string]: string; };
 
     /**
+     * Firefox user preferences. Learn more about the Firefox user preferences at
+     * [`about:config`](https://support.mozilla.org/en-US/kb/about-config-editor-firefox).
+     */
+    firefoxUserPrefs?: { [key: string]: string|number|boolean; };
+
+    /**
      * Emulates `'forced-colors'` media feature, supported values are `'active'`, `'none'`. See
      * [page.emulateMedia([options])](https://playwright.dev/docs/api/class-page#page-emulate-media) for more details.
      * Passing `null` resets emulation to system defaults. Defaults to `'none'`.
@@ -33393,8 +33618,8 @@ export interface BrowserType<Unused = {}> {
     /**
      * Enables [HAR](http://www.softwareishard.com/blog/har-12-spec) recording for all pages into `recordHar.path` file.
      * If not specified, the HAR is not recorded. Make sure to await
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for the HAR to
-     * be saved.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+     * the HAR to be saved.
      */
     recordHar?: {
       /**
@@ -33434,8 +33659,8 @@ export interface BrowserType<Unused = {}> {
     /**
      * Enables video recording for all pages into `recordVideo.dir` directory. If not specified videos are not recorded.
      * Make sure to await
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for videos to
-     * be saved.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+     * videos to be saved.
      */
     recordVideo?: {
       /**
@@ -34159,6 +34384,8 @@ export interface ElectronApplication {
    * Convenience method that returns all the opened windows.
    */
   windows(): Array<Page>;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 export type AndroidElementInfo = {
@@ -34804,8 +35031,8 @@ export interface AndroidDevice {
     /**
      * Enables [HAR](http://www.softwareishard.com/blog/har-12-spec) recording for all pages into `recordHar.path` file.
      * If not specified, the HAR is not recorded. Make sure to await
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for the HAR to
-     * be saved.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+     * the HAR to be saved.
      */
     recordHar?: {
       /**
@@ -34845,8 +35072,8 @@ export interface AndroidDevice {
     /**
      * Enables video recording for all pages into `recordVideo.dir` directory. If not specified videos are not recorded.
      * Make sure to await
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for videos to
-     * be saved.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+     * videos to be saved.
      */
     recordVideo?: {
       /**
@@ -35218,6 +35445,8 @@ export interface AndroidDevice {
   webViews(): Array<AndroidWebView>;
 
   input: AndroidInput;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 export interface AndroidInput {
@@ -35353,6 +35582,8 @@ export interface AndroidSocket {
    * @param data Data to write.
    */
   write(data: Buffer): Promise<void>;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 /**
@@ -35652,10 +35883,8 @@ export interface APIRequestContext {
    * All responses returned by
    * [apiRequestContext.get(url[, options])](https://playwright.dev/docs/api/class-apirequestcontext#api-request-context-get)
    * and similar methods are stored in the memory, so that you can later call
-   * [apiResponse.body()](https://playwright.dev/docs/api/class-apiresponse#api-response-body). This method discards all
-   * stored responses, and makes
-   * [apiResponse.body()](https://playwright.dev/docs/api/class-apiresponse#api-response-body) throw "Response disposed"
-   * error.
+   * [apiResponse.body()](https://playwright.dev/docs/api/class-apiresponse#api-response-body).This method discards all
+   * its resources, calling any method on disposed {@link APIRequestContext} will throw an exception.
    */
   dispose(): Promise<void>;
 
@@ -36292,6 +36521,8 @@ export interface APIRequestContext {
       }>;
     }>;
   }>;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 /**
@@ -36362,6 +36593,8 @@ export interface APIResponse {
    * Contains the URL of the response.
    */
   url(): string;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 /**
@@ -36388,7 +36621,7 @@ export interface Browser extends EventEmitter {
    * Emitted when Browser gets disconnected from the browser application. This might happen because of one of the
    * following:
    * - Browser application is closed or crashed.
-   * - The [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
+   * - The [browser.close([options])](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
    */
   on(event: 'disconnected', listener: (browser: Browser) => void): this;
 
@@ -36401,7 +36634,7 @@ export interface Browser extends EventEmitter {
    * Emitted when Browser gets disconnected from the browser application. This might happen because of one of the
    * following:
    * - Browser application is closed or crashed.
-   * - The [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
+   * - The [browser.close([options])](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
    */
   addListener(event: 'disconnected', listener: (browser: Browser) => void): this;
 
@@ -36419,7 +36652,7 @@ export interface Browser extends EventEmitter {
    * Emitted when Browser gets disconnected from the browser application. This might happen because of one of the
    * following:
    * - Browser application is closed or crashed.
-   * - The [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
+   * - The [browser.close([options])](https://playwright.dev/docs/api/class-browser#browser-close) method was called.
    */
   prependListener(event: 'disconnected', listener: (browser: Browser) => void): this;
 
@@ -36437,14 +36670,20 @@ export interface Browser extends EventEmitter {
    * the browser server.
    *
    * **NOTE** This is similar to force quitting the browser. Therefore, you should call
-   * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) on any {@link
-   * BrowserContext}'s you explicitly created earlier with
+   * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) on
+   * any {@link BrowserContext}'s you explicitly created earlier with
    * [browser.newContext([options])](https://playwright.dev/docs/api/class-browser#browser-new-context) **before**
-   * calling [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close).
+   * calling [browser.close([options])](https://playwright.dev/docs/api/class-browser#browser-close).
    *
    * The {@link Browser} object itself is considered to be disposed and cannot be used anymore.
+   * @param options
    */
-  close(): Promise<void>;
+  close(options?: {
+    /**
+     * The reason to be reported to the operations interrupted by the browser closure.
+     */
+    reason?: string;
+  }): Promise<void>;
 
   /**
    * Returns an array of all open browser contexts. In a newly created browser, this will return zero browser contexts.
@@ -36479,10 +36718,10 @@ export interface Browser extends EventEmitter {
    *
    * **NOTE** If directly using this method to create {@link BrowserContext}s, it is best practice to explicitly close
    * the returned context via
-   * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) when your code
-   * is done with the {@link BrowserContext}, and before calling
-   * [browser.close()](https://playwright.dev/docs/api/class-browser#browser-close). This will ensure the `context` is
-   * closed gracefully and any artifacts—like HARs and videos—are fully flushed and saved.
+   * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) when
+   * your code is done with the {@link BrowserContext}, and before calling
+   * [browser.close([options])](https://playwright.dev/docs/api/class-browser#browser-close). This will ensure the
+   * `context` is closed gracefully and any artifacts—like HARs and videos—are fully flushed and saved.
    *
    * **Usage**
    *
@@ -36683,8 +36922,8 @@ export interface Browser extends EventEmitter {
     /**
      * Enables [HAR](http://www.softwareishard.com/blog/har-12-spec) recording for all pages into `recordHar.path` file.
      * If not specified, the HAR is not recorded. Make sure to await
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for the HAR to
-     * be saved.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+     * the HAR to be saved.
      */
     recordHar?: {
       /**
@@ -36724,8 +36963,8 @@ export interface Browser extends EventEmitter {
     /**
      * Enables video recording for all pages into `recordVideo.dir` directory. If not specified videos are not recorded.
      * Make sure to await
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for videos to
-     * be saved.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+     * videos to be saved.
      */
     recordVideo?: {
       /**
@@ -36951,6 +37190,8 @@ export interface Browser extends EventEmitter {
    * Returns the browser version.
    */
   version(): string;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 export interface BrowserServer {
@@ -37007,6 +37248,8 @@ export interface BrowserServer {
    * to establish connection to the browser.
    */
   wsEndpoint(): string;
+
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 /**
@@ -37301,9 +37544,9 @@ export interface Download {
   cancel(): Promise<void>;
 
   /**
-   * Returns readable stream for current download or `null` if download failed.
+   * Returns a readable stream for a successful download, or throws for a failed/canceled download.
    */
-  createReadStream(): Promise<null|Readable>;
+  createReadStream(): Promise<Readable>;
 
   /**
    * Deletes the downloaded file. Will wait for the download to finish if necessary.
@@ -37321,14 +37564,14 @@ export interface Download {
   page(): Page;
 
   /**
-   * Returns path to the downloaded file in case of successful download. The method will wait for the download to finish
-   * if necessary. The method throws when connected remotely.
+   * Returns path to the downloaded file for a successful download, or throws for a failed/canceled download. The method
+   * will wait for the download to finish if necessary. The method throws when connected remotely.
    *
    * Note that the download's file name is a random GUID, use
    * [download.suggestedFilename()](https://playwright.dev/docs/api/class-download#download-suggested-filename) to get
    * suggested file name.
    */
-  path(): Promise<null|string>;
+  path(): Promise<string>;
 
   /**
    * Copy the download to a user-specified path. It is safe to call this method while the download is still in progress.
@@ -37518,8 +37761,8 @@ export interface Electron {
     /**
      * Enables [HAR](http://www.softwareishard.com/blog/har-12-spec) recording for all pages into `recordHar.path` file.
      * If not specified, the HAR is not recorded. Make sure to await
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for the HAR to
-     * be saved.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+     * the HAR to be saved.
      */
     recordHar?: {
       /**
@@ -37559,8 +37802,8 @@ export interface Electron {
     /**
      * Enables video recording for all pages into `recordVideo.dir` directory. If not specified videos are not recorded.
      * Make sure to await
-     * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for videos to
-     * be saved.
+     * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+     * videos to be saved.
      */
     recordVideo?: {
       /**
@@ -39897,8 +40140,8 @@ export interface BrowserContextOptions {
   /**
    * Enables [HAR](http://www.softwareishard.com/blog/har-12-spec) recording for all pages into `recordHar.path` file.
    * If not specified, the HAR is not recorded. Make sure to await
-   * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for the HAR to
-   * be saved.
+   * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+   * the HAR to be saved.
    */
   recordHar?: {
     /**
@@ -39938,8 +40181,8 @@ export interface BrowserContextOptions {
   /**
    * Enables video recording for all pages into `recordVideo.dir` directory. If not specified videos are not recorded.
    * Make sure to await
-   * [browserContext.close()](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for videos to
-   * be saved.
+   * [browserContext.close([options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-close) for
+   * videos to be saved.
    */
   recordVideo?: {
     /**
@@ -40729,6 +40972,8 @@ type Devices = {
   "Pixel 4a (5G) landscape": DeviceDescriptor;
   "Pixel 5": DeviceDescriptor;
   "Pixel 5 landscape": DeviceDescriptor;
+  "Pixel 7": DeviceDescriptor;
+  "Pixel 7 landscape": DeviceDescriptor;
   "Moto G4": DeviceDescriptor;
   "Moto G4 landscape": DeviceDescriptor;
   "Desktop Chrome HiDPI": DeviceDescriptor;
@@ -41376,7 +41621,7 @@ interface TestConfig {
 
     /**
      * Configuration for the
-     * [pageAssertions.toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
+     * [expect(page).toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
      * method.
      */
     toHaveScreenshot?: {
@@ -41419,7 +41664,7 @@ interface TestConfig {
 
     /**
      * Configuration for the
-     * [snapshotAssertions.toMatchSnapshot(name[, options])](https://playwright.dev/docs/api/class-snapshotassertions#snapshot-assertions-to-match-snapshot-1)
+     * [expect(value).toMatchSnapshot(name[, options])](https://playwright.dev/docs/api/class-snapshotassertions#snapshot-assertions-to-match-snapshot-1)
      * method.
      */
     toMatchSnapshot?: {
@@ -41885,9 +42130,9 @@ interface TestConfig {
 
   /**
    * This option configures a template controlling location of snapshots generated by
-   * [pageAssertions.toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
+   * [expect(page).toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
    * and
-   * [snapshotAssertions.toMatchSnapshot(name[, options])](https://playwright.dev/docs/api/class-snapshotassertions#snapshot-assertions-to-match-snapshot-1).
+   * [expect(value).toMatchSnapshot(name[, options])](https://playwright.dev/docs/api/class-snapshotassertions#snapshot-assertions-to-match-snapshot-1).
    *
    * **Usage**
    *
@@ -45347,7 +45592,7 @@ interface AsymmetricMatchers {
   /**
    * `expect.any()` matches any object instance created from the `constructor` or a corresponding primitive type. Use it
    * inside
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * to perform pattern matching.
    *
    * **Usage**
@@ -45369,7 +45614,7 @@ interface AsymmetricMatchers {
   any(sample: unknown): AsymmetricMatcher;
   /**
    * `expect.anything()` matches everything except `null` and `undefined`. Use it inside
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * to perform pattern matching.
    *
    * **Usage**
@@ -45387,7 +45632,7 @@ interface AsymmetricMatchers {
    * Note that received array may be a superset of the expected array and contain some extra elements.
    *
    * Use this method inside
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * to perform pattern matching.
    *
    * **Usage**
@@ -45402,9 +45647,9 @@ interface AsymmetricMatchers {
   arrayContaining(sample: Array<unknown>): AsymmetricMatcher;
   /**
    * Compares floating point numbers for approximate equality. Use this method inside
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * to perform pattern matching. When just comparing two numbers, prefer
-   * [genericAssertions.toBeCloseTo(expected[, numDigits])](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be-close-to).
+   * [expect(value).toBeCloseTo(expected[, numDigits])](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be-close-to).
    *
    * **Usage**
    *
@@ -45422,7 +45667,7 @@ interface AsymmetricMatchers {
    * object. Note that received object may be a superset of the expected object and contain some extra properties.
    *
    * Use this method inside
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * to perform pattern matching. Object properties can be matchers to further relax the expectation. See examples.
    *
    * **Usage**
@@ -45450,7 +45695,7 @@ interface AsymmetricMatchers {
   objectContaining(sample: Record<string, unknown>): AsymmetricMatcher;
   /**
    * `expect.stringContaining()` matches a string that contains the expected substring. Use this method inside
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * to perform pattern matching.
    *
    * **Usage**
@@ -45465,7 +45710,7 @@ interface AsymmetricMatchers {
   /**
    * `expect.stringMatching()` matches a received string that in turn matches the expected pattern. Use this method
    * inside
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * to perform pattern matching.
    *
    * **Usage**
@@ -45532,7 +45777,7 @@ interface GenericAssertions<R> {
   toBe(expected: unknown): R;
   /**
    * Compares floating point numbers for approximate equality. Use this method instead of
-   * [genericAssertions.toBe(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be)
+   * [expect(value).toBe(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be)
    * when comparing floating point numbers.
    *
    * **Usage**
@@ -45720,10 +45965,10 @@ interface GenericAssertions<R> {
    *
    * For objects, this method recursively checks equality of all fields, rather than comparing objects by reference as
    * performed by
-   * [genericAssertions.toContain(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-contain-2).
+   * [expect(value).toContain(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-contain-2).
    *
    * For primitive values, this method is equivalent to
-   * [genericAssertions.toContain(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-contain-2).
+   * [expect(value).toContain(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-contain-2).
    *
    * **Usage**
    *
@@ -45745,10 +45990,10 @@ interface GenericAssertions<R> {
    *
    * For objects, this method recursively checks equality of all fields, rather than comparing objects by reference as
    * performed by
-   * [genericAssertions.toBe(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be).
+   * [expect(value).toBe(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be).
    *
    * For primitive values, this method is equivalent to
-   * [genericAssertions.toBe(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be).
+   * [expect(value).toBe(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be).
    *
    * **Usage**
    *
@@ -45759,29 +46004,29 @@ interface GenericAssertions<R> {
    *
    * **Non-strict equality**
    *
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * performs deep equality check that compares contents of the received and expected values. To ensure two objects
    * reference the same instance, use
-   * [genericAssertions.toBe(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be)
+   * [expect(value).toBe(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-be)
    * instead.
    *
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * ignores `undefined` properties and array items, and does not insist on object types being equal. For stricter
    * matching, use
-   * [genericAssertions.toStrictEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-strict-equal).
+   * [expect(value).toStrictEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-strict-equal).
    *
    * **Pattern matching**
    *
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal)
    * can be also used to perform pattern matching on objects, arrays and primitive types, with the help of the following
    * matchers:
-   * - [genericAssertions.any(constructor)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-any)
-   * - [genericAssertions.anything()](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-anything)
-   * - [genericAssertions.arrayContaining(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-array-containing)
-   * - [genericAssertions.closeTo(expected[, numDigits])](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-close-to)
-   * - [genericAssertions.objectContaining(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-object-containing)
-   * - [genericAssertions.stringContaining(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-string-containing)
-   * - [genericAssertions.stringMatching(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-string-matching)
+   * - [expect(value).any(constructor)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-any)
+   * - [expect(value).anything()](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-anything)
+   * - [expect(value).arrayContaining(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-array-containing)
+   * - [expect(value).closeTo(expected[, numDigits])](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-close-to)
+   * - [expect(value).objectContaining(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-object-containing)
+   * - [expect(value).stringContaining(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-string-containing)
+   * - [expect(value).stringMatching(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-string-matching)
    *
    * Here is an example that asserts some of the values inside a complex object:
    *
@@ -45815,7 +46060,7 @@ interface GenericAssertions<R> {
   /**
    * Ensures that property at provided `keyPath` exists on the object and optionally checks that property is equal to
    * the `expected`. Equality is checked recursively, similarly to
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal).
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal).
    *
    * **Usage**
    *
@@ -45854,7 +46099,7 @@ interface GenericAssertions<R> {
   /**
    * Compares contents of the value with contents of `expected`, performing "deep equality" check. Allows extra
    * properties to be present in the value, unlike
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal),
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal),
    * so you can check just a subset of object properties.
    *
    * When comparing arrays, the number of items must match, and each item is checked recursively.
@@ -45880,7 +46125,7 @@ interface GenericAssertions<R> {
    * Compares contents of the value with contents of `expected` **and** their types.
    *
    * Differences from
-   * [genericAssertions.toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal):
+   * [expect(value).toEqual(expected)](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-equal):
    * - Keys with undefined properties are checked. For example, `{ a: undefined, b: 2 }` does not match `{ b: 2 }`.
    * - Array sparseness is checked. For example, `[, 1]` does not match `[undefined, 1]`.
    * - Object types are checked to be equal. For example, a class instance with fields `a` and `b` will not equal a
@@ -45926,7 +46171,7 @@ interface GenericAssertions<R> {
   toThrow(error?: unknown): R;
   /**
    * An alias for
-   * [genericAssertions.toThrow([expected])](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-throw).
+   * [expect(value).toThrow([expected])](https://playwright.dev/docs/api/class-genericassertions#generic-assertions-to-throw).
    *
    * **Usage**
    *
@@ -45989,7 +46234,7 @@ export interface ExpectMatcherUtils {
   stringify(object: unknown, maxDepth?: number, maxWidth?: number): string;
 }
 
-type State = {
+export type ExpectMatcherState = {
   isNot: boolean;
   promise: 'rejects' | 'resolves' | '';
   utils: ExpectMatcherUtils;
@@ -46021,7 +46266,7 @@ type MakeMatchers<R, T, ExtendedMatchers> = {
   rejects: MakeMatchers<Promise<R>, any, ExtendedMatchers>;
 } & IfAny<T, AllMatchers<R, T>, SpecificMatchers<R, T> & ToUserMatcherObject<ExtendedMatchers, T>>;
 
-export type Expect<ExtendedMatchers> = {
+export type Expect<ExtendedMatchers = {}> = {
   <T = unknown>(actual: T, messageOrOptions?: string | { message?: string }): MakeMatchers<void, T, ExtendedMatchers>;
   soft: <T = unknown>(actual: T, messageOrOptions?: string | { message?: string }) => MakeMatchers<void, T, ExtendedMatchers>;
   poll: <T = unknown>(actual: () => T | Promise<T>, messageOrOptions?: string | { message?: string, timeout?: number, intervals?: number[] }) => BaseMatchers<Promise<void>, T> & {
@@ -46030,18 +46275,13 @@ export type Expect<ExtendedMatchers> = {
      */
      not: BaseMatchers<Promise<void>, T>;
   };
-  extend<MoreMatchers extends Record<string, (this: State, receiver: any, ...args: any[]) => MatcherReturnType | Promise<MatcherReturnType>>>(matchers: MoreMatchers): Expect<ExtendedMatchers & MoreMatchers>;
+  extend<MoreMatchers extends Record<string, (this: ExpectMatcherState, receiver: any, ...args: any[]) => MatcherReturnType | Promise<MatcherReturnType>>>(matchers: MoreMatchers): Expect<ExtendedMatchers & MoreMatchers>;
   configure: (configuration: {
     message?: string,
     timeout?: number,
     soft?: boolean,
   }) => Expect<ExtendedMatchers>;
-  getState(): {
-    expand?: boolean;
-    isNot?: boolean;
-    promise?: string;
-    utils: any;
-  };
+  getState(): ExpectMatcherState;
   not: Omit<AsymmetricMatchers, 'any' | 'anything'>;
 } & AsymmetricMatchers;
 
@@ -46385,6 +46625,11 @@ interface LocatorAssertions {
    * Ensures the {@link Locator} points to an element that contains the given text. You can use regular expressions for
    * the value as well.
    *
+   * **Details**
+   *
+   * When `expected` parameter is a string, Playwright will normalize whitespaces and line breaks both in the actual
+   * text and in the expected string before matching. When regular expression is used, the actual text is matched as is.
+   *
    * **Usage**
    *
    * ```js
@@ -46461,6 +46706,12 @@ interface LocatorAssertions {
    * @param options
    */
   toHaveAttribute(name: string, value: string|RegExp, options?: {
+    /**
+     * Whether to perform case-insensitive match. `ignoreCase` option takes precedence over the corresponding regular
+     * expression flag if specified.
+     */
+    ignoreCase?: boolean;
+
     /**
      * Time to retry the assertion for in milliseconds. Defaults to `timeout` in `TestConfig.expect`.
      */
@@ -46773,6 +47024,11 @@ interface LocatorAssertions {
   /**
    * Ensures the {@link Locator} points to an element with the given text. You can use regular expressions for the value
    * as well.
+   *
+   * **Details**
+   *
+   * When `expected` parameter is a string, Playwright will normalize whitespaces and line breaks both in the actual
+   * text and in the expected string before matching. When regular expression is used, the actual text is matched as is.
    *
    * **Usage**
    *
@@ -47203,7 +47459,7 @@ interface PageAssertions {
 interface SnapshotAssertions {
   /**
    * **NOTE** To compare screenshots, use
-   * [pageAssertions.toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
+   * [expect(page).toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
    * instead.
    *
    * Ensures that passed value, either a [string] or a [Buffer], matches the expected snapshot stored in the test
@@ -47257,7 +47513,7 @@ interface SnapshotAssertions {
 
   /**
    * **NOTE** To compare screenshots, use
-   * [pageAssertions.toHaveScreenshot([options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-2)
+   * [expect(page).toHaveScreenshot([options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-2)
    * instead.
    *
    * Ensures that passed value, either a [string] or a [Buffer], matches the expected snapshot stored in the test
@@ -47440,7 +47696,7 @@ interface TestProject {
 
     /**
      * Configuration for the
-     * [pageAssertions.toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
+     * [expect(page).toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
      * method.
      */
     toHaveScreenshot?: {
@@ -47483,7 +47739,7 @@ interface TestProject {
 
     /**
      * Configuration for the
-     * [snapshotAssertions.toMatchSnapshot(name[, options])](https://playwright.dev/docs/api/class-snapshotassertions#snapshot-assertions-to-match-snapshot-1)
+     * [expect(value).toMatchSnapshot(name[, options])](https://playwright.dev/docs/api/class-snapshotassertions#snapshot-assertions-to-match-snapshot-1)
      * method.
      */
     toMatchSnapshot?: {
@@ -47609,9 +47865,9 @@ interface TestProject {
 
   /**
    * This option configures a template controlling location of snapshots generated by
-   * [pageAssertions.toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
+   * [expect(page).toHaveScreenshot(name[, options])](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-screenshot-1)
    * and
-   * [snapshotAssertions.toMatchSnapshot(name[, options])](https://playwright.dev/docs/api/class-snapshotassertions#snapshot-assertions-to-match-snapshot-1).
+   * [expect(value).toMatchSnapshot(name[, options])](https://playwright.dev/docs/api/class-snapshotassertions#snapshot-assertions-to-match-snapshot-1).
    *
    * **Usage**
    *
