@@ -8,4 +8,4 @@ var page = await browser.NewPageAsync();
 var pixel2 = playwright.Devices["Pixel 2"];
 await using var context = await browser.NewContextAsync(pixel2);
 await page.GotoAsync("https://playwright.dev/dotnet");
-await page.ScreenshotAsync(new PageScreenshotOptions { Path = "Pixel-2.png" });
+await page.ScreenshotAsync(new() { Path = "Pixel-2.png" });
