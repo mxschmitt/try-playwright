@@ -1,384 +1,379 @@
-// Declare "static" methods in Error
-interface ErrorConstructor {
-    /** Create .stack property on a target object */
-    captureStackTrace(targetObject: object, constructorOpt?: Function): void;
 
-    /**
-     * Optional override for formatting stack traces
-     *
-     * @see https://v8.dev/docs/stack-trace-api#customizing-stack-traces
-     */
-    prepareStackTrace?: ((err: Error, stackTraces: NodeJS.CallSite[]) => any) | undefined;
+// #region Fetch and friends
+// Conditional type aliases, used at the end of this file.
+// Will either be empty if lib-dom is included, or the undici version otherwise.
+type _Request = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").Request;
+type _Response = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").Response;
+type _FormData = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").FormData;
+type _Headers = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").Headers;
+type _RequestInit = typeof globalThis extends { onmessage: any } ? {}
+    : import("undici-types").RequestInit;
+type _ResponseInit = typeof globalThis extends { onmessage: any } ? {}
+    : import("undici-types").ResponseInit;
+// #endregion Fetch and friends
 
-    stackTraceLimit: number;
-}
-
-/*-----------------------------------------------*
- *                                               *
- *                   GLOBAL                      *
- *                                               *
- ------------------------------------------------*/
-
-// For backwards compability
-interface NodeRequire extends NodeJS.Require {}
-interface RequireResolve extends NodeJS.RequireResolve {}
-interface NodeModule extends NodeJS.Module {}
-
-declare var process: NodeJS.Process;
-declare var console: Console;
-
-declare var __filename: string;
-declare var __dirname: string;
-
-declare var require: NodeRequire;
-declare var module: NodeModule;
-
-// Same as module.exports
-declare var exports: any;
-
-/**
- * Only available if `--expose-gc` is passed to the process.
- */
-declare var gc: undefined | (() => void);
-
-// #region borrowed
-// from https://github.com/microsoft/TypeScript/blob/38da7c600c83e7b31193a62495239a0fe478cb67/lib/lib.webworker.d.ts#L633 until moved to separate lib
-/** A controller object that allows you to abort one or more DOM requests as and when desired. */
-interface AbortController {
-    /**
-     * Returns the AbortSignal object associated with this object.
-     */
-
-    readonly signal: AbortSignal;
-    /**
-     * Invoking this method will set this object's AbortSignal's aborted flag and signal to any observers that the associated activity is to be aborted.
-     */
-    abort(reason?: any): void;
-}
-
-/** A signal object that allows you to communicate with a DOM request (such as a Fetch) and abort it if required via an AbortController object. */
-interface AbortSignal extends EventTarget {
-    /**
-     * Returns true if this AbortSignal's AbortController has signaled to abort, and false otherwise.
-     */
-    readonly aborted: boolean;
-    readonly reason: any;
-    onabort: null | ((this: AbortSignal, event: Event) => any);
-    throwIfAborted(): void;
-}
-
-declare var AbortController: typeof globalThis extends { onmessage: any; AbortController: infer T } ? T
-    : {
-        prototype: AbortController;
-        new(): AbortController;
-    };
-
-declare var AbortSignal: typeof globalThis extends { onmessage: any; AbortSignal: infer T } ? T
-    : {
-        prototype: AbortSignal;
-        new(): AbortSignal;
-        abort(reason?: any): AbortSignal;
-        timeout(milliseconds: number): AbortSignal;
-    };
-// #endregion borrowed
-
-// #region Disposable
-interface SymbolConstructor {
-    /**
-     * A method that is used to release resources held by an object. Called by the semantics of the `using` statement.
-     */
-    readonly dispose: unique symbol;
-
-    /**
-     * A method that is used to asynchronously release resources held by an object. Called by the semantics of the `await using` statement.
-     */
-    readonly asyncDispose: unique symbol;
-}
-
-interface Disposable {
-    [Symbol.dispose](): void;
-}
-
-interface AsyncDisposable {
-    [Symbol.asyncDispose](): PromiseLike<void>;
-}
-// #endregion Disposable
-
-// #region ArrayLike.at()
-interface RelativeIndexable<T> {
-    /**
-     * Takes an integer value and returns the item at that index,
-     * allowing for positive and negative integers.
-     * Negative integers count back from the last item in the array.
-     */
-    at(index: number): T | undefined;
-}
-interface String extends RelativeIndexable<string> {}
-interface Array<T> extends RelativeIndexable<T> {}
-interface ReadonlyArray<T> extends RelativeIndexable<T> {}
-interface Int8Array extends RelativeIndexable<number> {}
-interface Uint8Array extends RelativeIndexable<number> {}
-interface Uint8ClampedArray extends RelativeIndexable<number> {}
-interface Int16Array extends RelativeIndexable<number> {}
-interface Uint16Array extends RelativeIndexable<number> {}
-interface Int32Array extends RelativeIndexable<number> {}
-interface Uint32Array extends RelativeIndexable<number> {}
-interface Float32Array extends RelativeIndexable<number> {}
-interface Float64Array extends RelativeIndexable<number> {}
-interface BigInt64Array extends RelativeIndexable<bigint> {}
-interface BigUint64Array extends RelativeIndexable<bigint> {}
-// #endregion ArrayLike.at() end
-
-/**
- * @since v17.0.0
- *
- * Creates a deep clone of an object.
- */
-declare function structuredClone<T>(
-    value: T,
-    transfer?: { transfer: ReadonlyArray<import("worker_threads").TransferListItem> },
-): T;
-
-/*----------------------------------------------*
-*                                               *
-*               GLOBAL INTERFACES               *
-*                                               *
-*-----------------------------------------------*/
-declare namespace NodeJS {
-    interface CallSite {
-        /**
-         * Value of "this"
-         */
-        getThis(): unknown;
+declare global {
+    // Declare "static" methods in Error
+    interface ErrorConstructor {
+        /** Create .stack property on a target object */
+        captureStackTrace(targetObject: object, constructorOpt?: Function): void;
 
         /**
-         * Type of "this" as a string.
-         * This is the name of the function stored in the constructor field of
-         * "this", if available.  Otherwise the object's [[Class]] internal
-         * property.
-         */
-        getTypeName(): string | null;
-
-        /**
-         * Current function
-         */
-        getFunction(): Function | undefined;
-
-        /**
-         * Name of the current function, typically its name property.
-         * If a name property is not available an attempt will be made to try
-         * to infer a name from the function's context.
-         */
-        getFunctionName(): string | null;
-
-        /**
-         * Name of the property [of "this" or one of its prototypes] that holds
-         * the current function
-         */
-        getMethodName(): string | null;
-
-        /**
-         * Name of the script [if this function was defined in a script]
-         */
-        getFileName(): string | undefined;
-
-        /**
-         * Current line number [if this function was defined in a script]
-         */
-        getLineNumber(): number | null;
-
-        /**
-         * Current column number [if this function was defined in a script]
-         */
-        getColumnNumber(): number | null;
-
-        /**
-         * A call site object representing the location where eval was called
-         * [if this function was created using a call to eval]
-         */
-        getEvalOrigin(): string | undefined;
-
-        /**
-         * Is this a toplevel invocation, that is, is "this" the global object?
-         */
-        isToplevel(): boolean;
-
-        /**
-         * Does this call take place in code defined by a call to eval?
-         */
-        isEval(): boolean;
-
-        /**
-         * Is this call in native V8 code?
-         */
-        isNative(): boolean;
-
-        /**
-         * Is this a constructor call?
-         */
-        isConstructor(): boolean;
-    }
-
-    interface ErrnoException extends Error {
-        errno?: number | undefined;
-        code?: string | undefined;
-        path?: string | undefined;
-        syscall?: string | undefined;
-    }
-
-    interface ReadableStream extends EventEmitter {
-        readable: boolean;
-        read(size?: number): string | Buffer;
-        setEncoding(encoding: BufferEncoding): this;
-        pause(): this;
-        resume(): this;
-        isPaused(): boolean;
-        pipe<T extends WritableStream>(destination: T, options?: { end?: boolean | undefined }): T;
-        unpipe(destination?: WritableStream): this;
-        unshift(chunk: string | Uint8Array, encoding?: BufferEncoding): void;
-        wrap(oldStream: ReadableStream): this;
-        [Symbol.asyncIterator](): AsyncIterableIterator<string | Buffer>;
-    }
-
-    interface WritableStream extends EventEmitter {
-        writable: boolean;
-        write(buffer: Uint8Array | string, cb?: (err?: Error | null) => void): boolean;
-        write(str: string, encoding?: BufferEncoding, cb?: (err?: Error | null) => void): boolean;
-        end(cb?: () => void): this;
-        end(data: string | Uint8Array, cb?: () => void): this;
-        end(str: string, encoding?: BufferEncoding, cb?: () => void): this;
-    }
-
-    interface ReadWriteStream extends ReadableStream, WritableStream {}
-
-    interface RefCounted {
-        ref(): this;
-        unref(): this;
-    }
-
-    type TypedArray =
-        | Uint8Array
-        | Uint8ClampedArray
-        | Uint16Array
-        | Uint32Array
-        | Int8Array
-        | Int16Array
-        | Int32Array
-        | BigUint64Array
-        | BigInt64Array
-        | Float32Array
-        | Float64Array;
-    type ArrayBufferView = TypedArray | DataView;
-
-    interface Require {
-        (id: string): any;
-        resolve: RequireResolve;
-        cache: Dict<NodeModule>;
-        /**
-         * @deprecated
-         */
-        extensions: RequireExtensions;
-        main: Module | undefined;
-    }
-
-    interface RequireResolve {
-        (id: string, options?: { paths?: string[] | undefined }): string;
-        paths(request: string): string[] | null;
-    }
-
-    interface RequireExtensions extends Dict<(m: Module, filename: string) => any> {
-        ".js": (m: Module, filename: string) => any;
-        ".json": (m: Module, filename: string) => any;
-        ".node": (m: Module, filename: string) => any;
-    }
-    interface Module {
-        /**
-         * `true` if the module is running during the Node.js preload
-         */
-        isPreloading: boolean;
-        exports: any;
-        require: Require;
-        id: string;
-        filename: string;
-        loaded: boolean;
-        /** @deprecated since v14.6.0 Please use `require.main` and `module.children` instead. */
-        parent: Module | null | undefined;
-        children: Module[];
-        /**
-         * @since v11.14.0
+         * Optional override for formatting stack traces
          *
-         * The directory name of the module. This is usually the same as the path.dirname() of the module.id.
+         * @see https://v8.dev/docs/stack-trace-api#customizing-stack-traces
          */
-        path: string;
-        paths: string[];
+        prepareStackTrace?: ((err: Error, stackTraces: NodeJS.CallSite[]) => any) | undefined;
+
+        stackTraceLimit: number;
     }
 
-    interface Dict<T> {
-        [key: string]: T | undefined;
+    /*-----------------------------------------------*
+    *                                               *
+    *                   GLOBAL                      *
+    *                                               *
+    ------------------------------------------------*/
+
+    // For backwards compability
+    interface NodeRequire extends NodeJS.Require {}
+    interface RequireResolve extends NodeJS.RequireResolve {}
+    interface NodeModule extends NodeJS.Module {}
+
+    var process: NodeJS.Process;
+    var console: Console;
+
+    var __filename: string;
+    var __dirname: string;
+
+    var require: NodeRequire;
+    var module: NodeModule;
+
+    // Same as module.exports
+    var exports: any;
+
+    /**
+     * Only available if `--expose-gc` is passed to the process.
+     */
+    var gc: undefined | (() => void);
+
+    // #region borrowed
+    // from https://github.com/microsoft/TypeScript/blob/38da7c600c83e7b31193a62495239a0fe478cb67/lib/lib.webworker.d.ts#L633 until moved to separate lib
+    /** A controller object that allows you to abort one or more DOM requests as and when desired. */
+    interface AbortController {
+        /**
+         * Returns the AbortSignal object associated with this object.
+         */
+
+        readonly signal: AbortSignal;
+        /**
+         * Invoking this method will set this object's AbortSignal's aborted flag and signal to any observers that the associated activity is to be aborted.
+         */
+        abort(reason?: any): void;
     }
 
-    interface ReadOnlyDict<T> {
-        readonly [key: string]: T | undefined;
+    /** A signal object that allows you to communicate with a DOM request (such as a Fetch) and abort it if required via an AbortController object. */
+    interface AbortSignal extends EventTarget {
+        /**
+         * Returns true if this AbortSignal's AbortController has signaled to abort, and false otherwise.
+         */
+        readonly aborted: boolean;
+        readonly reason: any;
+        onabort: null | ((this: AbortSignal, event: Event) => any);
+        throwIfAborted(): void;
     }
 
-    namespace fetch {
-        type _Request = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").Request;
-        type _Response = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").Response;
-        type _FormData = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").FormData;
-        type _Headers = typeof globalThis extends { onmessage: any } ? {} : import("undici-types").Headers;
-        type _RequestInit = typeof globalThis extends { onmessage: any } ? {}
-            : import("undici-types").RequestInit;
-        type Request = globalThis.Request;
-        type Response = globalThis.Response;
-        type Headers = globalThis.Headers;
-        type FormData = globalThis.FormData;
-        type RequestInit = globalThis.RequestInit;
-        type RequestInfo = import("undici-types").RequestInfo;
-        type HeadersInit = import("undici-types").HeadersInit;
-        type BodyInit = import("undici-types").BodyInit;
-        type RequestRedirect = import("undici-types").RequestRedirect;
-        type RequestCredentials = import("undici-types").RequestCredentials;
-        type RequestMode = import("undici-types").RequestMode;
-        type ReferrerPolicy = import("undici-types").ReferrerPolicy;
-        type Dispatcher = import("undici-types").Dispatcher;
-        type RequestDuplex = import("undici-types").RequestDuplex;
+    var AbortController: typeof globalThis extends { onmessage: any; AbortController: infer T } ? T
+        : {
+            prototype: AbortController;
+            new(): AbortController;
+        };
+
+    var AbortSignal: typeof globalThis extends { onmessage: any; AbortSignal: infer T } ? T
+        : {
+            prototype: AbortSignal;
+            new(): AbortSignal;
+            abort(reason?: any): AbortSignal;
+            timeout(milliseconds: number): AbortSignal;
+        };
+    // #endregion borrowed
+
+    // #region Disposable
+    interface SymbolConstructor {
+        /**
+         * A method that is used to release resources held by an object. Called by the semantics of the `using` statement.
+         */
+        readonly dispose: unique symbol;
+
+        /**
+         * A method that is used to asynchronously release resources held by an object. Called by the semantics of the `await using` statement.
+         */
+        readonly asyncDispose: unique symbol;
     }
+
+    interface Disposable {
+        [Symbol.dispose](): void;
+    }
+
+    interface AsyncDisposable {
+        [Symbol.asyncDispose](): PromiseLike<void>;
+    }
+    // #endregion Disposable
+
+    // #region ArrayLike.at()
+    interface RelativeIndexable<T> {
+        /**
+         * Takes an integer value and returns the item at that index,
+         * allowing for positive and negative integers.
+         * Negative integers count back from the last item in the array.
+         */
+        at(index: number): T | undefined;
+    }
+    interface String extends RelativeIndexable<string> {}
+    interface Array<T> extends RelativeIndexable<T> {}
+    interface ReadonlyArray<T> extends RelativeIndexable<T> {}
+    interface Int8Array extends RelativeIndexable<number> {}
+    interface Uint8Array extends RelativeIndexable<number> {}
+    interface Uint8ClampedArray extends RelativeIndexable<number> {}
+    interface Int16Array extends RelativeIndexable<number> {}
+    interface Uint16Array extends RelativeIndexable<number> {}
+    interface Int32Array extends RelativeIndexable<number> {}
+    interface Uint32Array extends RelativeIndexable<number> {}
+    interface Float32Array extends RelativeIndexable<number> {}
+    interface Float64Array extends RelativeIndexable<number> {}
+    interface BigInt64Array extends RelativeIndexable<bigint> {}
+    interface BigUint64Array extends RelativeIndexable<bigint> {}
+    // #endregion ArrayLike.at() end
+
+    /**
+     * @since v17.0.0
+     *
+     * Creates a deep clone of an object.
+     */
+    function structuredClone<T>(
+        value: T,
+        transfer?: { transfer: ReadonlyArray<import("worker_threads").TransferListItem> },
+    ): T;
+
+    /*----------------------------------------------*
+    *                                               *
+    *               GLOBAL INTERFACES               *
+    *                                               *
+    *-----------------------------------------------*/
+    namespace NodeJS {
+        interface CallSite {
+            /**
+             * Value of "this"
+             */
+            getThis(): unknown;
+
+            /**
+             * Type of "this" as a string.
+             * This is the name of the function stored in the constructor field of
+             * "this", if available.  Otherwise the object's [[Class]] internal
+             * property.
+             */
+            getTypeName(): string | null;
+
+            /**
+             * Current function
+             */
+            getFunction(): Function | undefined;
+
+            /**
+             * Name of the current function, typically its name property.
+             * If a name property is not available an attempt will be made to try
+             * to infer a name from the function's context.
+             */
+            getFunctionName(): string | null;
+
+            /**
+             * Name of the property [of "this" or one of its prototypes] that holds
+             * the current function
+             */
+            getMethodName(): string | null;
+
+            /**
+             * Name of the script [if this function was defined in a script]
+             */
+            getFileName(): string | undefined;
+
+            /**
+             * Current line number [if this function was defined in a script]
+             */
+            getLineNumber(): number | null;
+
+            /**
+             * Current column number [if this function was defined in a script]
+             */
+            getColumnNumber(): number | null;
+
+            /**
+             * A call site object representing the location where eval was called
+             * [if this function was created using a call to eval]
+             */
+            getEvalOrigin(): string | undefined;
+
+            /**
+             * Is this a toplevel invocation, that is, is "this" the global object?
+             */
+            isToplevel(): boolean;
+
+            /**
+             * Does this call take place in code defined by a call to eval?
+             */
+            isEval(): boolean;
+
+            /**
+             * Is this call in native V8 code?
+             */
+            isNative(): boolean;
+
+            /**
+             * Is this a constructor call?
+             */
+            isConstructor(): boolean;
+        }
+
+        interface ErrnoException extends Error {
+            errno?: number | undefined;
+            code?: string | undefined;
+            path?: string | undefined;
+            syscall?: string | undefined;
+        }
+
+        interface ReadableStream extends EventEmitter {
+            readable: boolean;
+            read(size?: number): string | Buffer;
+            setEncoding(encoding: BufferEncoding): this;
+            pause(): this;
+            resume(): this;
+            isPaused(): boolean;
+            pipe<T extends WritableStream>(destination: T, options?: { end?: boolean | undefined }): T;
+            unpipe(destination?: WritableStream): this;
+            unshift(chunk: string | Uint8Array, encoding?: BufferEncoding): void;
+            wrap(oldStream: ReadableStream): this;
+            [Symbol.asyncIterator](): AsyncIterableIterator<string | Buffer>;
+        }
+
+        interface WritableStream extends EventEmitter {
+            writable: boolean;
+            write(buffer: Uint8Array | string, cb?: (err?: Error | null) => void): boolean;
+            write(str: string, encoding?: BufferEncoding, cb?: (err?: Error | null) => void): boolean;
+            end(cb?: () => void): this;
+            end(data: string | Uint8Array, cb?: () => void): this;
+            end(str: string, encoding?: BufferEncoding, cb?: () => void): this;
+        }
+
+        interface ReadWriteStream extends ReadableStream, WritableStream {}
+
+        interface RefCounted {
+            ref(): this;
+            unref(): this;
+        }
+
+        type TypedArray =
+            | Uint8Array
+            | Uint8ClampedArray
+            | Uint16Array
+            | Uint32Array
+            | Int8Array
+            | Int16Array
+            | Int32Array
+            | BigUint64Array
+            | BigInt64Array
+            | Float32Array
+            | Float64Array;
+        type ArrayBufferView = TypedArray | DataView;
+
+        interface Require {
+            (id: string): any;
+            resolve: RequireResolve;
+            cache: Dict<NodeModule>;
+            /**
+             * @deprecated
+             */
+            extensions: RequireExtensions;
+            main: Module | undefined;
+        }
+
+        interface RequireResolve {
+            (id: string, options?: { paths?: string[] | undefined }): string;
+            paths(request: string): string[] | null;
+        }
+
+        interface RequireExtensions extends Dict<(m: Module, filename: string) => any> {
+            ".js": (m: Module, filename: string) => any;
+            ".json": (m: Module, filename: string) => any;
+            ".node": (m: Module, filename: string) => any;
+        }
+        interface Module {
+            /**
+             * `true` if the module is running during the Node.js preload
+             */
+            isPreloading: boolean;
+            exports: any;
+            require: Require;
+            id: string;
+            filename: string;
+            loaded: boolean;
+            /** @deprecated since v14.6.0 Please use `require.main` and `module.children` instead. */
+            parent: Module | null | undefined;
+            children: Module[];
+            /**
+             * @since v11.14.0
+             *
+             * The directory name of the module. This is usually the same as the path.dirname() of the module.id.
+             */
+            path: string;
+            paths: string[];
+        }
+
+        interface Dict<T> {
+            [key: string]: T | undefined;
+        }
+
+        interface ReadOnlyDict<T> {
+            readonly [key: string]: T | undefined;
+        }
+    }
+
+    interface RequestInit extends _RequestInit {}
+
+    function fetch(
+        input: string | URL | Request,
+        init?: RequestInit,
+    ): Promise<Response>;
+
+    interface Request extends _Request {}
+    var Request: typeof globalThis extends {
+        onmessage: any;
+        Request: infer T;
+    } ? T
+        : typeof import("undici-types").Request;
+
+    interface ResponseInit extends _ResponseInit {}
+
+    interface Response extends _Response {}
+    var Response: typeof globalThis extends {
+        onmessage: any;
+        Response: infer T;
+    } ? T
+        : typeof import("undici-types").Response;
+
+    interface FormData extends _FormData {}
+    var FormData: typeof globalThis extends {
+        onmessage: any;
+        FormData: infer T;
+    } ? T
+        : typeof import("undici-types").FormData;
+
+    interface Headers extends _Headers {}
+    var Headers: typeof globalThis extends {
+        onmessage: any;
+        Headers: infer T;
+    } ? T
+        : typeof import("undici-types").Headers;
 }
-
-interface RequestInit extends NodeJS.fetch._RequestInit {}
-
-declare function fetch(
-    input: NodeJS.fetch.RequestInfo,
-    init?: RequestInit,
-): Promise<Response>;
-
-interface Request extends NodeJS.fetch._Request {}
-declare var Request: typeof globalThis extends {
-    onmessage: any;
-    Request: infer T;
-} ? T
-    : typeof import("undici-types").Request;
-
-interface Response extends NodeJS.fetch._Response {}
-declare var Response: typeof globalThis extends {
-    onmessage: any;
-    Response: infer T;
-} ? T
-    : typeof import("undici-types").Response;
-
-interface FormData extends NodeJS.fetch._FormData {}
-declare var FormData: typeof globalThis extends {
-    onmessage: any;
-    FormData: infer T;
-} ? T
-    : typeof import("undici-types").FormData;
-
-interface Headers extends NodeJS.fetch._Headers {}
-declare var Headers: typeof globalThis extends {
-    onmessage: any;
-    Headers: infer T;
-} ? T
-    : typeof import("undici-types").Headers;
 declare module 'playwright-core' {
 // This is generated from /utils/protocol-types-generator/index.js
 type binary = string;
@@ -1057,7 +1052,7 @@ may be used by the front-end as additional context.
       request?: AffectedRequest;
     }
     export type MixedContentResolutionStatus = "MixedContentBlocked"|"MixedContentAutomaticallyUpgraded"|"MixedContentWarning";
-    export type MixedContentResourceType = "AttributionSrc"|"Audio"|"Beacon"|"CSPReport"|"Download"|"EventSource"|"Favicon"|"Font"|"Form"|"Frame"|"Image"|"Import"|"Manifest"|"Ping"|"PluginData"|"PluginResource"|"Prefetch"|"Resource"|"Script"|"ServiceWorker"|"SharedWorker"|"Stylesheet"|"Track"|"Video"|"Worker"|"XMLHttpRequest"|"XSLT";
+    export type MixedContentResourceType = "AttributionSrc"|"Audio"|"Beacon"|"CSPReport"|"Download"|"EventSource"|"Favicon"|"Font"|"Form"|"Frame"|"Image"|"Import"|"Manifest"|"Ping"|"PluginData"|"PluginResource"|"Prefetch"|"Resource"|"Script"|"ServiceWorker"|"SharedWorker"|"SpeculationRules"|"Stylesheet"|"Track"|"Video"|"Worker"|"XMLHttpRequest"|"XSLT";
     export interface MixedContentIssueDetails {
       /**
        * The type of resource causing the mixed content issue (css, js, iframe,
@@ -1749,7 +1744,7 @@ events afterwards if enabled and recording.
     export type PermissionSetting = "granted"|"denied"|"prompt";
     /**
      * Definition of PermissionDescriptor defined in the Permissions API:
-https://w3c.github.io/permissions/#dictdef-permissiondescriptor.
+https://w3c.github.io/permissions/#dom-permissiondescriptor.
      */
     export interface PermissionDescriptor {
       /**
@@ -2717,6 +2712,10 @@ A higher number has higher priority in the cascade order.
        */
       familyName: string;
       /**
+       * Font's PostScript name reported by platform.
+       */
+      postScriptName: string;
+      /**
        * Indicates if the font was downloaded or resolved locally.
        */
       isCustomFont: boolean;
@@ -2845,6 +2844,28 @@ stylesheet rules) this rule came from.
       initialValue?: Value;
       inherits: boolean;
       syntax: string;
+    }
+    /**
+     * CSS font-palette-values rule representation.
+     */
+    export interface CSSFontPaletteValuesRule {
+      /**
+       * The css style sheet identifier (absent for user agent stylesheet and user-specified
+stylesheet rules) this rule came from.
+       */
+      styleSheetId?: StyleSheetId;
+      /**
+       * Parent stylesheet's origin.
+       */
+      origin: StyleSheetOrigin;
+      /**
+       * Associated font palette name.
+       */
+      fontPaletteName: Value;
+      /**
+       * Associated style declaration.
+       */
+      style: CSSStyle;
     }
     /**
      * CSS property at-rule representation.
@@ -3131,6 +3152,10 @@ attributes) for a DOM node identified by `nodeId`.
        * A list of CSS property registrations matching this node.
        */
       cssPropertyRegistrations?: CSSPropertyRegistration[];
+      /**
+       * A font-palette-values rule matching this node.
+       */
+      cssFontPaletteValuesRule?: CSSFontPaletteValuesRule;
       /**
        * Id of the first parent element that does not have display: contents.
        */
@@ -5997,6 +6022,12 @@ A display feature that only splits content will have a 0 mask_length.
        */
       maskLength: number;
     }
+    export interface DevicePosture {
+      /**
+       * Current posture of the device
+       */
+      type: "continuous"|"folded";
+    }
     export interface MediaFeature {
       name: string;
       value: string;
@@ -6216,6 +6247,11 @@ change is not observed by the page, e.g. viewport-relative elements do not chang
 is turned-off.
        */
       displayFeature?: DisplayFeature;
+      /**
+       * If set, the posture of a foldable device. If not set the posture is set
+to continuous.
+       */
+      devicePosture?: DevicePosture;
     }
     export type setDeviceMetricsOverrideReturnValue = {
     }
@@ -6487,7 +6523,7 @@ on Android.
        */
       userAgent: string;
       /**
-       * Browser langugage to emulate.
+       * Browser language to emulate.
        */
       acceptLanguage?: string;
       /**
@@ -8513,6 +8549,9 @@ records.
      * The reason why Chrome uses a specific transport protocol for HTTP semantics.
      */
     export type AlternateProtocolUsage = "alternativeJobWonWithoutRace"|"alternativeJobWonRace"|"mainJobWonRace"|"mappingMissing"|"broken"|"dnsAlpnH3JobWonWithoutRace"|"dnsAlpnH3JobWonRace"|"unspecifiedReason";
+    export interface ServiceWorkerRouterInfo {
+      ruleIdMatched: number;
+    }
     /**
      * HTTP response data.
      */
@@ -8577,6 +8616,10 @@ records.
        * Specifies that the request was served from the prefetch cache.
        */
       fromPrefetchCache?: boolean;
+      /**
+       * Infomation about how Service Worker Static Router was used.
+       */
+      serviceWorkerRouterInfo?: ServiceWorkerRouterInfo;
       /**
        * Total number of bytes received for this request so far.
        */
@@ -10339,7 +10382,7 @@ continueInterceptedRequest call.
        */
       userAgent: string;
       /**
-       * Browser langugage to emulate.
+       * Browser language to emulate.
        */
       acceptLanguage?: string;
       /**
@@ -11271,7 +11314,7 @@ as an ad.
      * All Permissions Policy features. This enum should match the one defined
 in third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5.
      */
-    export type PermissionsPolicyFeature = "accelerometer"|"ambient-light-sensor"|"attribution-reporting"|"autoplay"|"bluetooth"|"browsing-topics"|"camera"|"ch-dpr"|"ch-device-memory"|"ch-downlink"|"ch-ect"|"ch-prefers-color-scheme"|"ch-prefers-reduced-motion"|"ch-prefers-reduced-transparency"|"ch-rtt"|"ch-save-data"|"ch-ua"|"ch-ua-arch"|"ch-ua-bitness"|"ch-ua-platform"|"ch-ua-model"|"ch-ua-mobile"|"ch-ua-form-factor"|"ch-ua-full-version"|"ch-ua-full-version-list"|"ch-ua-platform-version"|"ch-ua-wow64"|"ch-viewport-height"|"ch-viewport-width"|"ch-width"|"clipboard-read"|"clipboard-write"|"compute-pressure"|"cross-origin-isolated"|"direct-sockets"|"display-capture"|"document-domain"|"encrypted-media"|"execution-while-out-of-viewport"|"execution-while-not-rendered"|"focus-without-user-activation"|"fullscreen"|"frobulate"|"gamepad"|"geolocation"|"gyroscope"|"hid"|"identity-credentials-get"|"idle-detection"|"interest-cohort"|"join-ad-interest-group"|"keyboard-map"|"local-fonts"|"magnetometer"|"microphone"|"midi"|"otp-credentials"|"payment"|"picture-in-picture"|"private-aggregation"|"private-state-token-issuance"|"private-state-token-redemption"|"publickey-credentials-get"|"run-ad-auction"|"screen-wake-lock"|"serial"|"shared-autofill"|"shared-storage"|"shared-storage-select-url"|"smart-card"|"storage-access"|"sync-xhr"|"unload"|"usb"|"vertical-scroll"|"web-share"|"window-management"|"window-placement"|"xr-spatial-tracking";
+    export type PermissionsPolicyFeature = "accelerometer"|"ambient-light-sensor"|"attribution-reporting"|"autoplay"|"bluetooth"|"browsing-topics"|"camera"|"ch-dpr"|"ch-device-memory"|"ch-downlink"|"ch-ect"|"ch-prefers-color-scheme"|"ch-prefers-reduced-motion"|"ch-prefers-reduced-transparency"|"ch-rtt"|"ch-save-data"|"ch-ua"|"ch-ua-arch"|"ch-ua-bitness"|"ch-ua-platform"|"ch-ua-model"|"ch-ua-mobile"|"ch-ua-form-factor"|"ch-ua-full-version"|"ch-ua-full-version-list"|"ch-ua-platform-version"|"ch-ua-wow64"|"ch-viewport-height"|"ch-viewport-width"|"ch-width"|"clipboard-read"|"clipboard-write"|"compute-pressure"|"cross-origin-isolated"|"direct-sockets"|"display-capture"|"document-domain"|"encrypted-media"|"execution-while-out-of-viewport"|"execution-while-not-rendered"|"focus-without-user-activation"|"fullscreen"|"frobulate"|"gamepad"|"geolocation"|"gyroscope"|"hid"|"identity-credentials-get"|"idle-detection"|"interest-cohort"|"join-ad-interest-group"|"keyboard-map"|"local-fonts"|"magnetometer"|"microphone"|"midi"|"otp-credentials"|"payment"|"picture-in-picture"|"private-aggregation"|"private-state-token-issuance"|"private-state-token-redemption"|"publickey-credentials-get"|"run-ad-auction"|"screen-wake-lock"|"serial"|"shared-autofill"|"shared-storage"|"shared-storage-select-url"|"smart-card"|"storage-access"|"sync-xhr"|"unload"|"usb"|"usb-unrestricted"|"vertical-scroll"|"web-printing"|"web-share"|"window-management"|"window-placement"|"xr-spatial-tracking";
     /**
      * Reason for a permissions policy feature to be disabled.
      */
@@ -12371,19 +12414,6 @@ as an ad. Only sent if frame is labelled as an ad and id is available.
       adScriptId?: AdScriptId;
     }
     /**
-     * Returns all browser cookies for the page and all of its subframes. Depending
-on the backend support, will return detailed cookie information in the
-`cookies` field.
-     */
-    export type getCookiesParameters = {
-    }
-    export type getCookiesReturnValue = {
-      /**
-       * Array of cookie objects.
-       */
-      cookies: Network.Cookie[];
-    }
-    /**
      * Returns present frame tree structure.
      */
     export type getFrameTreeParameters = {
@@ -12632,6 +12662,10 @@ in which case the content will be scaled to fit the paper size.
        * Whether or not to generate tagged (accessible) PDF. Defaults to embedder choice.
        */
       generateTaggedPDF?: boolean;
+      /**
+       * Whether or not to embed the document outline into the PDF.
+       */
+      generateDocumentOutline?: boolean;
     }
     export type printToPDFReturnValue = {
       /**
@@ -13610,6 +13644,7 @@ For cached script it is the last time the cache entry was validated.
       scriptResponseTime?: number;
       controlledClients?: Target.TargetID[];
       targetId?: Target.TargetID;
+      routerRules?: string;
     }
     /**
      * ServiceWorker error message.
@@ -13892,6 +13927,14 @@ SharedStorageAccessType.workletSet.
        */
       ends: number[];
     }
+    export interface AttributionReportingTriggerSpec {
+      /**
+       * number instead of integer because not all uint32 can be represented by
+int
+       */
+      triggerData: number[];
+      eventReportWindows: AttributionReportingEventReportWindows;
+    }
     export type AttributionReportingTriggerDataMatching = "exact"|"modulus";
     export interface AttributionReportingSourceRegistration {
       time: Network.TimeSinceEpoch;
@@ -13899,7 +13942,7 @@ SharedStorageAccessType.workletSet.
        * duration in seconds
        */
       expiry: number;
-      eventReportWindows: AttributionReportingEventReportWindows;
+      triggerSpecs: AttributionReportingTriggerSpec[];
       /**
        * duration in seconds
        */
@@ -16005,6 +16048,18 @@ Otherwise, they will not be resolved. Defaults to true.
 Defaults to false.
        */
       isUserVerified?: boolean;
+      /**
+       * Credentials created by this authenticator will have the backup
+eligibility (BE) flag set to this value. Defaults to false.
+https://w3c.github.io/webauthn/#sctn-credential-backup
+       */
+      defaultBackupEligibility?: boolean;
+      /**
+       * Credentials created by this authenticator will have the backup state
+(BS) flag set to this value. Defaults to false.
+https://w3c.github.io/webauthn/#sctn-credential-backup
+       */
+      defaultBackupState?: boolean;
     }
     export interface Credential {
       credentialId: binary;
@@ -16475,6 +16530,14 @@ status is shared by prefetchStatusUpdated and prerenderStatusUpdated.
 filter out the ones that aren't necessary to the developers.
      */
     export type PrefetchStatus = "PrefetchAllowed"|"PrefetchFailedIneligibleRedirect"|"PrefetchFailedInvalidRedirect"|"PrefetchFailedMIMENotSupported"|"PrefetchFailedNetError"|"PrefetchFailedNon2XX"|"PrefetchFailedPerPageLimitExceeded"|"PrefetchEvicted"|"PrefetchHeldback"|"PrefetchIneligibleRetryAfter"|"PrefetchIsPrivacyDecoy"|"PrefetchIsStale"|"PrefetchNotEligibleBrowserContextOffTheRecord"|"PrefetchNotEligibleDataSaverEnabled"|"PrefetchNotEligibleExistingProxy"|"PrefetchNotEligibleHostIsNonUnique"|"PrefetchNotEligibleNonDefaultStoragePartition"|"PrefetchNotEligibleSameSiteCrossOriginPrefetchRequiredProxy"|"PrefetchNotEligibleSchemeIsNotHttps"|"PrefetchNotEligibleUserHasCookies"|"PrefetchNotEligibleUserHasServiceWorker"|"PrefetchNotEligibleBatterySaverEnabled"|"PrefetchNotEligiblePreloadingDisabled"|"PrefetchNotFinishedInTime"|"PrefetchNotStarted"|"PrefetchNotUsedCookiesChanged"|"PrefetchProxyNotAvailable"|"PrefetchResponseUsed"|"PrefetchSuccessfulButNotUsed"|"PrefetchNotUsedProbeFailed";
+    /**
+     * Information of headers to be displayed when the header mismatch occurred.
+     */
+    export interface PrerenderMismatchedHeaders {
+      headerName: string;
+      initialValue?: string;
+      activationValue?: string;
+    }
     
     /**
      * Upsert. Currently, it is only emitted when a rule set added.
@@ -16521,6 +16584,7 @@ filter out the ones that aren't necessary to the developers.
 that is incompatible with prerender and has caused the cancellation of the attempt.
        */
       disallowedMojoInterface?: string;
+      mismatchedHeaders?: PrerenderMismatchedHeaders[];
     }
     /**
      * Send a list of sources for all preloading attempts in a document.
@@ -16550,9 +16614,13 @@ whether this account has ever been used to sign in to this RP before.
      */
     export type LoginState = "SignIn"|"SignUp";
     /**
-     * Whether the dialog shown is an account chooser or an auto re-authentication dialog.
+     * The types of FedCM dialogs.
      */
-    export type DialogType = "AccountChooser"|"AutoReauthn"|"ConfirmIdpLogin";
+    export type DialogType = "AccountChooser"|"AutoReauthn"|"ConfirmIdpLogin"|"Error";
+    /**
+     * The buttons on the FedCM dialog.
+     */
+    export type DialogButton = "ConfirmIdpLoginContinue"|"ErrorGotIt"|"ErrorMoreDetails";
     /**
      * Corresponds to IdentityRequestAccount
      */
@@ -16583,6 +16651,13 @@ RP context was used appropriately.
       title: string;
       subtitle?: string;
     }
+    /**
+     * Triggered when a dialog is closed, either by user action, JS abort,
+or a command below.
+     */
+    export type dialogClosedPayload = {
+      dialogId: string;
+    }
     
     export type enableParameters = {
       /**
@@ -16604,14 +16679,11 @@ normally happen, if this is unimportant to what's being tested.
     }
     export type selectAccountReturnValue = {
     }
-    /**
-     * Only valid if the dialog type is ConfirmIdpLogin. Acts as if the user had
-clicked the continue button.
-     */
-    export type confirmIdpLoginParameters = {
+    export type clickDialogButtonParameters = {
       dialogId: string;
+      dialogButton: DialogButton;
     }
-    export type confirmIdpLoginReturnValue = {
+    export type clickDialogButtonReturnValue = {
     }
     export type dismissDialogParameters = {
       dialogId: string;
@@ -19426,6 +19498,7 @@ Error was thrown.
     "Preload.prerenderStatusUpdated": Preload.prerenderStatusUpdatedPayload;
     "Preload.preloadingAttemptSourcesUpdated": Preload.preloadingAttemptSourcesUpdatedPayload;
     "FedCm.dialogShown": FedCm.dialogShownPayload;
+    "FedCm.dialogClosed": FedCm.dialogClosedPayload;
     "Console.messageAdded": Console.messageAddedPayload;
     "Debugger.breakpointResolved": Debugger.breakpointResolvedPayload;
     "Debugger.paused": Debugger.pausedPayload;
@@ -19783,7 +19856,6 @@ Error was thrown.
     "Page.getManifestIcons": Page.getManifestIconsParameters;
     "Page.getAppId": Page.getAppIdParameters;
     "Page.getAdScriptId": Page.getAdScriptIdParameters;
-    "Page.getCookies": Page.getCookiesParameters;
     "Page.getFrameTree": Page.getFrameTreeParameters;
     "Page.getLayoutMetrics": Page.getLayoutMetricsParameters;
     "Page.getNavigationHistory": Page.getNavigationHistoryParameters;
@@ -19944,7 +20016,7 @@ Error was thrown.
     "FedCm.enable": FedCm.enableParameters;
     "FedCm.disable": FedCm.disableParameters;
     "FedCm.selectAccount": FedCm.selectAccountParameters;
-    "FedCm.confirmIdpLogin": FedCm.confirmIdpLoginParameters;
+    "FedCm.clickDialogButton": FedCm.clickDialogButtonParameters;
     "FedCm.dismissDialog": FedCm.dismissDialogParameters;
     "FedCm.resetCooldown": FedCm.resetCooldownParameters;
     "Console.clearMessages": Console.clearMessagesParameters;
@@ -20362,7 +20434,6 @@ Error was thrown.
     "Page.getManifestIcons": Page.getManifestIconsReturnValue;
     "Page.getAppId": Page.getAppIdReturnValue;
     "Page.getAdScriptId": Page.getAdScriptIdReturnValue;
-    "Page.getCookies": Page.getCookiesReturnValue;
     "Page.getFrameTree": Page.getFrameTreeReturnValue;
     "Page.getLayoutMetrics": Page.getLayoutMetricsReturnValue;
     "Page.getNavigationHistory": Page.getNavigationHistoryReturnValue;
@@ -20523,7 +20594,7 @@ Error was thrown.
     "FedCm.enable": FedCm.enableReturnValue;
     "FedCm.disable": FedCm.disableReturnValue;
     "FedCm.selectAccount": FedCm.selectAccountReturnValue;
-    "FedCm.confirmIdpLogin": FedCm.confirmIdpLoginReturnValue;
+    "FedCm.clickDialogButton": FedCm.clickDialogButtonReturnValue;
     "FedCm.dismissDialog": FedCm.dismissDialogReturnValue;
     "FedCm.resetCooldown": FedCm.resetCooldownReturnValue;
     "Console.clearMessages": Console.clearMessagesReturnValue;
@@ -23856,8 +23927,13 @@ export interface Page {
    */
   locator(selector: string, options?: {
     /**
-     * Matches elements containing an element that matches an inner locator. Inner locator is queried against the outer
-     * one. For example, `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     * Narrows down the results of the method to those which contain elements matching this relative locator. For example,
+     * `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     *
+     * Inner locator **must be relative** to the outer locator and is queried starting with the outer locator match, not
+     * the document root. For example, you can find `content` that has `div` in
+     * `<article><content><div>Playwright</div></content></article>`. However, looking for `content` that has `article
+     * div` will fail, because the inner locator must be relative and should not use any elements outside the `content`.
      *
      * Note that outer and inner locators must belong to the same frame. Inner locator must not contain {@link
      * FrameLocator}s.
@@ -24316,7 +24392,7 @@ export interface Page {
    * labels. Option is considered matching if all specified properties match.
    * @param options
    */
-  selectOption(selector: string, values: null|string|ElementHandle|Array<string>|{
+  selectOption(selector: string, values: null|string|ElementHandle|ReadonlyArray<string>|{
     /**
      * Matches by `option.value`. Optional.
      */
@@ -24331,7 +24407,7 @@ export interface Page {
      * Matches by the index. Optional.
      */
     index?: number;
-  }|Array<ElementHandle>|Array<{
+  }|ReadonlyArray<ElementHandle>|ReadonlyArray<{
     /**
      * Matches by `option.value`. Optional.
      */
@@ -24530,7 +24606,7 @@ export interface Page {
    * @param files
    * @param options
    */
-  setInputFiles(selector: string, files: string|Array<string>|{
+  setInputFiles(selector: string, files: string|ReadonlyArray<string>|{
     /**
      * File name
      */
@@ -24545,7 +24621,7 @@ export interface Page {
      * File content
      */
     buffer: Buffer;
-  }|Array<{
+  }|ReadonlyArray<{
     /**
      * File name
      */
@@ -24844,6 +24920,24 @@ export interface Page {
    * @param handler Optional handler function to route the request.
    */
   unroute(url: string|RegExp|((url: URL) => boolean), handler?: ((route: Route, request: Request) => Promise<any>|any)): Promise<void>;
+
+  /**
+   * Removes all routes created with
+   * [page.route(url, handler[, options])](https://playwright.dev/docs/api/class-page#page-route) and
+   * [page.routeFromHAR(har[, options])](https://playwright.dev/docs/api/class-page#page-route-from-har).
+   * @param options
+   */
+  unrouteAll(options?: {
+    /**
+     * Specifies wether to wait for already running handlers and what to do if they throw errors:
+     * - `'default'` - do not wait for current handler calls (if any) to finish, if unrouted handler throws, it may
+     *   result in unhandled error
+     * - `'wait'` - wait for current handler calls (if any) to finish
+     * - `'ignoreErrors'` - do not wait for current handler calls (if any) to finish, all errors thrown by the handlers
+     *   after unrouting are silently caught
+     */
+    behavior?: "wait"|"ignoreErrors"|"default";
+  }): Promise<void>;
 
   url(): string;
 
@@ -27273,8 +27367,13 @@ export interface Frame {
    */
   locator(selector: string, options?: {
     /**
-     * Matches elements containing an element that matches an inner locator. Inner locator is queried against the outer
-     * one. For example, `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     * Narrows down the results of the method to those which contain elements matching this relative locator. For example,
+     * `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     *
+     * Inner locator **must be relative** to the outer locator and is queried starting with the outer locator match, not
+     * the document root. For example, you can find `content` that has `div` in
+     * `<article><content><div>Playwright</div></content></article>`. However, looking for `content` that has `article
+     * div` will fail, because the inner locator must be relative and should not use any elements outside the `content`.
      *
      * Note that outer and inner locators must belong to the same frame. Inner locator must not contain {@link
      * FrameLocator}s.
@@ -27415,7 +27514,7 @@ export interface Frame {
    * labels. Option is considered matching if all specified properties match.
    * @param options
    */
-  selectOption(selector: string, values: null|string|ElementHandle|Array<string>|{
+  selectOption(selector: string, values: null|string|ElementHandle|ReadonlyArray<string>|{
     /**
      * Matches by `option.value`. Optional.
      */
@@ -27430,7 +27529,7 @@ export interface Frame {
      * Matches by the index. Optional.
      */
     index?: number;
-  }|Array<ElementHandle>|Array<{
+  }|ReadonlyArray<ElementHandle>|ReadonlyArray<{
     /**
      * Matches by `option.value`. Optional.
      */
@@ -27587,7 +27686,7 @@ export interface Frame {
    * @param files
    * @param options
    */
-  setInputFiles(selector: string, files: string|Array<string>|{
+  setInputFiles(selector: string, files: string|ReadonlyArray<string>|{
     /**
      * File name
      */
@@ -27602,7 +27701,7 @@ export interface Frame {
      * File content
      */
     buffer: Buffer;
-  }|Array<{
+  }|ReadonlyArray<{
     /**
      * File name
      */
@@ -28758,7 +28857,7 @@ export interface BrowserContext {
    *
    * For the cookie to apply to all subdomains as well, prefix domain with a dot, like this: ".example.com".
    */
-  addCookies(cookies: Array<{
+  addCookies(cookies: ReadonlyArray<{
     name: string;
 
     value: string;
@@ -28849,7 +28948,7 @@ export interface BrowserContext {
    * URLs are returned.
    * @param urls Optional list of URLs.
    */
-  cookies(urls?: string|Array<string>): Promise<Array<Cookie>>;
+  cookies(urls?: string|ReadonlyArray<string>): Promise<Array<Cookie>>;
 
   /**
    * The method adds a function called `name` on the `window` object of every frame in every page in the context. When
@@ -28914,7 +29013,7 @@ export interface BrowserContext {
    * - `'payment-handler'`
    * @param options
    */
-  grantPermissions(permissions: Array<string>, options?: {
+  grantPermissions(permissions: ReadonlyArray<string>, options?: {
     /**
      * The [origin] to grant permissions to, e.g. "https://example.com".
      */
@@ -29204,6 +29303,25 @@ export interface BrowserContext {
    * [browserContext.route(url, handler[, options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-route).
    */
   unroute(url: string|RegExp|((url: URL) => boolean), handler?: ((route: Route, request: Request) => Promise<any>|any)): Promise<void>;
+
+  /**
+   * Removes all routes created with
+   * [browserContext.route(url, handler[, options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-route)
+   * and
+   * [browserContext.routeFromHAR(har[, options])](https://playwright.dev/docs/api/class-browsercontext#browser-context-route-from-har).
+   * @param options
+   */
+  unrouteAll(options?: {
+    /**
+     * Specifies wether to wait for already running handlers and what to do if they throw errors:
+     * - `'default'` - do not wait for current handler calls (if any) to finish, if unrouted handler throws, it may
+     *   result in unhandled error
+     * - `'wait'` - wait for current handler calls (if any) to finish
+     * - `'ignoreErrors'` - do not wait for current handler calls (if any) to finish, all errors thrown by the handlers
+     *   after unrouting are silently caught
+     */
+    behavior?: "wait"|"ignoreErrors"|"default";
+  }): Promise<void>;
 
   /**
    * **NOTE** Only works with Chromium browser's persistent context.
@@ -29667,12 +29785,18 @@ export interface JSHandle<T = any> {
  */
 export interface ElementHandle<T=Node> extends JSHandle<T> {
   /**
+   * **NOTE** Use locator-based [page.locator(selector[, options])](https://playwright.dev/docs/api/class-page#page-locator)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * The method finds an element matching the specified selector in the `ElementHandle`'s subtree. If no elements match
    * the selector, returns `null`.
    * @param selector A selector to query for.
    */
   $<K extends keyof HTMLElementTagNameMap>(selector: K, options?: { strict: boolean }): Promise<ElementHandleForTag<K> | null>;
   /**
+   * **NOTE** Use locator-based [page.locator(selector[, options])](https://playwright.dev/docs/api/class-page#page-locator)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * The method finds an element matching the specified selector in the `ElementHandle`'s subtree. If no elements match
    * the selector, returns `null`.
    * @param selector A selector to query for.
@@ -29680,12 +29804,18 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   $(selector: string, options?: { strict: boolean }): Promise<ElementHandle<SVGElement | HTMLElement> | null>;
 
   /**
+   * **NOTE** Use locator-based [page.locator(selector[, options])](https://playwright.dev/docs/api/class-page#page-locator)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * The method finds all elements matching the specified selector in the `ElementHandle`s subtree. If no elements match
    * the selector, returns empty array.
    * @param selector A selector to query for.
    */
   $$<K extends keyof HTMLElementTagNameMap>(selector: K): Promise<ElementHandleForTag<K>[]>;
   /**
+   * **NOTE** Use locator-based [page.locator(selector[, options])](https://playwright.dev/docs/api/class-page#page-locator)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * The method finds all elements matching the specified selector in the `ElementHandle`s subtree. If no elements match
    * the selector, returns empty array.
    * @param selector A selector to query for.
@@ -29693,6 +29823,11 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   $$(selector: string): Promise<ElementHandle<SVGElement | HTMLElement>[]>;
 
   /**
+   * **NOTE** This method does not wait for the element to pass actionability checks and therefore can lead to the flaky tests.
+   * Use
+   * [locator.evaluate(pageFunction[, arg, options])](https://playwright.dev/docs/api/class-locator#locator-evaluate),
+   * other {@link Locator} helper methods or web-first assertions instead.
+   *
    * Returns the return value of `pageFunction`.
    *
    * The method finds an element matching the specified selector in the `ElementHandle`s subtree and passes it as a
@@ -29716,6 +29851,11 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    */
   $eval<K extends keyof HTMLElementTagNameMap, R, Arg>(selector: K, pageFunction: PageFunctionOn<HTMLElementTagNameMap[K], Arg, R>, arg: Arg): Promise<R>;
   /**
+   * **NOTE** This method does not wait for the element to pass actionability checks and therefore can lead to the flaky tests.
+   * Use
+   * [locator.evaluate(pageFunction[, arg, options])](https://playwright.dev/docs/api/class-locator#locator-evaluate),
+   * other {@link Locator} helper methods or web-first assertions instead.
+   *
    * Returns the return value of `pageFunction`.
    *
    * The method finds an element matching the specified selector in the `ElementHandle`s subtree and passes it as a
@@ -29739,6 +29879,11 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    */
   $eval<R, Arg, E extends SVGElement | HTMLElement = SVGElement | HTMLElement>(selector: string, pageFunction: PageFunctionOn<E, Arg, R>, arg: Arg): Promise<R>;
   /**
+   * **NOTE** This method does not wait for the element to pass actionability checks and therefore can lead to the flaky tests.
+   * Use
+   * [locator.evaluate(pageFunction[, arg, options])](https://playwright.dev/docs/api/class-locator#locator-evaluate),
+   * other {@link Locator} helper methods or web-first assertions instead.
+   *
    * Returns the return value of `pageFunction`.
    *
    * The method finds an element matching the specified selector in the `ElementHandle`s subtree and passes it as a
@@ -29762,6 +29907,11 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    */
   $eval<K extends keyof HTMLElementTagNameMap, R>(selector: K, pageFunction: PageFunctionOn<HTMLElementTagNameMap[K], void, R>, arg?: any): Promise<R>;
   /**
+   * **NOTE** This method does not wait for the element to pass actionability checks and therefore can lead to the flaky tests.
+   * Use
+   * [locator.evaluate(pageFunction[, arg, options])](https://playwright.dev/docs/api/class-locator#locator-evaluate),
+   * other {@link Locator} helper methods or web-first assertions instead.
+   *
    * Returns the return value of `pageFunction`.
    *
    * The method finds an element matching the specified selector in the `ElementHandle`s subtree and passes it as a
@@ -29786,6 +29936,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   $eval<R, E extends SVGElement | HTMLElement = SVGElement | HTMLElement>(selector: string, pageFunction: PageFunctionOn<E, void, R>, arg?: any): Promise<R>;
 
   /**
+   * **NOTE** In most cases,
+   * [locator.evaluateAll(pageFunction[, arg])](https://playwright.dev/docs/api/class-locator#locator-evaluate-all),
+   * other {@link Locator} helper methods and web-first assertions do a better job.
+   *
    * Returns the return value of `pageFunction`.
    *
    * The method finds all elements matching the specified selector in the `ElementHandle`'s subtree and passes an array
@@ -29817,6 +29971,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    */
   $$eval<K extends keyof HTMLElementTagNameMap, R, Arg>(selector: K, pageFunction: PageFunctionOn<HTMLElementTagNameMap[K][], Arg, R>, arg: Arg): Promise<R>;
   /**
+   * **NOTE** In most cases,
+   * [locator.evaluateAll(pageFunction[, arg])](https://playwright.dev/docs/api/class-locator#locator-evaluate-all),
+   * other {@link Locator} helper methods and web-first assertions do a better job.
+   *
    * Returns the return value of `pageFunction`.
    *
    * The method finds all elements matching the specified selector in the `ElementHandle`'s subtree and passes an array
@@ -29848,6 +30006,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    */
   $$eval<R, Arg, E extends SVGElement | HTMLElement = SVGElement | HTMLElement>(selector: string, pageFunction: PageFunctionOn<E[], Arg, R>, arg: Arg): Promise<R>;
   /**
+   * **NOTE** In most cases,
+   * [locator.evaluateAll(pageFunction[, arg])](https://playwright.dev/docs/api/class-locator#locator-evaluate-all),
+   * other {@link Locator} helper methods and web-first assertions do a better job.
+   *
    * Returns the return value of `pageFunction`.
    *
    * The method finds all elements matching the specified selector in the `ElementHandle`'s subtree and passes an array
@@ -29879,6 +30041,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    */
   $$eval<K extends keyof HTMLElementTagNameMap, R>(selector: K, pageFunction: PageFunctionOn<HTMLElementTagNameMap[K][], void, R>, arg?: any): Promise<R>;
   /**
+   * **NOTE** In most cases,
+   * [locator.evaluateAll(pageFunction[, arg])](https://playwright.dev/docs/api/class-locator#locator-evaluate-all),
+   * other {@link Locator} helper methods and web-first assertions do a better job.
+   *
    * Returns the return value of `pageFunction`.
    *
    * The method finds all elements matching the specified selector in the `ElementHandle`'s subtree and passes an array
@@ -29911,6 +30077,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   $$eval<R, E extends SVGElement | HTMLElement = SVGElement | HTMLElement>(selector: string, pageFunction: PageFunctionOn<E[], void, R>, arg?: any): Promise<R>;
 
   /**
+   * **NOTE** Use web assertions that assert visibility or a locator-based
+   * [locator.waitFor([options])](https://playwright.dev/docs/api/class-locator#locator-wait-for) instead.
+   *
    * Returns element specified by selector when it satisfies `state` option. Returns `null` if waiting for `hidden` or
    * `detached`.
    *
@@ -29936,6 +30105,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    */
   waitForSelector<K extends keyof HTMLElementTagNameMap>(selector: K, options?: ElementHandleWaitForSelectorOptionsNotHidden): Promise<ElementHandleForTag<K>>;
   /**
+   * **NOTE** Use web assertions that assert visibility or a locator-based
+   * [locator.waitFor([options])](https://playwright.dev/docs/api/class-locator#locator-wait-for) instead.
+   *
    * Returns element specified by selector when it satisfies `state` option. Returns `null` if waiting for `hidden` or
    * `detached`.
    *
@@ -29961,6 +30133,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    */
   waitForSelector(selector: string, options?: ElementHandleWaitForSelectorOptionsNotHidden): Promise<ElementHandle<SVGElement | HTMLElement>>;
   /**
+   * **NOTE** Use web assertions that assert visibility or a locator-based
+   * [locator.waitFor([options])](https://playwright.dev/docs/api/class-locator#locator-wait-for) instead.
+   *
    * Returns element specified by selector when it satisfies `state` option. Returns `null` if waiting for `hidden` or
    * `detached`.
    *
@@ -29986,6 +30161,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    */
   waitForSelector<K extends keyof HTMLElementTagNameMap>(selector: K, options: ElementHandleWaitForSelectorOptions): Promise<ElementHandleForTag<K> | null>;
   /**
+   * **NOTE** Use web assertions that assert visibility or a locator-based
+   * [locator.waitFor([options])](https://playwright.dev/docs/api/class-locator#locator-wait-for) instead.
+   *
    * Returns element specified by selector when it satisfies `state` option. Returns `null` if waiting for `hidden` or
    * `detached`.
    *
@@ -30055,6 +30233,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }>;
 
   /**
+   * **NOTE** Use locator-based [locator.check([options])](https://playwright.dev/docs/api/class-locator#locator-check) instead.
+   * Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method checks the element by performing the following steps:
    * 1. Ensure that element is a checkbox or a radio input. If not, this method throws. If the element is already
    *    checked, this method returns immediately.
@@ -30110,6 +30291,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based [locator.click([options])](https://playwright.dev/docs/api/class-locator#locator-click) instead.
+   * Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method clicks the element by performing the following steps:
    * 1. Wait for [actionability](https://playwright.dev/docs/actionability) checks on the element, unless `force` option is set.
    * 1. Scroll the element into view if needed.
@@ -30188,6 +30372,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   contentFrame(): Promise<null|Frame>;
 
   /**
+   * **NOTE** Use locator-based [locator.dblclick([options])](https://playwright.dev/docs/api/class-locator#locator-dblclick)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method double clicks the element by performing the following steps:
    * 1. Wait for [actionability](https://playwright.dev/docs/actionability) checks on the element, unless `force` option is set.
    * 1. Scroll the element into view if needed.
@@ -30259,6 +30446,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.dispatchEvent(type[, eventInit, options])](https://playwright.dev/docs/api/class-locator#locator-dispatch-event)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * The snippet below dispatches the `click` event on the element. Regardless of the visibility state of the element,
    * `click` is dispatched. This is equivalent to calling
    * [element.click()](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/click).
@@ -30298,6 +30489,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   dispatchEvent(type: string, eventInit?: EvaluationArgument): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based [locator.fill(value[, options])](https://playwright.dev/docs/api/class-locator#locator-fill)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method waits for [actionability](https://playwright.dev/docs/actionability) checks, focuses the element, fills it and triggers an
    * `input` event after filling. Note that you can pass an empty string to clear the input field.
    *
@@ -30334,17 +30528,27 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based [locator.focus([options])](https://playwright.dev/docs/api/class-locator#locator-focus) instead.
+   * Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Calls [focus](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus) on the element.
    */
   focus(): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.getAttribute(name[, options])](https://playwright.dev/docs/api/class-locator#locator-get-attribute)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns element attribute value.
    * @param name Attribute name to get the value for.
    */
   getAttribute(name: string): Promise<null|string>;
 
   /**
+   * **NOTE** Use locator-based [locator.hover([options])](https://playwright.dev/docs/api/class-locator#locator-hover) instead.
+   * Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method hovers over the element by performing the following steps:
    * 1. Wait for [actionability](https://playwright.dev/docs/actionability) checks on the element, unless `force` option is set.
    * 1. Scroll the element into view if needed.
@@ -30403,16 +30607,26 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based [locator.innerHTML([options])](https://playwright.dev/docs/api/class-locator#locator-inner-html)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns the `element.innerHTML`.
    */
   innerHTML(): Promise<string>;
 
   /**
+   * **NOTE** Use locator-based [locator.innerText([options])](https://playwright.dev/docs/api/class-locator#locator-inner-text)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns the `element.innerText`.
    */
   innerText(): Promise<string>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.inputValue([options])](https://playwright.dev/docs/api/class-locator#locator-input-value) instead. Read
+   * more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns `input.value` for the selected `<input>` or `<textarea>` or `<select>` element.
    *
    * Throws for non-input elements. However, if the element is inside the `<label>` element that has an associated
@@ -30431,31 +30645,51 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<string>;
 
   /**
+   * **NOTE** Use locator-based [locator.isChecked([options])](https://playwright.dev/docs/api/class-locator#locator-is-checked)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns whether the element is checked. Throws if the element is not a checkbox or radio input.
    */
   isChecked(): Promise<boolean>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.isDisabled([options])](https://playwright.dev/docs/api/class-locator#locator-is-disabled) instead. Read
+   * more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns whether the element is disabled, the opposite of [enabled](https://playwright.dev/docs/actionability#enabled).
    */
   isDisabled(): Promise<boolean>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.isEditable([options])](https://playwright.dev/docs/api/class-locator#locator-is-editable) instead. Read
+   * more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns whether the element is [editable](https://playwright.dev/docs/actionability#editable).
    */
   isEditable(): Promise<boolean>;
 
   /**
+   * **NOTE** Use locator-based [locator.isEnabled([options])](https://playwright.dev/docs/api/class-locator#locator-is-enabled)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns whether the element is [enabled](https://playwright.dev/docs/actionability#enabled).
    */
   isEnabled(): Promise<boolean>;
 
   /**
+   * **NOTE** Use locator-based [locator.isHidden([options])](https://playwright.dev/docs/api/class-locator#locator-is-hidden)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns whether the element is hidden, the opposite of [visible](https://playwright.dev/docs/actionability#visible).
    */
   isHidden(): Promise<boolean>;
 
   /**
+   * **NOTE** Use locator-based [locator.isVisible([options])](https://playwright.dev/docs/api/class-locator#locator-is-visible)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns whether the element is [visible](https://playwright.dev/docs/actionability#visible).
    */
   isVisible(): Promise<boolean>;
@@ -30466,6 +30700,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   ownerFrame(): Promise<null|Frame>;
 
   /**
+   * **NOTE** Use locator-based [locator.press(key[, options])](https://playwright.dev/docs/api/class-locator#locator-press)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Focuses the element, and then uses
    * [keyboard.down(key)](https://playwright.dev/docs/api/class-keyboard#keyboard-down) and
    * [keyboard.up(key)](https://playwright.dev/docs/api/class-keyboard#keyboard-up).
@@ -30514,6 +30751,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based [locator.screenshot([options])](https://playwright.dev/docs/api/class-locator#locator-screenshot)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method captures a screenshot of the page, clipped to the size and position of this particular element. If the
    * element is covered by other elements, it will not be actually visible on the screenshot. If the element is a
    * scrollable container, only the currently scrolled content will be visible on the screenshot.
@@ -30581,6 +30821,13 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
     scale?: "css"|"device";
 
     /**
+     * Text of the stylesheet to apply while making the screenshot. This is where you can hide dynamic elements, make
+     * elements invisible or change their properties to help you creating repeatable screenshots. This stylesheet pierces
+     * the Shadow DOM and applies to the inner frames.
+     */
+    style?: string;
+
+    /**
      * Maximum time in milliseconds. Defaults to `0` - no timeout. The default value can be changed via `actionTimeout`
      * option in the config, or by using the
      * [browserContext.setDefaultTimeout(timeout)](https://playwright.dev/docs/api/class-browsercontext#browser-context-set-default-timeout)
@@ -30595,6 +30842,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<Buffer>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.scrollIntoViewIfNeeded([options])](https://playwright.dev/docs/api/class-locator#locator-scroll-into-view-if-needed)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method waits for [actionability](https://playwright.dev/docs/actionability) checks, then tries to scroll element into view, unless
    * it is completely visible as defined by
    * [IntersectionObserver](https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API)'s `ratio`.
@@ -30614,6 +30865,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.selectOption(values[, options])](https://playwright.dev/docs/api/class-locator#locator-select-option)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method waits for [actionability](https://playwright.dev/docs/actionability) checks, waits until all specified options are present in
    * the `<select>` element and selects these options.
    *
@@ -30644,7 +30899,7 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    * labels. Option is considered matching if all specified properties match.
    * @param options
    */
-  selectOption(values: null|string|ElementHandle|Array<string>|{
+  selectOption(values: null|string|ElementHandle|ReadonlyArray<string>|{
     /**
      * Matches by `option.value`. Optional.
      */
@@ -30659,7 +30914,7 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
      * Matches by the index. Optional.
      */
     index?: number;
-  }|Array<ElementHandle>|Array<{
+  }|ReadonlyArray<ElementHandle>|ReadonlyArray<{
     /**
      * Matches by `option.value`. Optional.
      */
@@ -30697,6 +30952,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<Array<string>>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.selectText([options])](https://playwright.dev/docs/api/class-locator#locator-select-text) instead. Read
+   * more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method waits for [actionability](https://playwright.dev/docs/actionability) checks, then focuses the element and selects all its
    * text content.
    *
@@ -30721,6 +30980,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.setChecked(checked[, options])](https://playwright.dev/docs/api/class-locator#locator-set-checked)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method checks or unchecks an element by performing the following steps:
    * 1. Ensure that element is a checkbox or a radio input. If not, this method throws.
    * 1. If the element already has the right checked state, this method returns immediately.
@@ -30776,6 +31039,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.setInputFiles(files[, options])](https://playwright.dev/docs/api/class-locator#locator-set-input-files)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * Sets the value of the file input to these file paths or files. If some of the `filePaths` are relative paths, then
    * they are resolved relative to the current working directory. For empty array, clears the selected files.
    *
@@ -30786,7 +31053,7 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    * @param files
    * @param options
    */
-  setInputFiles(files: string|Array<string>|{
+  setInputFiles(files: string|ReadonlyArray<string>|{
     /**
      * File name
      */
@@ -30801,7 +31068,7 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
      * File content
      */
     buffer: Buffer;
-  }|Array<{
+  }|ReadonlyArray<{
     /**
      * File name
      */
@@ -30834,6 +31101,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based [locator.tap([options])](https://playwright.dev/docs/api/class-locator#locator-tap) instead. Read
+   * more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method taps the element by performing the following steps:
    * 1. Wait for [actionability](https://playwright.dev/docs/actionability) checks on the element, unless `force` option is set.
    * 1. Scroll the element into view if needed.
@@ -30894,6 +31164,10 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based
+   * [locator.textContent([options])](https://playwright.dev/docs/api/class-locator#locator-text-content) instead. Read
+   * more about [locators](https://playwright.dev/docs/locators).
+   *
    * Returns the `node.textContent`.
    */
   textContent(): Promise<null|string>;
@@ -30936,6 +31210,9 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
   }): Promise<void>;
 
   /**
+   * **NOTE** Use locator-based [locator.uncheck([options])](https://playwright.dev/docs/api/class-locator#locator-uncheck)
+   * instead. Read more about [locators](https://playwright.dev/docs/locators).
+   *
    * This method checks the element by performing the following steps:
    * 1. Ensure that element is a checkbox or a radio input. If not, this method throws. If the element is already
    *    unchecked, this method returns immediately.
@@ -30996,9 +31273,8 @@ export interface ElementHandle<T=Node> extends JSHandle<T> {
    * Depending on the `state` parameter, this method waits for one of the [actionability](https://playwright.dev/docs/actionability) checks to
    * pass. This method throws when the element is detached while waiting, unless waiting for the `"hidden"` state.
    * - `"visible"` Wait until the element is [visible](https://playwright.dev/docs/actionability#visible).
-   * - `"hidden"` Wait until the element is [not visible](https://playwright.dev/docs/actionability#visible) or
-   *   [not attached](https://playwright.dev/docs/actionability#attached). Note that waiting for hidden does not throw when the element
-   *   detaches.
+   * - `"hidden"` Wait until the element is [not visible](https://playwright.dev/docs/actionability#visible) or not attached. Note that
+   *   waiting for hidden does not throw when the element detaches.
    * - `"stable"` Wait until the element is both [visible](https://playwright.dev/docs/actionability#visible) and
    *   [stable](https://playwright.dev/docs/actionability#stable).
    * - `"enabled"` Wait until the element is [enabled](https://playwright.dev/docs/actionability#enabled).
@@ -31824,8 +32100,13 @@ export interface Locator {
    */
   filter(options?: {
     /**
-     * Matches elements containing an element that matches an inner locator. Inner locator is queried against the outer
-     * one. For example, `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     * Narrows down the results of the method to those which contain elements matching this relative locator. For example,
+     * `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     *
+     * Inner locator **must be relative** to the outer locator and is queried starting with the outer locator match, not
+     * the document root. For example, you can find `content` that has `div` in
+     * `<article><content><div>Playwright</div></content></article>`. However, looking for `content` that has `article
+     * div` will fail, because the inner locator must be relative and should not use any elements outside the `content`.
      *
      * Note that outer and inner locators must belong to the same frame. Inner locator must not contain {@link
      * FrameLocator}s.
@@ -32528,8 +32809,13 @@ export interface Locator {
    */
   locator(selectorOrLocator: string|Locator, options?: {
     /**
-     * Matches elements containing an element that matches an inner locator. Inner locator is queried against the outer
-     * one. For example, `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     * Narrows down the results of the method to those which contain elements matching this relative locator. For example,
+     * `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     *
+     * Inner locator **must be relative** to the outer locator and is queried starting with the outer locator match, not
+     * the document root. For example, you can find `content` that has `div` in
+     * `<article><content><div>Playwright</div></content></article>`. However, looking for `content` that has `article
+     * div` will fail, because the inner locator must be relative and should not use any elements outside the `content`.
      *
      * Note that outer and inner locators must belong to the same frame. Inner locator must not contain {@link
      * FrameLocator}s.
@@ -32795,7 +33081,7 @@ export interface Locator {
    * labels. Option is considered matching if all specified properties match.
    * @param options
    */
-  selectOption(values: null|string|ElementHandle|Array<string>|{
+  selectOption(values: null|string|ElementHandle|ReadonlyArray<string>|{
     /**
      * Matches by `option.value`. Optional.
      */
@@ -32810,7 +33096,7 @@ export interface Locator {
      * Matches by the index. Optional.
      */
     index?: number;
-  }|Array<ElementHandle>|Array<{
+  }|ReadonlyArray<ElementHandle>|ReadonlyArray<{
     /**
      * Matches by `option.value`. Optional.
      */
@@ -32974,7 +33260,7 @@ export interface Locator {
    * @param files
    * @param options
    */
-  setInputFiles(files: string|Array<string>|{
+  setInputFiles(files: string|ReadonlyArray<string>|{
     /**
      * File name
      */
@@ -32989,7 +33275,7 @@ export interface Locator {
      * File content
      */
     buffer: Buffer;
-  }|Array<{
+  }|ReadonlyArray<{
     /**
      * File name
      */
@@ -33383,8 +33669,10 @@ export interface BrowserType<Unused = {}> {
     acceptDownloads?: boolean;
 
     /**
+     * **NOTE** Use custom browser args at your own risk, as some of them may break Playwright functionality.
+     *
      * Additional arguments to pass to the browser instance. The list of Chromium flags can be found
-     * [here](http://peter.sh/experiments/chromium-command-line-switches/).
+     * [here](https://peter.sh/experiments/chromium-command-line-switches/).
      */
     args?: Array<string>;
 
@@ -33821,8 +34109,10 @@ export interface BrowserType<Unused = {}> {
    */
   launchServer(options?: {
     /**
+     * **NOTE** Use custom browser args at your own risk, as some of them may break Playwright functionality.
+     *
      * Additional arguments to pass to the browser instance. The list of Chromium flags can be found
-     * [here](http://peter.sh/experiments/chromium-command-line-switches/).
+     * [here](https://peter.sh/experiments/chromium-command-line-switches/).
      */
     args?: Array<string>;
 
@@ -34863,8 +35153,10 @@ export interface AndroidDevice {
     acceptDownloads?: boolean;
 
     /**
+     * **NOTE** Use custom browser args at your own risk, as some of them may break Playwright functionality.
+     *
      * Additional arguments to pass to the browser instance. The list of Chromium flags can be found
-     * [here](http://peter.sh/experiments/chromium-command-line-switches/).
+     * [here](https://peter.sh/experiments/chromium-command-line-switches/).
      */
     args?: Array<string>;
 
@@ -35483,7 +35775,7 @@ export interface AndroidInput {
     x: number;
 
     y: number;
-  }, segments: Array<{
+  }, segments: ReadonlyArray<{
     x: number;
 
     y: number;
@@ -37884,7 +38176,7 @@ export interface FileChooser {
    * @param files
    * @param options
    */
-  setFiles(files: string|Array<string>|{
+  setFiles(files: string|ReadonlyArray<string>|{
     /**
      * File name
      */
@@ -37899,7 +38191,7 @@ export interface FileChooser {
      * File content
      */
     buffer: Buffer;
-  }|Array<{
+  }|ReadonlyArray<{
     /**
      * File name
      */
@@ -38307,8 +38599,13 @@ export interface FrameLocator {
    */
   locator(selectorOrLocator: string|Locator, options?: {
     /**
-     * Matches elements containing an element that matches an inner locator. Inner locator is queried against the outer
-     * one. For example, `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     * Narrows down the results of the method to those which contain elements matching this relative locator. For example,
+     * `article` that has `text=Playwright` matches `<article><div>Playwright</div></article>`.
+     *
+     * Inner locator **must be relative** to the outer locator and is queried starting with the outer locator match, not
+     * the document root. For example, you can find `content` that has `div` in
+     * `<article><content><div>Playwright</div></content></article>`. However, looking for `content` that has `article
+     * div` will fail, because the inner locator must be relative and should not use any elements outside the `content`.
      *
      * Note that outer and inner locators must belong to the same frame. Inner locator must not contain {@link
      * FrameLocator}s.
@@ -38557,7 +38854,7 @@ export interface Logger {
    * @param args message arguments
    * @param hints optional formatting hints
    */
-  log(name: string, severity: "verbose"|"info"|"warning"|"error", message: string|Error, args: Array<Object>, hints: {
+  log(name: string, severity: "verbose"|"info"|"warning"|"error", message: string|Error, args: ReadonlyArray<Object>, hints: {
     /**
      * Optional preferred logger color.
      */
@@ -39210,14 +39507,14 @@ export interface Route {
    * **Usage**
    *
    * ```js
-   * await page.route('**\/*', (route, request) => {
+   * await page.route('**\/*', async (route, request) => {
    *   // Override headers
    *   const headers = {
    *     ...request.headers(),
    *     foo: 'foo-value', // set "foo" header
    *     bar: undefined, // remove "bar" header
    *   };
-   *   route.continue({ headers });
+   *   await route.continue({ headers });
    * });
    * ```
    *
@@ -39261,17 +39558,17 @@ export interface Route {
    * **Usage**
    *
    * ```js
-   * await page.route('**\/*', route => {
+   * await page.route('**\/*', async route => {
    *   // Runs last.
-   *   route.abort();
+   *   await route.abort();
    * });
-   * await page.route('**\/*', route => {
+   * await page.route('**\/*', async route => {
    *   // Runs second.
-   *   route.fallback();
+   *   await route.fallback();
    * });
-   * await page.route('**\/*', route => {
+   * await page.route('**\/*', async route => {
    *   // Runs first.
-   *   route.fallback();
+   *   await route.fallback();
    * });
    * ```
    *
@@ -39280,9 +39577,9 @@ export interface Route {
    *
    * ```js
    * // Handle GET requests.
-   * await page.route('**\/*', route => {
+   * await page.route('**\/*', async route => {
    *   if (route.request().method() !== 'GET') {
-   *     route.fallback();
+   *     await route.fallback();
    *     return;
    *   }
    *   // Handling GET only.
@@ -39290,9 +39587,9 @@ export interface Route {
    * });
    *
    * // Handle POST requests.
-   * await page.route('**\/*', route => {
+   * await page.route('**\/*', async route => {
    *   if (route.request().method() !== 'POST') {
-   *     route.fallback();
+   *     await route.fallback();
    *     return;
    *   }
    *   // Handling POST only.
@@ -39304,14 +39601,14 @@ export interface Route {
    * modify url, method, headers and postData of the request.
    *
    * ```js
-   * await page.route('**\/*', (route, request) => {
+   * await page.route('**\/*', async (route, request) => {
    *   // Override headers
    *   const headers = {
    *     ...request.headers(),
    *     foo: 'foo-value', // set "foo" header
    *     bar: undefined, // remove "bar" header
    *   };
-   *   route.fallback({ headers });
+   *   await route.fallback({ headers });
    * });
    * ```
    *
@@ -39405,8 +39702,8 @@ export interface Route {
    * An example of fulfilling all requests with 404 responses:
    *
    * ```js
-   * await page.route('**\/*', route => {
-   *   route.fulfill({
+   * await page.route('**\/*', async route => {
+   *   await route.fulfill({
    *     status: 404,
    *     contentType: 'text/plain',
    *     body: 'Not Found!'
@@ -39597,9 +39894,11 @@ export interface Tracing {
    */
   start(options?: {
     /**
-     * If specified, the trace is going to be saved into the file with the given name inside the `tracesDir` folder
-     * specified in
-     * [browserType.launch([options])](https://playwright.dev/docs/api/class-browsertype#browser-type-launch).
+     * If specified, intermediate trace files are going to be saved into the files with the given name prefix inside the
+     * `tracesDir` folder specified in
+     * [browserType.launch([options])](https://playwright.dev/docs/api/class-browsertype#browser-type-launch). To specify
+     * the final trace zip file name, you need to pass `path` option to
+     * [tracing.stop([options])](https://playwright.dev/docs/api/class-tracing#tracing-stop) instead.
      */
     name?: string;
 
@@ -39655,9 +39954,11 @@ export interface Tracing {
    */
   startChunk(options?: {
     /**
-     * If specified, the trace is going to be saved into the file with the given name inside the `tracesDir` folder
-     * specified in
-     * [browserType.launch([options])](https://playwright.dev/docs/api/class-browsertype#browser-type-launch).
+     * If specified, intermediate trace files are going to be saved into the files with the given name prefix inside the
+     * `tracesDir` folder specified in
+     * [browserType.launch([options])](https://playwright.dev/docs/api/class-browsertype#browser-type-launch). To specify
+     * the final trace zip file name, you need to pass `path` option to
+     * [tracing.stopChunk([options])](https://playwright.dev/docs/api/class-tracing#tracing-stop-chunk) instead.
      */
     name?: string;
 
@@ -40399,8 +40700,10 @@ interface AccessibilitySnapshotOptions {
 
 export interface LaunchOptions {
   /**
+   * **NOTE** Use custom browser args at your own risk, as some of them may break Playwright functionality.
+   *
    * Additional arguments to pass to the browser instance. The list of Chromium flags can be found
-   * [here](http://peter.sh/experiments/chromium-command-line-switches/).
+   * [here](https://peter.sh/experiments/chromium-command-line-switches/).
    */
   args?: Array<string>;
 
@@ -40651,6 +40954,13 @@ export interface LocatorScreenshotOptions {
   scale?: "css"|"device";
 
   /**
+   * Text of the stylesheet to apply while making the screenshot. This is where you can hide dynamic elements, make
+   * elements invisible or change their properties to help you creating repeatable screenshots. This stylesheet pierces
+   * the Shadow DOM and applies to the inner frames.
+   */
+  style?: string;
+
+  /**
    * Maximum time in milliseconds. Defaults to `0` - no timeout. The default value can be changed via `actionTimeout`
    * option in the config, or by using the
    * [browserContext.setDefaultTimeout(timeout)](https://playwright.dev/docs/api/class-browsercontext#browser-context-set-default-timeout)
@@ -40844,6 +41154,13 @@ export interface PageScreenshotOptions {
   scale?: "css"|"device";
 
   /**
+   * Text of the stylesheet to apply while making the screenshot. This is where you can hide dynamic elements, make
+   * elements invisible or change their properties to help you creating repeatable screenshots. This stylesheet pierces
+   * the Shadow DOM and applies to the inner frames.
+   */
+  style?: string;
+
+  /**
    * Maximum time in milliseconds. Defaults to `0` - no timeout. The default value can be changed via `actionTimeout`
    * option in the config, or by using the
    * [browserContext.setDefaultTimeout(timeout)](https://playwright.dev/docs/api/class-browsercontext#browser-context-set-default-timeout)
@@ -41017,7 +41334,7 @@ import type { APIRequestContext, Browser, BrowserContext, BrowserContextOptions,
 export * from 'playwright-core';
 
 export type ReporterDescription =
-  ['blob'] | ['blob', { outputDir?: string }] |
+  ['blob'] | ['blob', { outputDir?: string, fileName?: string }] |
   ['dot'] |
   ['line'] |
   ['list'] | ['list', { printSteps?: boolean }] |
@@ -41660,6 +41977,11 @@ interface TestConfig {
        * to `"css"`.
        */
       scale?: "css"|"device";
+
+      /**
+       * See `style` in [page.screenshot([options])](https://playwright.dev/docs/api/class-page#page-screenshot).
+       */
+      stylePath?: string|Array<string>;
     };
 
     /**
@@ -43029,7 +43351,7 @@ export interface TestInfo {
    * (i.e. `test-results/a-test-title`), otherwise it will throw.
    * @param pathSegments Path segments to append at the end of the resulting path.
    */
-  outputPath(...pathSegments: Array<string>): string;
+  outputPath(...pathSegments: ReadonlyArray<string>): string;
 
   /**
    * Changes the timeout for the currently running test. Zero means no timeout. Learn more about
@@ -43091,7 +43413,7 @@ export interface TestInfo {
    * @param pathSegments The name of the snapshot or the path segments to define the snapshot file path. Snapshots with the same name in the
    * same test file are expected to be the same.
    */
-  snapshotPath(...pathSegments: Array<string>): string;
+  snapshotPath(...pathSegments: ReadonlyArray<string>): string;
 
   /**
    * The list of annotations applicable to the current test. Includes annotations from the test, annotations from all
@@ -44070,6 +44392,8 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
    * You can access all the same {@link Fixtures} as the test function itself, and also the {@link TestInfo} object that
    * gives a lot of useful information. For example, you can navigate the page before starting the test.
    *
+   * Playwright will continue running all applicable hooks even if some of them have failed.
+   *
    * You can use [test.afterEach(hookFunction)](https://playwright.dev/docs/api/class-test#test-after-each-1) to
    * teardown any resources set up in `beforeEach`.
    *
@@ -44094,6 +44418,10 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   beforeEach(inner: (args: TestArgs & WorkerArgs, testInfo: TestInfo) => Promise<any> | any): void;
   /**
    * Declares a `beforeEach` hook with a title that is executed before each test.
+   *
+   * **Details**
+   *
+   * See [test.beforeEach(hookFunction)](https://playwright.dev/docs/api/class-test#test-before-each-1).
    *
    * **Usage**
    *
@@ -44127,6 +44455,8 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
    * You can access all the same {@link Fixtures} as the test function itself, and also the {@link TestInfo} object that
    * gives a lot of useful information. For example, you can check whether the test succeeded or failed.
    *
+   * Playwright will continue running all applicable hooks even if some of them have failed.
+   *
    * **Usage**
    *
    * ```js
@@ -44150,6 +44480,10 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   afterEach(inner: (args: TestArgs & WorkerArgs, testInfo: TestInfo) => Promise<any> | any): void;
   /**
    * Declares an `afterEach` hook with a title that is executed after each test.
+   *
+   * **Details**
+   *
+   * See [test.afterEach(hookFunction)](https://playwright.dev/docs/api/class-test#test-after-each-1).
    *
    * **Usage**
    *
@@ -44185,6 +44519,8 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
    * Note that worker process is restarted on test failures, and `beforeAll` hook runs again in the new worker. Learn
    * more about [workers and failures](https://playwright.dev/docs/test-retries).
    *
+   * Playwright will continue running all applicable hooks even if some of them have failed.
+   *
    * You can use [test.afterAll(hookFunction)](https://playwright.dev/docs/api/class-test#test-after-all-1) to teardown
    * any resources set up in `beforeAll`.
    *
@@ -44212,6 +44548,10 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   beforeAll(inner: (args: TestArgs & WorkerArgs, testInfo: TestInfo) => Promise<any> | any): void;
   /**
    * Declares a `beforeAll` hook with a title that is executed once per worker process before all tests.
+   *
+   * **Details**
+   *
+   * See [test.beforeAll(hookFunction)](https://playwright.dev/docs/api/class-test#test-before-all-1).
    *
    * **Usage**
    *
@@ -44244,6 +44584,8 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
    * Note that worker process is restarted on test failures, and `afterAll` hook runs again in the new worker. Learn
    * more about [workers and failures](https://playwright.dev/docs/test-retries).
    *
+   * Playwright will continue running all applicable hooks even if some of them have failed.
+   *
    * **Usage**
    *
    * ```js
@@ -44258,6 +44600,10 @@ export interface TestType<TestArgs extends KeyValue, WorkerArgs extends KeyValue
   afterAll(inner: (args: TestArgs & WorkerArgs, testInfo: TestInfo) => Promise<any> | any): void;
   /**
    * Declares an `afterAll` hook with a title that is executed once per worker after all tests.
+   *
+   * **Details**
+   *
+   * See [test.afterAll(hookFunction)](https://playwright.dev/docs/api/class-test#test-after-all-1).
    *
    * **Usage**
    *
@@ -44741,6 +45087,8 @@ export interface PlaywrightWorkerOptions {
    * options [testOptions.headless](https://playwright.dev/docs/api/class-testoptions#test-options-headless) and
    * [testOptions.channel](https://playwright.dev/docs/api/class-testoptions#test-options-channel) take priority over
    * this.
+   *
+   * **NOTE** Use custom browser args at your own risk, as some of them may break Playwright functionality.
    *
    * **Usage**
    *
@@ -46392,7 +46740,8 @@ interface APIResponseAssertions {
  */
 interface LocatorAssertions {
   /**
-   * Ensures that {@link Locator} points to an [attached](https://playwright.dev/docs/actionability#attached) DOM node.
+   * Ensures that {@link Locator} points to an element that is
+   * [connected](https://developer.mozilla.org/en-US/docs/Web/API/Node/isConnected) to a Document or a ShadowRoot.
    *
    * **Usage**
    *
@@ -46587,8 +46936,7 @@ interface LocatorAssertions {
   }): Promise<void>;
 
   /**
-   * Ensures that {@link Locator} points to an [attached](https://playwright.dev/docs/actionability#attached) and
-   * [visible](https://playwright.dev/docs/actionability#visible) DOM node.
+   * Ensures that {@link Locator} points to an attached and [visible](https://playwright.dev/docs/actionability#visible) DOM node.
    *
    * To check that at least one element from the list is visible, use
    * [locator.first()](https://playwright.dev/docs/api/class-locator#locator-first).
@@ -46622,8 +46970,8 @@ interface LocatorAssertions {
   }): Promise<void>;
 
   /**
-   * Ensures the {@link Locator} points to an element that contains the given text. You can use regular expressions for
-   * the value as well.
+   * Ensures the {@link Locator} points to an element that contains the given text. All nested elements will be
+   * considered when computing the text content of the element. You can use regular expressions for the value as well.
    *
    * **Details**
    *
@@ -46673,7 +47021,7 @@ interface LocatorAssertions {
    * @param expected Expected substring or RegExp or a list of those.
    * @param options
    */
-  toContainText(expected: string|RegExp|Array<string|RegExp>, options?: {
+  toContainText(expected: string|RegExp|ReadonlyArray<string|RegExp>, options?: {
     /**
      * Whether to perform case-insensitive match. `ignoreCase` option takes precedence over the corresponding regular
      * expression flag if specified.
@@ -46764,7 +47112,7 @@ interface LocatorAssertions {
    * @param expected Expected class or RegExp or a list of those.
    * @param options
    */
-  toHaveClass(expected: string|RegExp|Array<string|RegExp>, options?: {
+  toHaveClass(expected: string|RegExp|ReadonlyArray<string|RegExp>, options?: {
     /**
      * Time to retry the assertion for in milliseconds. Defaults to `timeout` in `TestConfig.expect`.
      */
@@ -46869,7 +47217,7 @@ interface LocatorAssertions {
    * @param name Snapshot name.
    * @param options
    */
-  toHaveScreenshot(name: string|Array<string>, options?: {
+  toHaveScreenshot(name: string|ReadonlyArray<string>, options?: {
     /**
      * When set to `"disabled"`, stops CSS animations, CSS transitions and Web Animations. Animations get different
      * treatment depending on their duration:
@@ -46924,6 +47272,13 @@ interface LocatorAssertions {
      * Defaults to `"css"`.
      */
     scale?: "css"|"device";
+
+    /**
+     * File name containing the stylesheet to apply while making the screenshot. This is where you can hide dynamic
+     * elements, make elements invisible or change their properties to help you creating repeatable screenshots. This
+     * stylesheet pierces the Shadow DOM and applies to the inner frames.
+     */
+    stylePath?: string|Array<string>;
 
     /**
      * An acceptable perceived color difference in the [YIQ color space](https://en.wikipedia.org/wiki/YIQ) between the
@@ -47009,6 +47364,13 @@ interface LocatorAssertions {
     scale?: "css"|"device";
 
     /**
+     * File name containing the stylesheet to apply while making the screenshot. This is where you can hide dynamic
+     * elements, make elements invisible or change their properties to help you creating repeatable screenshots. This
+     * stylesheet pierces the Shadow DOM and applies to the inner frames.
+     */
+    stylePath?: string|Array<string>;
+
+    /**
      * An acceptable perceived color difference in the [YIQ color space](https://en.wikipedia.org/wiki/YIQ) between the
      * same pixel in compared images, between zero (strict) and one (lax), default is configurable with
      * `TestConfig.expect`. Defaults to `0.2`.
@@ -47022,8 +47384,8 @@ interface LocatorAssertions {
   }): Promise<void>;
 
   /**
-   * Ensures the {@link Locator} points to an element with the given text. You can use regular expressions for the value
-   * as well.
+   * Ensures the {@link Locator} points to an element with the given text. All nested elements will be considered when
+   * computing the text content of the element. You can use regular expressions for the value as well.
    *
    * **Details**
    *
@@ -47072,7 +47434,7 @@ interface LocatorAssertions {
    * @param expected Expected string or RegExp or a list of those.
    * @param options
    */
-  toHaveText(expected: string|RegExp|Array<string|RegExp>, options?: {
+  toHaveText(expected: string|RegExp|ReadonlyArray<string|RegExp>, options?: {
     /**
      * Whether to perform case-insensitive match. `ignoreCase` option takes precedence over the corresponding regular
      * expression flag if specified.
@@ -47136,7 +47498,7 @@ interface LocatorAssertions {
    * @param values Expected options currently selected.
    * @param options
    */
-  toHaveValues(values: Array<string|RegExp>, options?: {
+  toHaveValues(values: ReadonlyArray<string|RegExp>, options?: {
     /**
      * Time to retry the assertion for in milliseconds. Defaults to `timeout` in `TestConfig.expect`.
      */
@@ -47185,7 +47547,7 @@ interface PageAssertions {
    * @param name Snapshot name.
    * @param options
    */
-  toHaveScreenshot(name: string|Array<string>, options?: {
+  toHaveScreenshot(name: string|ReadonlyArray<string>, options?: {
     /**
      * When set to `"disabled"`, stops CSS animations, CSS transitions and Web Animations. Animations get different
      * treatment depending on their duration:
@@ -47271,6 +47633,13 @@ interface PageAssertions {
      * Defaults to `"css"`.
      */
     scale?: "css"|"device";
+
+    /**
+     * File name containing the stylesheet to apply while making the screenshot. This is where you can hide dynamic
+     * elements, make elements invisible or change their properties to help you creating repeatable screenshots. This
+     * stylesheet pierces the Shadow DOM and applies to the inner frames.
+     */
+    stylePath?: string|Array<string>;
 
     /**
      * An acceptable perceived color difference in the [YIQ color space](https://en.wikipedia.org/wiki/YIQ) between the
@@ -47386,6 +47755,13 @@ interface PageAssertions {
     scale?: "css"|"device";
 
     /**
+     * File name containing the stylesheet to apply while making the screenshot. This is where you can hide dynamic
+     * elements, make elements invisible or change their properties to help you creating repeatable screenshots. This
+     * stylesheet pierces the Shadow DOM and applies to the inner frames.
+     */
+    stylePath?: string|Array<string>;
+
+    /**
      * An acceptable perceived color difference in the [YIQ color space](https://en.wikipedia.org/wiki/YIQ) between the
      * same pixel in compared images, between zero (strict) and one (lax), default is configurable with
      * `TestConfig.expect`. Defaults to `0.2`.
@@ -47490,7 +47866,7 @@ interface SnapshotAssertions {
    * @param name Snapshot name.
    * @param options
    */
-  toMatchSnapshot(name: string|Array<string>, options?: {
+  toMatchSnapshot(name: string|ReadonlyArray<string>, options?: {
     /**
      * An acceptable ratio of pixels that are different to the total amount of pixels, between `0` and `1`. Default is
      * configurable with `TestConfig.expect`. Unset by default.
@@ -47735,6 +48111,11 @@ interface TestProject {
        * to `"css"`.
        */
       scale?: "css"|"device";
+
+      /**
+       * See `style` in [page.screenshot([options])](https://playwright.dev/docs/api/class-page#page-screenshot).
+       */
+      stylePath?: string|Array<string>;
     };
 
     /**
