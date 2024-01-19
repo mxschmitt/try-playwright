@@ -38,7 +38,7 @@ async function getNpmFile(packageName, file) {
 async function updateFrontendTypes() {
     const typesFile = 'frontend/src/components/Editor/types.txt';
     let typesBuffer = '';
-    typesBuffer += await getNpmFile('@types/node@14', 'globals.d.ts');
+    typesBuffer += await getNpmFile('@types/node@18', 'globals.d.ts');
     typesBuffer += 'declare module \'playwright-core\' {\n';
     typesBuffer += await getNpmFile(`playwright-core`, 'types/protocol.d.ts');
     typesBuffer += (await getNpmFile(`playwright-core`, 'types/structs.d.ts')).split('\n').slice(19).join('\n');
@@ -48,7 +48,7 @@ async function updateFrontendTypes() {
     typesBuffer += '  export * from \'playwright-core\';\n';
     typesBuffer += '}\n';
     typesBuffer += 'declare module \'@playwright/test\' {\n';
-    typesBuffer += (await getNpmFile('@playwright/test', 'types/test.d.ts')).split('\n').map(line => line.replace('@playwright/test/types/expect-types', '@playwright/test-expect')).join('\n');
+    typesBuffer += (await getNpmFile('playwright', 'types/test.d.ts')).split('\n').map(line => line.replace('@playwright/test/types/expect-types', '@playwright/test-expect')).join('\n');
     typesBuffer += '}\n';
     fs.writeFileSync(typesFile, typesBuffer);
 }
