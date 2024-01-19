@@ -9,7 +9,7 @@ COPY worker-java/main.go /root/
 COPY internal/ /root/internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app
 
-FROM mcr.microsoft.com/playwright/java:v$PLAYWRIGHT_VERSION-focal
+FROM mcr.microsoft.com/playwright/java:v$PLAYWRIGHT_VERSION-jammy
 
 RUN apt-get remove -y git ssh xvfb curl && \
     apt-get autoremove -y
