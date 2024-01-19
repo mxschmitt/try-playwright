@@ -11,9 +11,10 @@ const { chromium } = require('playwright');
   const page = await context.newPage();
 
   await page.goto('https://github.com');
-  await page.type('input[name="q"]', 'Playwright');
-  await page.press('input[name="q"]', 'Enter');
-  await page.click('.repo-list-item:nth-child(1) a');
+  await page.getByRole('button', { name: 'Search or jump to...' }).click()
+  await page.getByRole('combobox', { name: 'Search' }).fill('Playwright')
+  await page.getByRole('combobox', { name: 'Search' }).press('Enter')
+  await page.getByRole('link', { name: 'microsoft/playwright', exact: true }).click()
   await page.waitForLoadState('networkidle');
 
   await browser.close();

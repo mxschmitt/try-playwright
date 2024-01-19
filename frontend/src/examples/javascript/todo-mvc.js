@@ -24,7 +24,7 @@ const TODO_NAME = 'Bake a cake';
   });
   const page = await context.newPage();
 
-  await page.goto('http://todomvc.com/examples/react/');
+  await page.goto('https://demo.playwright.dev/todomvc');
 
   // Helper function to get the amount of todos on the page
   const getCountOfTodos = () => page.$$eval('ul.todo-list > li', el => el.length)
@@ -34,7 +34,7 @@ const TODO_NAME = 'Bake a cake';
 
   // Adding a todo entry (click in the input, enter the todo title and press the Enter key)
   await page.click('input.new-todo');
-  await page.type('input.new-todo', TODO_NAME);
+  await page.fill('input.new-todo', TODO_NAME);
   await page.press('input.new-todo', 'Enter');
 
   // After adding 1 there should be 1 entry in the list
