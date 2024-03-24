@@ -1,0 +1,3 @@
+1.42.0-alpha-2024-02-09 bad
+1.42.0-alpha-2024-02-08 good
+range: https://github.com/microsoft/playwright/compare/58f580dbde4d62b7001ff84b1cd5746a53eaf3c8...7a86bf4af62fe3e44a41f94c7a4ab7f645c205e1
