@@ -30,7 +30,7 @@ func handler(w *worker.Worker, code string) error {
 	if err := os.WriteFile(sourceFile, []byte(code), 0644); err != nil {
 		return fmt.Errorf("could not write Java source files: %v", err)
 	}
-	if err := w.ExecCommand("javac", "--class-path", classPath, sourceFile); err != nil {
+	if err := w.ExecCommand("javac", "-proc:none", "--class-path", classPath, sourceFile); err != nil {
 		return fmt.Errorf("could not compile: %w", err)
 	}
 	return w.ExecCommand("java", "--class-path", classPath, filepath.Join("org", "example", className))

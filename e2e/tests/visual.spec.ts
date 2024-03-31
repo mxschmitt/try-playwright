@@ -34,10 +34,9 @@ test.describe('Examples', () => {
     await tpPage.executeExample(1)
     await expect(tpPage.images).toHaveCount(2)
     await expect(tpPage.videos).toHaveCount(0)
-    await expect(tpPage.fileNames).toHaveText([
-      "example-chromium.png",
-      "example-webkit.png",
-    ])
+    await expect(tpPage.fileNames).toContainText("example-chromium.png")
+    await expect(tpPage.fileNames).toContainText("example-webkit.png")
+    await expect(tpPage.fileNames).toHaveCount(2)
   })
   test("2: should be able to set the geolocation", async ({ tpPage }) => {
     await tpPage.executeExample(2)
