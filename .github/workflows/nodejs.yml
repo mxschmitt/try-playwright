@@ -15,6 +15,8 @@ jobs:
       with:
         node-version: 18
     - uses: actions/checkout@v3
+    - name: Free Disk Space
+      uses: jlumbroso/free-disk-space@main
     - name: Install k3s
       run: |
         curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --docker --disable traefik --kubelet-arg=image-gc-high-threshold=85 --kubelet-arg=image-gc-low-threshold=80" sudo sh -
@@ -34,11 +36,8 @@ jobs:
         WORKER_COUNT: 1
     - run: kubectl apply -f k8/
 
-    - name: Install Playwright browsers
-      run: npx playwright install
-      working-directory: e2e
-    - name: Install Playwright operating system dependencies
-      run: npx playwright install-deps
+    - name: Install Playwright
+      run: npx playwright install --with-deps
       working-directory: e2e
     - name: Run e2e tests
       working-directory: e2e
