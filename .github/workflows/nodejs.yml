@@ -50,7 +50,7 @@ jobs:
         kubectl wait --timeout 10m --for=condition=ready pod -l role=worker
         ROOT_TEST_URL=$FRONTEND_URL npm run test
     - name: Upload test-results
-      if: ${{ failure() }}
+      if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v3
       with:
         name: e2e-test-results
