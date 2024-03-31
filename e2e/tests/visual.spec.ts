@@ -21,8 +21,6 @@ class TryPlaywrightPage {
   fileNames = this.page.locator('p[data-test-id="file"] span.file-name')
 }
 
-
-
 const test = base.extend<{ tpPage: TryPlaywrightPage }>({
   tpPage: async ({ page }, use) => {
     await use(new TryPlaywrightPage(page));
