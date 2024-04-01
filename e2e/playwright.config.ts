@@ -18,10 +18,10 @@ const config = defineConfig({
   testDir: path.join(__dirname, 'tests'),
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : undefined,
-  reporter: 'list',
+  reporter: 'html',
   workers: 1,
   use: {
-    trace: process.env.CI ? 'retry-with-trace' : 'off',
+    trace: process.env.CI ? 'on-first-retry' : undefined,
     ignoreHTTPSErrors: true,
     viewport: {
       width: 1920,

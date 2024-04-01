@@ -49,12 +49,12 @@ jobs:
         npx wait-on "$FRONTEND_URL/service/control/health"
         kubectl wait --timeout 10m --for=condition=ready pod -l role=worker
         ROOT_TEST_URL=$FRONTEND_URL npm run test
-    - name: Upload test-results
+    - name: Upload playwright-report
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v3
       with:
-        name: e2e-test-results
-        path: e2e/test-results/
+        name: e2e-playwright-report
+        path: e2e/playwright-report/
   build:
     runs-on: ubuntu-22.04
     permissions:
