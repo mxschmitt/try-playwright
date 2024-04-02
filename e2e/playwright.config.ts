@@ -21,7 +21,7 @@ const config = defineConfig({
   reporter: 'html',
   workers: 1,
   use: {
-    trace: process.env.CI ? 'on-first-retry' : undefined,
+    trace: process.env.CI ? 'on-all-retries' : undefined,
     ignoreHTTPSErrors: true,
     viewport: {
       width: 1920,
