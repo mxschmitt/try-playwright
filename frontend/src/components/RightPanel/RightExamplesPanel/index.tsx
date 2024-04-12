@@ -21,6 +21,7 @@ const RightExamplesPanel: React.FunctionComponent = () => {
     const handleOnSelect = (eventKey: string | number | undefined): void => {
         if (!eventKey)
             return;
+        setExpandedId(eventKey as string)
         const params = new URLSearchParams(window.location.search)
         params.set("e", String(eventKey))
         params.delete("s")
