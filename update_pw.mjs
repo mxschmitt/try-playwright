@@ -28,9 +28,13 @@ async function updateDependencies(folder) {
  * @returns {Promise<string>}
  */
 async function getNpmFile(packageName, file) {
-    const response = await fetch(`https://unpkg.com/${packageName}/${file}`);
+    const response = await fetch(`https://unpkg.com/${packageName}/${file}`, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        },
+    });
     if (!response.ok) {
-        throw new Error(`Could not download ${packageName}/${file}`);
+        throw new Error(`Could not download ${packageName}/${file}. Status: ${response.status}. Body: ${await response.text()}`);
     }
     return await response.text();
 }
