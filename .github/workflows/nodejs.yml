@@ -51,7 +51,7 @@ jobs:
         ROOT_TEST_URL=$FRONTEND_URL npm run test
     - name: Upload playwright-report
       if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: e2e-playwright-report
         path: e2e/playwright-report/
