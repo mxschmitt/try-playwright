@@ -29,5 +29,6 @@ func handler(w *worker.Worker, code string) error {
 func main() {
 	worker.NewWorker(&worker.WorkerExectionOptions{
 		Handler: handler,
+		IgnoreFilePatterns: []string{"**/*.last-run.json"},
 	}).Run()
 }

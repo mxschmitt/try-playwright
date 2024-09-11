@@ -74,6 +74,5 @@ func main() {
 		Handler:            handler,
 		ExecutionDirectory: projectDir,
 		TransformOutput:    transformOutput,
-		IgnoreFilePatterns: []string{filepath.Join(projectDir, "target", "**")},
 	}).Run()
 }

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"sync"
 
+	"github.com/bmatcuk/doublestar"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -73,7 +73,7 @@ func (fw *filesCollector) watch() {
 
 func (fw *filesCollector) consumeCreateEvent(event fsnotify.Event) error {
 	for _, ignorePattern := range fw.ignorePatterns {
-		matched, err := filepath.Match(ignorePattern, event.Name)
+		matched, err := doublestar.Match(ignorePattern, event.Name)
 		if err != nil {
 			return fmt.Errorf("could not match pattern: %w", err)
 		}
