@@ -25,10 +25,13 @@ const ResponseFile: React.FunctionComponent<ResponseFileProps> = ({ file }) => {
         </video>
     }
     if (extension === ".zip") {
-        const traceViewerURL = `https://trace.playwright.dev/?trace=${encodeURIComponent(publicURL)}`
-        return <a href={traceViewerURL} target="_blank" rel="noreferrer" className={styles.zipFile}>
-            Open {fileName} in Trace Viewer
-        </a>
+        const traceViewerURL = `https://trace.playwright.dev/?trace=${encodeURIComponent(new URL(publicURL, window.location.href).toString())}`
+        return <span>
+                &nbsp;-&nbsp;
+                <a href={traceViewerURL} target="_blank" rel="noreferrer" className={styles.zipFile}>
+                Open in Trace Viewer
+            </a>
+        </span>
     }
     return <img src={publicURL} alt={fileName} className={styles.image} />
 }
