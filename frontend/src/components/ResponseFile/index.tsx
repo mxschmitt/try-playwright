@@ -37,9 +37,8 @@ const ResponseFile: React.FunctionComponent<ResponseFileProps> = ({ file }) => {
 }
 
 const ResponseFileWrapper: React.FunctionComponent<ResponseFileProps> = ({ file }) => {
-    const { publicURL, fileName, extension } = file
     return <p className={styles.responseFile} data-test-id="file">
-        <span className="file-name">{fileName}</span>
+        <span className="file-name">{file.fileName}</span>
         <ResponseFile file={file} />
     </p>
 }
