@@ -49,7 +49,7 @@ declare global {
 }
 
 export const trackEvent = (): void => {
-  if (window.gtag && process.env.NODE_ENV === "production") {
+  if (window.gtag && process.env.NODE_ENV === "production" && !window.navigator.webdriver) {
     window.gtag('event', "execute", {
       'event_category': "engagement",
     });
