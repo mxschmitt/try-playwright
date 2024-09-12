@@ -18,7 +18,7 @@ func handler(w *worker.Worker, code string) error {
 		if err := os.WriteFile(testPath, []byte(code), 0644); err != nil {
 			return fmt.Errorf("failed to write test file: %w", err)
 		}
-		return w.ExecCommand("node", "/usr/lib/node_modules/@playwright/test/cli.js", "test", testPath)
+		return w.ExecCommand("node", "/usr/lib/node_modules/@playwright/test/cli.js", "test", "--trace=on", testPath)
 	}
 	if strings.HasSuffix(code, TYPESCRIPT_MAGIC_SUFFIX) {
 		return w.ExecCommand("ts-node", `--compilerOptions='{"isolatedModules": false}'`, "-e", strings.TrimSuffix(code, TYPESCRIPT_MAGIC_SUFFIX))

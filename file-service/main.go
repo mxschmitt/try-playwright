@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -104,7 +104,7 @@ func (s *server) handleUploadImage(c echo.Context) error {
 			if err != nil {
 				return fmt.Errorf("could not open file: %w", err)
 			}
-			fileContent, err := ioutil.ReadAll(file)
+			fileContent, err := io.ReadAll(file)
 			if err != nil {
 				return fmt.Errorf("could not read file: %w", err)
 			}
@@ -113,8 +113,8 @@ func (s *server) handleUploadImage(c echo.Context) error {
 			if err != nil {
 				return fmt.Errorf("could not detect mime-type: %w", err)
 			}
-			if mimeType.MIME.Value != "application/pdf" && mimeType.MIME.Value != "image/png" && mimeType.MIME.Value != "video/webm" {
-				return fmt.Errorf("not allowed mime-type: %s", files[i].Filename)
+			if mimeType.MIME.Value != "application/pdf" && mimeType.MIME.Value != "image/png" && mimeType.MIME.Value != "video/webm" && mimeType.MIME.Value != "application/zip" {
+				return fmt.Errorf("not allowed mime-type (%s): %s", mimeType.MIME.Value, files[i].Filename)
 			}
 			fileExtension := filepath.Ext(files[i].Filename)
 			objectName := uuid.New().String() + fileExtension
