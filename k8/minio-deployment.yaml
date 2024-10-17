@@ -24,7 +24,7 @@ spec:
           name: minio
           env:
             - name: MINIO_ROOT_USER
-              value: "minio"
+              value: "${MINIO_ROOT_USER}"
             - name: MINIO_ROOT_PASSWORD
-              value: "R9gGSFb4QkZH8LzzS8SECsG66JNX"
+              value: "${MINIO_ROOT_PASSWORD}"
       restartPolicy: Always
