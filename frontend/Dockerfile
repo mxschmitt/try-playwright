@@ -11,7 +11,7 @@ COPY frontend/src /frontend/src
 
 RUN npm run build
 
-FROM caddy:2.4.6-alpine
+FROM caddy:2.8.4-alpine
 
 COPY frontend/Caddyfile /etc/caddy/Caddyfile
 
