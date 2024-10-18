@@ -22,9 +22,9 @@ spec:
             - name: MINIO_ENDPOINT
               value: minio:9000
             - name: MINIO_ACCESS_KEY
-              value: "minio"
+              value: "${MINIO_ROOT_USER}"
             - name: MINIO_SECRET_KEY
-              value: "R9gGSFb4QkZH8LzzS8SECsG66JNX"
+              value: "${MINIO_ROOT_PASSWORD}"
             - name: FILE_SERVICE_SENTRY_DSN
               value: https://3911972a34944ec5bd8b681a252d4f1d@o359550.ingest.sentry.io/5479804
           image: ghcr.io/mxschmitt/try-playwright/file-service:${DOCKER_TAG}

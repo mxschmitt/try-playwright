@@ -31,6 +31,8 @@ jobs:
     - name: Generate K8 files
       run: |
         version="$(bash .github/workflows/determine_docker_image_tag.sh)"
+        export MINIO_ROOT_USER="minioadmin"
+        export MINIO_ROOT_PASSWORD=$(openssl rand -base64 32)
         bash k8/generate.sh $version
       env:
         WORKER_COUNT: 1
