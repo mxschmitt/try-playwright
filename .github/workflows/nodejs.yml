@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [build]
     timeout-minutes: 60
     steps:
@@ -58,7 +58,7 @@ jobs:
         name: e2e-playwright-report
         path: e2e/playwright-report/
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
