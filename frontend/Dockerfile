@@ -1,4 +1,4 @@
-FROM node:18-alpine as client-builder
+FROM node:22-alpine as client-builder
 
 WORKDIR /frontend
 

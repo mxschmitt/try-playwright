@@ -9,7 +9,7 @@ COPY worker-javascript/main.go /root/
 COPY internal/ /root/internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app
 
-FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-jammy
+FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble
 
 ARG PLAYWRIGHT_VERSION
 ENV PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION

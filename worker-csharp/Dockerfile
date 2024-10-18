@@ -1,4 +1,4 @@
-ARG PLAYWRIGHT_VERSION=1.46.0
+ARG PLAYWRIGHT_VERSION=1.47.0
 FROM golang:1.20-buster as builder
 WORKDIR /root
 COPY go.mod /root/
@@ -9,7 +9,7 @@ COPY worker-csharp/main.go /root/
 COPY internal/ /root/internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app
 
-FROM mcr.microsoft.com/playwright/dotnet:v${PLAYWRIGHT_VERSION}-jammy
+FROM mcr.microsoft.com/playwright/dotnet:v${PLAYWRIGHT_VERSION}-noble
 
 ARG PLAYWRIGHT_VERSION
 ENV PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION
@@ -19,10 +19,6 @@ RUN apt-get remove -y git ssh xvfb curl && \
     apt-get autoremove -y
 
 WORKDIR /home/pwuser/
-
-# Nuke /tmp/.dotnet/ folder to avoid permission issues root != pwuser
-# Workaround for https://github.com/dotnet/runtime/issues/80619
-RUN rm -rf /tmp/.dotnet/
 
 USER pwuser
 
