@@ -10,12 +10,16 @@ const { chromium } = require('playwright');
   });
   const page = await context.newPage();
 
-  await page.goto('https://github.com');
-  await page.locator('button').filter({ hasText: 'Search or jump to...' }).click();
-  await page.getByRole('combobox', { name: 'Search' }).fill('Playwright');
-  await page.getByRole('combobox', { name: 'Search' }).press('Enter');
-  await page.getByRole('link', { name: 'microsoft/playwright', exact: true }).click();
-  await page.waitForLoadState('networkidle');
+  for (let i = 0; i < 3; i++) {
+    await page.goto('https://news.ycombinator.com/');
+    await page.getByRole('link', { name: 'new', exact: true }).click();
+    await page.locator('.pagetop > a').first().click();
+    await page.getByRole('link', { name: 'comments', exact: true }).click();
+    await page.getByRole('link', { name: 'ask' }).click();
+    await page.getByRole('link', { name: 'show' }).click();
+    await page.getByRole('link', { name: 'jobs' }).click();
+    await page.getByRole('link', { name: 'login' }).click();
+  }
 
   await browser.close();
 })();
