@@ -1,4 +1,4 @@
-ARG PLAYWRIGHT_VERSION=1.46.0
+ARG PLAYWRIGHT_VERSION=1.47.0
 FROM golang:1.20-buster as builder
 WORKDIR /root
 COPY go.mod /root/
@@ -9,7 +9,7 @@ COPY worker-java/main.go /root/
 COPY internal/ /root/internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app
 
-FROM mcr.microsoft.com/playwright/java:v$PLAYWRIGHT_VERSION-jammy
+FROM mcr.microsoft.com/playwright/java:v$PLAYWRIGHT_VERSION-noble
 
 RUN apt-get remove -y git ssh xvfb curl && \
     apt-get autoremove -y
