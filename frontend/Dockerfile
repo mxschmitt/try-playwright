@@ -11,17 +11,8 @@ COPY frontend/src /frontend/src
 
 RUN npm run build
 
-FROM golang:1.24-bookworm as server-builder
+FROM caddy:2.8.4-alpine
 
-RUN go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-
-RUN xcaddy build --with github.com/mholt/caddy-ratelimit
-
-FROM alpine:3.21
-
-COPY --from=server-builder /go/caddy /usr/bin/caddy
 COPY frontend/Caddyfile /etc/caddy/Caddyfile
 
 COPY --from=client-builder /frontend/dist /frontend
-
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
