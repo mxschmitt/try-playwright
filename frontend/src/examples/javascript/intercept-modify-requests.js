@@ -1,7 +1,7 @@
 // @ts-check
 const playwright = require('playwright');
 
-const IMAGE_URL = 'https://via.placeholder.com/300x70/e74c3c/2c3e50/?text=Yey%20Playwright!';
+const IMAGE_URL = 'https://placehold.co/300x70?text=Yey+Playwright!';
 
 (async () => {
   const browser = await playwright.chromium.launch();
