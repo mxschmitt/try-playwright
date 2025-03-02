@@ -125,6 +125,14 @@ func (s *server) initializeHttpServer() {
 	s.server.POST("/service/control/share/create", s.handleShareCreate)
 }
 
+func getTurnstileIP(c echo.Context) string {
+	cfConnectingIP := c.Request().Header.Get("CF-Connecting-IP")
+	if cfConnectingIP != "" {
+		return cfConnectingIP
+	}
+	return c.RealIP()
+}
+
 func (s *server) handleRun(c echo.Context) error {
 	var req *workertypes.WorkerRequestPayload
 	if err := c.Bind(&req); err != nil {
@@ -138,6 +146,13 @@ func (s *server) handleRun(c echo.Context) error {
 		})
 	}
 
+	log.Printf("Validating turnstile")
+	if err := ValidateTurnstile(c.Request().Context(), req.Token, getTurnstileIP(c), os.Getenv("TURNSTILE_SECRET_KEY")); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	log.Printf("Validated turnstile successfully")
 	log.Printf("Obtaining worker")
 	var worker *Worker
 	select {
