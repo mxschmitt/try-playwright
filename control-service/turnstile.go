@@ -26,6 +26,9 @@ func ValidateTurnstile(ctx context.Context, token string, remoteIP string, secre
 		log.Printf("warning: Turnstile remoteIP is empty, skipping validation")
 		return nil
 	}
+    if token == "" {
+        return fmt.Errorf("no token provided")
+    }
     requestBody, err := json.Marshal(map[string]string{
         "secret":   secretKey,
         "response": token,
