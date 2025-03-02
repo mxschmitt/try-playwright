@@ -148,6 +148,7 @@ func (s *server) handleRun(c echo.Context) error {
 
 	log.Printf("Validating turnstile")
 	if err := ValidateTurnstile(c.Request().Context(), req.Token, getTurnstileIP(c), os.Getenv("TURNSTILE_SECRET_KEY")); err != nil {
+		log.Printf("Could not validate turnstile: %v", err)
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": err.Error(),
 		})
