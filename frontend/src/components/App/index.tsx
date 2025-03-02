@@ -18,7 +18,7 @@ const App: React.FunctionComponent = () => {
   const { code, onChangeRightPanelMode, codeLanguage, onLanguageChange } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<ExecutionResponse|null>(null)
-  const handleExecutionRef = useRef<() => Promise<void>>()
+  const handleExecutionRef = useRef<() => Promise<void>>(undefined)
   const [darkMode] = useDarkMode()
   const turnstileRef = useRef<HTMLDivElement>(null)
 

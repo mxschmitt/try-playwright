@@ -58,7 +58,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     const [darkMode] = useDarkMode()
     const rootNode = useRef<HTMLDivElement>(null);
     const { code, onChange, codeLanguage } = useContext(CodeContext)
-    const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor>()
+    const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor>(undefined)
     useEffect(() => {
         if (!rootNode.current)
             return;
