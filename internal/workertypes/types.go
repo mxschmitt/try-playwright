@@ -16,6 +16,7 @@ type WorkerResponsePayload struct {
 }
 
 type WorkerRequestPayload struct {
+	Token    string         `json:"token"`
 	Code     string         `json:"code"`
 	Language WorkerLanguage `json:"language"`
 }
