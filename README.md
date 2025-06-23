@@ -1,7 +1,7 @@
 # Try Playwright
 
 ![CI](https://github.com/mxschmitt/try-playwright/workflows/CI/badge.svg)
-![Playwright version](https://img.shields.io/badge/Playwright-1.50.1-blue.svg)
+![Playwright version](https://img.shields.io/badge/Playwright-1.53.1-blue.svg)
 
 > Interactive playground for [Playwright](https://github.com/microsoft/playwright) to run examples directly from your browser
 
