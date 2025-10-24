@@ -22,7 +22,7 @@ spec:
               value: "yes"
             - name: ETCD_LISTEN_CLIENT_URLS
               value: http://0.0.0.0:2379
-          image: docker.io/bitnami/etcd:3-debian-10
+          image: quay.io/coreos/etcd:v3.6.5
           name: etcd
           volumeMounts:
             - mountPath: /bitnami/etcd
