@@ -2,7 +2,7 @@ FROM alpine:3.16
 
 EXPOSE 3128
 
-ADD ./squid/squid.conf /etc/squid/squid.con
+ADD ./squid/squid.conf /etc/squid/squid.conf
 
 RUN apk add squid=5.5-r1
 
