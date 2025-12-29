@@ -1,6 +1,7 @@
 # Try Playwright
 
-![CI](https://github.com/mxschmitt/try-playwright/workflows/CI/badge.svg)
+[![CI](https://github.com/mxschmitt/try-playwright/actions/workflows/nodejs.yml/badge.svg)](https://github.com/mxschmitt/try-playwright/actions/workflows/nodejs.yml)
+[![Playwright Component Tests](https://github.com/mxschmitt/try-playwright/actions/workflows/playwright.yml/badge.svg)](https://github.com/mxschmitt/try-playwright/actions/workflows/playwright.yml)
 ![Playwright version](https://img.shields.io/badge/Playwright-1.53.1-blue.svg)
 
 > Interactive playground for [Playwright](https://github.com/microsoft/playwright) to run examples directly from your browser
