@@ -8,6 +8,7 @@ export WORKER_COUNT="${WORKER_COUNT:-2}"
 # Validate required environment variables
 : "${MINIO_ROOT_USER:?Need to set MINIO_ROOT_USER}"
 : "${MINIO_ROOT_PASSWORD:?Need to set MINIO_ROOT_PASSWORD}"
+: "${TURNSTILE_SECRET_KEY:?Need to set TURNSTILE_SECRET_KEY}"
 
 for file_path in k8/*.yaml.tpl; do
     filename="$(basename ${file_path})"
