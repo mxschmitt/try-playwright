@@ -1,3 +1,8 @@
+# Sourced from hhttps://github.com/kubernetes/ingress-nginx/blob/bd7aa50b11c2dc2398a698aad359b4b6a9edbdec/deploy/static/provider/baremetal/deploy.yaml
+# Made the following changes:
+# - added hostNetwork: true to the ingress-nginx-controller (https://kubernetes.github.io/ingress-nginx/deploy/baremetal/#via-the-host-network)
+# - removed the ingress-nginx-controller service
+#GENERATED FOR K8S 1.20
 apiVersion: v1
 kind: Namespace
 metadata:
