@@ -31,6 +31,10 @@ spec:
               value: ${DOCKER_TAG}
             - name: TURNSTILE_SECRET_KEY
               value: "${TURNSTILE_SECRET_KEY}"
+            - name: LOG_AGGREGATOR_URL
+              value: "${LOG_AGGREGATOR_URL}"
+            - name: LOG_AGGREGATOR_ENABLED
+              value: "${LOG_AGGREGATOR_ENABLED}"
           image: ghcr.io/mxschmitt/try-playwright/control-service:${DOCKER_TAG}
           name: control
           imagePullPolicy: IfNotPresent
