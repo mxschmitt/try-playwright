@@ -24,7 +24,7 @@ async function updateDependencies(folder) {
 
 /**
  * @param {string} packageName
- * @param {string} file 
+ * @param {string} file
  * @returns {Promise<string>}
  */
 async function getNpmFile(packageName, file) {
@@ -39,21 +39,105 @@ async function getNpmFile(packageName, file) {
     return await response.text();
 }
 
+/**
+ * Removes import statements, reference directives, copyright headers, and export statements from the beginning of a type definition file.
+ * This prevents issues with relative imports that don't exist in the concatenated file.
+ *
+ * @param {string} content - The file content to process
+ * @returns {string} - The content with imports/references/exports/copyright headers stripped
+ */
+function stripFileHeader(content) {
+    const lines = content.split('\n');
+    let startIndex = 0;
+    let inMultiLineComment = false;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // Check for multi-line comment start
+        if (line.startsWith('/**') || line.startsWith('/*')) {
+            inMultiLineComment = true;
+            startIndex = i + 1;
+            continue;
+        }
+
+        // Check for multi-line comment end
+        if (inMultiLineComment) {
+            if (line.endsWith('*/')) {
+                inMultiLineComment = false;
+                startIndex = i + 1;
+            }
+            continue;
+        }
+
+        // Skip single-line comments
+        if (line.startsWith('//')) {
+            startIndex = i + 1;
+            continue;
+        }
+
+        // Skip empty lines
+        if (line === '') {
+            startIndex = i + 1;
+            continue;
+        }
+
+        // Skip triple-slash reference directives
+        if (line.startsWith('///')) {
+            startIndex = i + 1;
+            continue;
+        }
+
+        // Skip import statements
+        if (line.startsWith('import ') || line.startsWith('import{')) {
+            startIndex = i + 1;
+            continue;
+        }
+
+        // Skip export statements at the top (but not export type/interface declarations)
+        if (line.startsWith('export ') && !line.match(/^export (type|interface|class|const|function|namespace|declare)/)) {
+            startIndex = i + 1;
+            continue;
+        }
+
+        // We've hit actual content, stop skipping
+        break;
+    }
+
+    return lines.slice(startIndex).join('\n');
+}
+
 async function updateFrontendTypes() {
     const typesFile = 'frontend/src/components/Editor/types.txt';
     let typesBuffer = '';
-    typesBuffer += (await getNpmFile('@types/node@18', 'globals.d.ts')).split('\n').slice(1).join('\n');
+
+    // Add Node.js global types
+    typesBuffer += stripFileHeader(await getNpmFile('@types/node@18', 'globals.d.ts'));
+    typesBuffer += '\n';
+
+    // Add playwright-core module
     typesBuffer += 'declare module \'playwright-core\' {\n';
     typesBuffer += await getNpmFile(`playwright-core`, 'types/protocol.d.ts');
-    typesBuffer += (await getNpmFile(`playwright-core`, 'types/structs.d.ts')).split('\n').slice(17).join('\n');
-    typesBuffer += (await getNpmFile(`playwright-core`, 'types/types.d.ts')).split('\n').slice(21).join('\n');
+    typesBuffer += stripFileHeader(await getNpmFile(`playwright-core`, 'types/structs.d.ts'));
+    typesBuffer += '\n';
+    typesBuffer += stripFileHeader(await getNpmFile(`playwright-core`, 'types/types.d.ts'));
     typesBuffer += '}\n';
+
+    // Add playwright module (re-exports playwright-core)
     typesBuffer += 'declare module \'playwright\' {\n';
     typesBuffer += '  export * from \'playwright-core\';\n';
     typesBuffer += '}\n';
+
+    // Add @playwright/test module
     typesBuffer += 'declare module \'@playwright/test\' {\n';
-    typesBuffer += (await getNpmFile('playwright', 'types/test.d.ts')).split('\n').map(line => line.replace('@playwright/test/types/expect-types', '@playwright/test-expect')).join('\n');
+    const testTypes = await getNpmFile('playwright', 'types/test.d.ts');
+    // Fix internal reference paths that won't exist in the concatenated file
+    const fixedTestTypes = testTypes.split('\n')
+        .map(line => line.replace('@playwright/test/types/expect-types', '@playwright/test-expect'))
+        .join('\n');
+    typesBuffer += fixedTestTypes;
     typesBuffer += '}\n';
+
     fs.writeFileSync(typesFile, typesBuffer);
 }
 

@@ -1,3 +1,4 @@
+declare var global: typeof globalThis;
 
 declare var process: NodeJS.Process;
 declare var console: Console;
@@ -167,6 +168,7 @@ declare namespace NodeJS {
         [Symbol.asyncIterator](): NodeJS.AsyncIterator<T, TReturn, TNext>;
     }
 }
+
 declare module 'playwright-core' {
 // This is generated from /utils/protocol-types-generator/index.js
 type binary = string;
@@ -23413,10 +23415,6 @@ Error was thrown.
     "Schema.getDomains": Schema.getDomainsReturnValue;
   }
 }
-
-/**
- * Can be converted to JSON
- */
 export type Serializable = any;
 /**
  * Can be converted to JSON, but may also contain JSHandles.
