@@ -103,8 +103,8 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
             monaco.editor.setModelLanguage(editorRef.current.getModel()!, CODE_LANG_2_MONACO_LANG[codeLanguage])
         if ([CodeLanguage.PLAYWRIGHT_TEST, CodeLanguage.JAVASCRIPT].includes(codeLanguage) && tsTypesAlreadyLoaded.current === false) {
             tsTypesAlreadyLoaded.current = true
-            monaco.languages.typescript.javascriptDefaults.addExtraLib(staticTypes)
-            monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+            monaco.typescript.javascriptDefaults.addExtraLib(staticTypes)
+            monaco.typescript.javascriptDefaults.setDiagnosticsOptions({
                 diagnosticCodesToIgnore: [80001, 7044]
             })
         }
