@@ -19,8 +19,13 @@ const config = defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [
+    ['list'],
+    ['html'],
     ['@flakiness/playwright', { endpoint: 'https://flakiness.io' }],
-  ] : [['list'], ['html']],
+  ] : [
+    ['list'],
+    ['html'],
+  ],
   workers: 1,
   use: {
     trace: process.env.CI ? 'on-all-retries' : undefined,
