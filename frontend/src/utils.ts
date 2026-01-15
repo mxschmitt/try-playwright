@@ -97,7 +97,7 @@ export const determineLanguage = (): CodeLanguage => {
   }
   if (window.localStorage) {
     const localStorageLanguage = window.localStorage.getItem("language") as CodeLanguage
-    if (localStorageLanguage) {
+    if (localStorageLanguage && LANGUAGES.includes(localStorageLanguage)) {
       return localStorageLanguage
     }
   }

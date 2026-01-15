@@ -17,22 +17,24 @@ const Header: React.FunctionComponent = () => {
         <strong>Playwright</strong>{' '}
         <span role="img" aria-label="Playwright">🎭</span>
       </Navbar.Brand>
-      <Nav pullRight>
-        <Nav.Item href={documentationLink} target="_blank" rel="noopener noreferrer" icon={<InfoIcon />}>
-          <span className={styles.hideSmallScreens}>
-            Documentation
-          </span>
-          <span className={styles.hideBigScreens}>
-            Docs
-          </span>
-        </Nav.Item>
-        <Nav.Item href="https://github.com/mxschmitt/try-playwright" icon={<GitHubIcon />}>
-          <span className={styles.hideSmallScreens} style={{paddingRight: 5}}>
-            View
-          </span>
-          Source
-        </Nav.Item>
-      </Nav>
+      <Navbar.Content align="right">
+        <Nav>
+          <Nav.Item href={documentationLink} target="_blank" rel="noopener noreferrer" icon={<InfoIcon />}>
+            <span className={styles.hideSmallScreens}>
+              Documentation
+            </span>
+            <span className={styles.hideBigScreens}>
+              Docs
+            </span>
+          </Nav.Item>
+          <Nav.Item href="https://github.com/mxschmitt/try-playwright" icon={<GitHubIcon />}>
+            <span className={styles.hideSmallScreens} style={{paddingRight: 5}}>
+              View
+            </span>
+            Source
+          </Nav.Item>
+        </Nav>
+      </Navbar.Content>
     </Navbar>
   )
 }
