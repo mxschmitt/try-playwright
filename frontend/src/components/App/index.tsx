@@ -48,7 +48,7 @@ const App: React.FunctionComponent = () => {
       <div ref={turnstileRef} style={{ display: 'none' }} />
       <Header />
       <Grid fluid className={styles.grid}>
-        <Col xs={24} md={12}>
+        <Col span={{ xs: 24, md: 12 }}>
           {loading && <Loader center content="loading" backdrop className={styles.loader} />}
           <Panel
             bodyFill
@@ -68,7 +68,7 @@ const App: React.FunctionComponent = () => {
             <Editor onExecution={handleExecutionRef} />
           </Panel>
         </Col>
-        <Col xs={24} md={12}>
+        <Col span={{ xs: 24, md: 12 }}>
           <RightPanel resp={resp} />
         </Col>
       </Grid >

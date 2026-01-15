@@ -35,7 +35,7 @@ const RightExamplesPanel: React.FunctionComponent = () => {
     return (
         <>
             <PanelGroup accordion bordered onSelect={handleOnSelect}>
-                {examples.map((example, idx) => <Panel key={example.id} eventKey={example.id} header={<>
+                {examples?.map((example, idx) => <Panel key={example.id} eventKey={example.id} header={<>
                     <a className={styles.exampleLink} href={`/?e=${example.id}`} onClick={(e: React.MouseEvent): void => e.preventDefault()}>
                         {example.title}
                     </a>
