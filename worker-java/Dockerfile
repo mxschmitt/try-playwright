@@ -1,5 +1,5 @@
 ARG PLAYWRIGHT_VERSION=1.52.0
-FROM golang:1.20-buster as builder
+FROM golang:1.25-alpine as builder
 WORKDIR /root
 COPY go.mod /root/
 COPY go.sum /root/

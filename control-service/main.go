@@ -22,7 +22,7 @@ import (
 	sentryecho "github.com/getsentry/sentry-go/echo"
 
 	"github.com/streadway/amqp"
-	"go.etcd.io/etcd/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
