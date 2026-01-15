@@ -18,7 +18,9 @@ const config = defineConfig({
   testDir: path.join(__dirname, 'tests'),
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : undefined,
-  reporter: [['list'], ['html']],
+  reporter: process.env.CI ? [
+    ['@flakiness/playwright', { endpoint: 'https://flakiness.io' }],
+  ] : [['list'], ['html']],
   workers: 1,
   use: {
     trace: process.env.CI ? 'on-all-retries' : undefined,

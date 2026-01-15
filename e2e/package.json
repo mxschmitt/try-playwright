@@ -13,6 +13,7 @@
   },
   "homepage": "https://github.com/mxschmitt/try-playwright#readme",
   "devDependencies": {
+    "@flakiness/playwright": "^1.0.0",
     "@playwright/test": "^1.53.1"
   },
   "private": true
