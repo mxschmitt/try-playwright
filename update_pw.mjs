@@ -45,8 +45,8 @@ async function updateFrontendTypes() {
     typesBuffer += (await getNpmFile('@types/node@18', 'globals.d.ts')).split('\n').slice(1).join('\n');
     typesBuffer += 'declare module \'playwright-core\' {\n';
     typesBuffer += await getNpmFile(`playwright-core`, 'types/protocol.d.ts');
-    typesBuffer += (await getNpmFile(`playwright-core`, 'types/structs.d.ts')).split('\n').slice(19).join('\n');
-    typesBuffer += (await getNpmFile(`playwright-core`, 'types/types.d.ts')).split('\n').slice(23).join('\n');
+    typesBuffer += (await getNpmFile(`playwright-core`, 'types/structs.d.ts')).split('\n').slice(17).join('\n');
+    typesBuffer += (await getNpmFile(`playwright-core`, 'types/types.d.ts')).split('\n').slice(21).join('\n');
     typesBuffer += '}\n';
     typesBuffer += 'declare module \'playwright\' {\n';
     typesBuffer += '  export * from \'playwright-core\';\n';
