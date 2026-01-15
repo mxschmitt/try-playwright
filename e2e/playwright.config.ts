@@ -28,7 +28,7 @@ const config = defineConfig({
   ],
   workers: 1,
   use: {
-    trace: process.env.CI ? 'on-all-retries' : undefined,
+    trace: process.env.CI ? 'retain-on-failure' : undefined,
     ignoreHTTPSErrors: true,
     viewport: {
       width: 1920,
