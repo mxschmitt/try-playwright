@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -15,12 +17,14 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/mxschmitt/try-playwright/internal/echoutils"
+	"github.com/mxschmitt/try-playwright/internal/logagg"
 	"github.com/mxschmitt/try-playwright/internal/workertypes"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/getsentry/sentry-go"
 	sentryecho "github.com/getsentry/sentry-go/echo"
 
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/client-go/kubernetes"
@@ -36,8 +40,11 @@ const (
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
-	log.SetFormatter(&log.TextFormatter{
-		TimestampFormat: time.StampMilli,
+	log.SetFormatter(&log.JSONFormatter{
+		TimestampFormat: time.RFC3339Nano,
+		FieldMap: log.FieldMap{
+			log.FieldKeyMsg: "message",
+		},
 	})
 }
 
@@ -133,44 +140,78 @@ func getTurnstileIP(c echo.Context) string {
 	return c.RealIP()
 }
 
+func respondError(c echo.Context, status int, requestID, testID string, logBuffer *bytes.Buffer, msg string) error {
+	return c.JSON(status, echo.Map{
+		"error":     msg,
+		"requestId": requestID,
+		"testId":    testID,
+		"logs": echo.Map{
+			"control": logBuffer.String(),
+		},
+	})
+}
+
 func (s *server) handleRun(c echo.Context) error {
+	requestID := uuid.New().String()
+	testID := c.Request().Header.Get("X-Test-ID")
+	if testID == "" {
+		testID = requestID
+	}
+	c.Set("requestId", requestID)
+	c.Set("testId", testID)
+	c.Response().Header().Set("X-Request-ID", requestID)
+	c.Response().Header().Set("X-Test-ID", testID)
+	logBuffer := &bytes.Buffer{}
+	defer logagg.DeferPost("control", &testID, &requestID, logBuffer)
+	requestScopedLogger := log.New()
+	requestScopedLogger.SetFormatter(log.StandardLogger().Formatter)
+	requestScopedLogger.SetLevel(log.GetLevel())
+	requestScopedLogger.SetOutput(io.MultiWriter(os.Stdout, logBuffer))
+	logger := requestScopedLogger.WithFields(log.Fields{
+		"request-id": requestID,
+		"testId":     testID,
+		"service":    "control",
+	})
+	logger.Logger.AddHook(logagg.NewHook())
+
 	var req *workertypes.WorkerRequestPayload
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "could not decode request body",
-		})
+		return respondError(c, http.StatusBadRequest, requestID, testID, logBuffer, "could not decode request body")
+	}
+	req.RequestID = requestID
+	if req.TestID == "" {
+		req.TestID = testID
 	}
 	if !req.Language.IsValid() {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "could not recognize language",
-		})
+		return respondError(c, http.StatusBadRequest, requestID, testID, logBuffer, "could not recognize language")
 	}
 
-	log.Printf("Validating turnstile")
+	logger.Printf("Validating turnstile")
 	if err := ValidateTurnstile(c.Request().Context(), req.Token, getTurnstileIP(c), os.Getenv("TURNSTILE_SECRET_KEY")); err != nil {
-		log.Printf("Could not validate turnstile: %v", err)
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": err.Error(),
-		})
+		logger.Printf("Could not validate turnstile: %v", err)
+		return respondError(c, http.StatusUnauthorized, requestID, testID, logBuffer, err.Error())
 	}
-	log.Printf("Validated turnstile successfully")
-	log.Printf("Obtaining worker")
+	logger = logger.WithField("request-id", requestID)
+	logger.Printf("Validated turnstile successfully")
+	logger.Printf("Obtaining worker")
 	var worker *Worker
 	select {
 	case worker = <-s.workers[req.Language].GetCh():
 	case <-time.After(WORKER_TIMEOUT * time.Second):
-		log.Println("Got Worker timeout, was not able to get a worker!")
-		return c.JSON(http.StatusServiceUnavailable, echo.Map{
-			"error": "Timeout in getting a worker!",
-		})
+		logger.Println("Got Worker timeout, was not able to get a worker!")
+		return respondError(c, http.StatusServiceUnavailable, requestID, testID, logBuffer, "Timeout in getting a worker!")
 	}
 
-	logger := log.WithField("worker-id", worker.id)
+	logger = logger.WithFields(log.Fields{
+		"worker-id": worker.id,
+		"testId":    testID,
+	})
 	logger.Infof("Received code: '%s'", req.Code)
 	logger.Info("Obtained worker successfully")
 	logger.Info("Publishing job")
-	if err := worker.Publish(req.Code); err != nil {
-		return fmt.Errorf("could not create new worker job: %w", err)
+	if err := worker.Publish(req.Code, req.RequestID, req.TestID); err != nil {
+		logger.Errorf("could not create new worker job: %v", err)
+		return respondError(c, http.StatusInternalServerError, requestID, testID, logBuffer, "could not create new worker job")
 	}
 	logger.Println("Published message")
 
@@ -205,13 +246,22 @@ func (s *server) handleRun(c echo.Context) error {
 
 	if timeout {
 		return c.JSON(http.StatusServiceUnavailable, echo.Map{
-			"error": "Execution timeout!",
+			"error":     "Execution timeout!",
+			"requestId": requestID,
+			"testId":    testID,
+			"logs": echo.Map{
+				"control": logBuffer.String(),
+			},
 		})
 	}
 
+	payload.RequestID = requestID
+	payload.TestID = testID
 	if !payload.Success {
 		return c.JSON(http.StatusBadRequest, payload)
 	}
+	c.Response().Header().Set("X-Request-ID", requestID)
+	c.Response().Header().Set("X-Test-ID", testID)
 	return c.JSON(http.StatusOK, payload)
 }
 

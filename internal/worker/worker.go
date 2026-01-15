@@ -6,32 +6,48 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/mxschmitt/try-playwright/internal/logagg"
 	"github.com/mxschmitt/try-playwright/internal/workertypes"
+	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
 type executionHandler func(worker *Worker, code string) error
 
 type Worker struct {
-	options *WorkerExectionOptions
-	channel *amqp.Channel
-	TmpDir  string
-	output  *bytes.Buffer
-	files   []string
-	env     []string
+	options   *WorkerExectionOptions
+	channel   *amqp.Channel
+	TmpDir    string
+	requestID string
+	testID    string
+	logBuffer *bytes.Buffer
+	output    *bytes.Buffer
+	files     []string
+	env       []string
 }
 
 var queue_name = fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
 
 func (w *Worker) Run() {
+	w.logBuffer = new(bytes.Buffer)
+	log.SetFormatter(&log.JSONFormatter{
+		TimestampFormat: time.RFC3339Nano,
+		FieldMap: log.FieldMap{
+			log.FieldKeyMsg: "message",
+		},
+	})
+	log.SetOutput(io.MultiWriter(os.Stdout, w.logBuffer))
+	log.SetLevel(log.InfoLevel)
+	log.StandardLogger().AddHook(logagg.NewHook())
+
 	if w.options.ExecutionDirectory != "" {
 		w.TmpDir = w.options.ExecutionDirectory
 	} else {
@@ -125,18 +141,40 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 	if err := json.Unmarshal(incomingMessage.Body, &incomingMessageParsed); err != nil {
 		return fmt.Errorf("could not parse incoming amqp message: %w", err)
 	}
-	outgoingMessage := &workertypes.WorkerResponsePayload{Version: os.Getenv("PLAYWRIGHT_VERSION")}
+	w.requestID = incomingMessageParsed.RequestID
+	w.testID = incomingMessageParsed.TestID
+	defer logagg.DeferPost("worker", &w.testID, &w.requestID, w.logBuffer)
+	if w.requestID != "" {
+		w.AddEnv("PLAYWRIGHT_REQUEST_ID", w.requestID)
+	}
+	if w.testID != "" {
+		w.AddEnv("PLAYWRIGHT_TEST_ID", w.testID)
+	}
+	log.WithFields(log.Fields{
+		"request-id": w.requestID,
+		"testId":     w.testID,
+		"service":    "worker",
+	}).Info("received execution message")
+	outgoingMessage := &workertypes.WorkerResponsePayload{
+		Version: os.Getenv("PLAYWRIGHT_VERSION"),
+		Files:   []workertypes.File{},
+	}
 	if err := w.options.Handler(w, incomingMessageParsed.Code); err != nil {
 		outgoingMessage.Success = false
 		outgoingMessage.Error = err.Error()
 	} else {
 		outgoingMessage.Success = true
-		outgoingMessage.Files, err = w.uploadFiles()
+		files, err := w.uploadFiles()
 		if err != nil {
 			return fmt.Errorf("could not upload files: %w", err)
 		}
+		if files != nil {
+			outgoingMessage.Files = files
+		}
 	}
 	outgoingMessage.Output = w.options.TransformOutput(w.output.String())
+	outgoingMessage.RequestID = w.requestID
+	outgoingMessage.TestID = w.testID
 	outgoingMessageBody, err := json.Marshal(outgoingMessage)
 	if err != nil {
 		return fmt.Errorf("could not marshal outgoing message payload: %w", err)
@@ -164,6 +202,13 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 var uploadFilesEndpoint = fmt.Sprintf("%s/api/v1/file/upload", os.Getenv("FILE_SERVICE_URL"))
 
 func (w *Worker) uploadFiles() ([]workertypes.File, error) {
+	if len(w.files) == 0 {
+		return nil, nil
+	}
+	log.WithFields(log.Fields{
+		"request-id": w.requestID,
+		"testId":     w.testID,
+	}).Infof("uploading %d file(s) to file service", len(w.files))
 	var b bytes.Buffer
 	requestWriter := multipart.NewWriter(&b)
 	for i, filePath := range w.files {
@@ -189,6 +234,12 @@ func (w *Worker) uploadFiles() ([]workertypes.File, error) {
 		return nil, fmt.Errorf("could not create new request: %w", err)
 	}
 	req.Header.Set("Content-Type", requestWriter.FormDataContentType())
+	if w.requestID != "" {
+		req.Header.Set("X-Request-ID", w.requestID)
+	}
+	if w.testID != "" {
+		req.Header.Set("X-Test-ID", w.testID)
+	}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
