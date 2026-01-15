@@ -180,7 +180,7 @@ const playwright = require('playwright');
 })();`)
     })
     await Promise.all([
-      page.getByText("Status: 500").waitFor(),
+      page.getByText("Status: 403").waitFor(),
       page.getByRole('button', { name: 'Run'}).click(),
     ])
   })
