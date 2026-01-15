@@ -16,6 +16,6 @@ spec:
         reachable-by-worker: "true"
     spec:
       containers:
-        - image: rabbitmq:3
+        - image: rabbitmq:4.0
           name: rabbitmq
       restartPolicy: Always
