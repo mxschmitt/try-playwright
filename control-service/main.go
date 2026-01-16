@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -278,7 +277,7 @@ func (s *server) handleShareGet(c echo.Context) error {
 }
 
 func (s *server) handleShareCreate(c echo.Context) error {
-	code, err := ioutil.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1<<20))
+	code, err := io.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("could not read request body: %w", err)
 	}

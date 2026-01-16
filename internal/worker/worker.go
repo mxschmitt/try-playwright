@@ -28,6 +28,7 @@ type Worker struct {
 	TmpDir    string
 	requestID string
 	testID    string
+	logger    *log.Logger
 	logBuffer *bytes.Buffer
 	output    *bytes.Buffer
 	files     []string
@@ -38,15 +39,16 @@ var queue_name = fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
 
 func (w *Worker) Run() {
 	w.logBuffer = new(bytes.Buffer)
-	log.SetFormatter(&log.JSONFormatter{
+	w.logger = log.New()
+	w.logger.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 		FieldMap: log.FieldMap{
 			log.FieldKeyMsg: "message",
 		},
 	})
-	log.SetOutput(io.MultiWriter(os.Stdout, w.logBuffer))
-	log.SetLevel(log.InfoLevel)
-	log.StandardLogger().AddHook(logagg.NewHook())
+	w.logger.SetOutput(io.MultiWriter(os.Stdout, w.logBuffer))
+	w.logger.SetLevel(log.InfoLevel)
+	w.logger.AddHook(logagg.NewHook())
 
 	if w.options.ExecutionDirectory != "" {
 		w.TmpDir = w.options.ExecutionDirectory
@@ -150,7 +152,7 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 	if w.testID != "" {
 		w.AddEnv("PLAYWRIGHT_TEST_ID", w.testID)
 	}
-	log.WithFields(log.Fields{
+	w.logger.WithFields(log.Fields{
 		"request-id": w.requestID,
 		"testId":     w.testID,
 		"service":    "worker",
@@ -205,7 +207,7 @@ func (w *Worker) uploadFiles() ([]workertypes.File, error) {
 	if len(w.files) == 0 {
 		return nil, nil
 	}
-	log.WithFields(log.Fields{
+	w.logger.WithFields(log.Fields{
 		"request-id": w.requestID,
 		"testId":     w.testID,
 	}).Infof("uploading %d file(s) to file service", len(w.files))
