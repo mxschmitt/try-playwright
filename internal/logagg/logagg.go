@@ -4,11 +4,26 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 )
+
+var httpClient = &http.Client{
+	Timeout: 3 * time.Second,
+	Transport: &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout: 1 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout:   1 * time.Second,
+		ResponseHeaderTimeout: 2 * time.Second,
+		IdleConnTimeout:       10 * time.Second,
+		MaxIdleConns:          10,
+		MaxIdleConnsPerHost:   2,
+	},
+}
 
 type payload struct {
 	TestID    string `json:"testId"`
@@ -45,7 +60,7 @@ func Post(ctx context.Context, service, testID, requestID, message string) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return
 	}

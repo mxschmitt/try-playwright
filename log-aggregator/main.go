@@ -157,7 +157,10 @@ func main() {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		for _, e := range entries {
 			line := fmt.Sprintf("%s [%s] [request:%s] %s\n", e.ts.UTC().Format(time.RFC3339Nano), e.service, e.requestID, e.message)
-			_, _ = w.Write([]byte(line))
+			if _, err := w.Write([]byte(line)); err != nil {
+				log.Printf("error writing log line: %v", err)
+				break
+			}
 		}
 	})
 
