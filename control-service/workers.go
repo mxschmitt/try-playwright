@@ -191,6 +191,14 @@ func (w *Worker) createPod() error {
 							Name:  "FILE_SERVICE_URL",
 							Value: "http://file:8080",
 						},
+						{
+							Name:  "LOG_AGGREGATOR_URL",
+							Value: os.Getenv("LOG_AGGREGATOR_URL"),
+						},
+						{
+							Name:  "LOG_AGGREGATOR_ENABLED",
+							Value: os.Getenv("LOG_AGGREGATOR_ENABLED"),
+						},
 					},
 					Resources: v1.ResourceRequirements{
 						Limits: v1.ResourceList{
@@ -219,9 +227,11 @@ func determineWorkerImageName(language workertypes.WorkerLanguage) string {
 	return fmt.Sprintf("ghcr.io/mxschmitt/try-playwright/worker-%s:%s", language, tag)
 }
 
-func (w *Worker) Publish(code string) error {
-	msgBody, err := json.Marshal(map[string]string{
-		"code": code,
+func (w *Worker) Publish(code string, requestID string, testID string) error {
+	msgBody, err := json.Marshal(&workertypes.WorkerRequestPayload{
+		Code:      code,
+		RequestID: requestID,
+		TestID:    testID,
 	})
 	if err != nil {
 		return fmt.Errorf("could not marshal json: %v", err)

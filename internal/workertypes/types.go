@@ -7,18 +7,22 @@ type File struct {
 }
 
 type WorkerResponsePayload struct {
-	Success  bool   `json:"success"`
-	Error    string `json:"error"`
-	Version  string `json:"version"`
-	Duration int64  `json:"duration"`
-	Files    []File `json:"files"`
-	Output   string `json:"output"`
+	Success   bool   `json:"success"`
+	Error     string `json:"error"`
+	Version   string `json:"version"`
+	Duration  int64  `json:"duration"`
+	Files     []File `json:"files"`
+	Output    string `json:"output"`
+	RequestID string `json:"requestId"`
+	TestID    string `json:"testId"`
 }
 
 type WorkerRequestPayload struct {
-	Token    string         `json:"token"`
-	Code     string         `json:"code"`
-	Language WorkerLanguage `json:"language"`
+	Token     string         `json:"token"`
+	Code      string         `json:"code"`
+	RequestID string         `json:"requestId"`
+	TestID    string         `json:"testId"`
+	Language  WorkerLanguage `json:"language"`
 }
 
 type WorkerLanguage string

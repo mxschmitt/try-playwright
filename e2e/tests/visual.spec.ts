@@ -1,14 +1,41 @@
 import { expect, test as base, Page } from '@playwright/test';
 
+async function attachAggregatorLogs(testId?: string) {
+  const testInfo = test.info();
+  const effectiveTestId = testId || testInfo.testId;
+  const base = (process.env.LOG_AGGREGATOR_URL || '').replace(/\/$/, '');
+  if (!base) return;
+  try {
+    const res = await fetch(`${base}/logs/${encodeURIComponent(effectiveTestId)}`);
+    if (!res.ok) return;
+    const body = await res.text();
+    if (body.trim().length === 0) return;
+    await testInfo.attach(`logs-${effectiveTestId}`, {
+      body,
+      contentType: 'text/plain',
+    });
+  } catch {
+    // best-effort; ignore
+  }
+}
+
 class TryPlaywrightPage {
   constructor(private readonly page: Page) { }
   async executeExample(nth: number): Promise<void> {
     await this.page.goto('/?l=javascript');
     await this.page.locator(`.rs-panel-group > .rs-panel:nth-child(${nth})`).click();
+    const responsePromise = this.page.waitForResponse("**/service/control/run");
     await Promise.all([
-      this.page.waitForResponse("**/service/control/run"),
+      responsePromise,
       this.page.getByRole('button', { name: 'Run' }).click(),
-    ])
+    ]);
+    const resp = await responsePromise;
+    try {
+      const payload = await resp.json();
+      await attachAggregatorLogs(payload?.testId);
+    } catch (_) {
+      // ignore: best-effort log attachment
+    }
   }
   async getConsoleLines(): Promise<string[]> {
     let consoleLines = this.page.locator(".rs-panel-body code")

@@ -15,6 +15,7 @@ import (
 
 	"github.com/h2non/filetype"
 	"github.com/mxschmitt/try-playwright/internal/echoutils"
+	"github.com/mxschmitt/try-playwright/internal/logagg"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/getsentry/sentry-go"
@@ -93,6 +94,32 @@ type publicFile struct {
 }
 
 func (s *server) handleUploadImage(c echo.Context) error {
+	requestID := c.Request().Header.Get("X-Request-ID")
+	if requestID == "" {
+		requestID = uuid.New().String()
+	}
+	testID := c.Request().Header.Get("X-Test-ID")
+	if testID == "" {
+		testID = requestID
+	}
+	logBuffer := &bytes.Buffer{}
+	defer logagg.DeferPost("file-service", &testID, &requestID, logBuffer)
+	requestScopedLogger := log.New()
+	requestScopedLogger.SetFormatter(&log.JSONFormatter{
+		TimestampFormat: time.RFC3339Nano,
+		FieldMap: log.FieldMap{
+			log.FieldKeyMsg: "message",
+		},
+	})
+	requestScopedLogger.SetLevel(log.GetLevel())
+	requestScopedLogger.SetOutput(io.MultiWriter(os.Stdout, logBuffer))
+	logger := requestScopedLogger.WithFields(log.Fields{
+		"request-id": requestID,
+		"testId":     testID,
+		"service":    "file-service",
+	})
+	logger.Logger.AddHook(logagg.NewHook())
+
 	// Maximum of 10MB
 	if err := c.Request().ParseMultipartForm(10 << 20); err != nil {
 		return fmt.Errorf("could not parse form: %w", err)
@@ -127,6 +154,7 @@ func (s *server) handleUploadImage(c echo.Context) error {
 			if err != nil {
 				return fmt.Errorf("could not generate public URL: %w", err)
 			}
+			logger.Infof("stored file %s (mime: %s)", files[i].Filename, mimeType.MIME.Value)
 			outFiles = append(outFiles, publicFile{
 				Extension: fileExtension,
 				FileName:  files[i].Filename,
@@ -134,6 +162,8 @@ func (s *server) handleUploadImage(c echo.Context) error {
 			})
 		}
 	}
+	c.Response().Header().Set("X-Request-ID", requestID)
+	c.Response().Header().Set("X-Test-ID", testID)
 	return c.JSON(http.StatusCreated, outFiles)
 }
 
