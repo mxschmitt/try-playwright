@@ -10,11 +10,11 @@ jobs:
     needs: [build]
     timeout-minutes: 60
     steps:
+    - uses: actions/checkout@v4
     - name: Use Node.js
       uses: actions/setup-node@v4
       with:
         node-version: 20
-    - uses: actions/checkout@v4
     - name: Free Disk Space
       uses: jlumbroso/free-disk-space@main
     - name: Install k3s
@@ -36,7 +36,8 @@ jobs:
         bash k8/generate.sh $version
       env:
         WORKER_COUNT: 1
-    - run: kubectl apply -f k8/
+    - name: Deploy to k3s
+      run: kubectl apply -f k8/
 
     - name: Install Playwright
       run: npx playwright install --with-deps
@@ -45,7 +46,7 @@ jobs:
       working-directory: e2e
       run: |
         kubectl wait --timeout 10m --for=condition=ready pods --all
-        FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}')
+        FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[0].nodePort}')
         FRONTEND_URL="http://127.0.0.1:$FRONTEND_PORT"
         echo "Host: $FRONTEND_URL"
         npx wait-on "$FRONTEND_URL/service/control/health"
