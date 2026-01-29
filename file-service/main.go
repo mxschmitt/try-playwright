@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"syscall"
 	"time"
 
@@ -34,6 +35,13 @@ type server struct {
 }
 
 const BUCKET_NAME = "file-uploads"
+
+var allowedMimeTypes = []string{
+	"application/pdf",
+	"image/png",
+	"video/webm",
+	"application/zip",
+}
 
 func newServer() (*server, error) {
 	err := sentry.Init(sentry.ClientOptions{
@@ -127,7 +135,7 @@ func (s *server) processUploadedFile(ctx context.Context, fh *multipart.FileHead
 	if err != nil {
 		return publicFile{}, fmt.Errorf("could not detect mime-type: %w", err)
 	}
-	if mimeType.MIME.Value != "application/pdf" && mimeType.MIME.Value != "image/png" && mimeType.MIME.Value != "video/webm" && mimeType.MIME.Value != "application/zip" {
+	if !slices.Contains(allowedMimeTypes, mimeType.MIME.Value) {
 		return publicFile{}, fmt.Errorf("not allowed mime-type (%s): %s", mimeType.MIME.Value, fh.Filename)
 	}
 
