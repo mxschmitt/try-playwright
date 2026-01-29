@@ -218,8 +218,9 @@ func (s *server) handleRun(c echo.Context) error {
 }
 
 func (s *server) handleShareGet(c echo.Context) error {
+	ctx := c.Request().Context()
 	id := c.Param("id")
-	resp, err := s.etcdClient.Get(context.Background(), id)
+	resp, err := s.etcdClient.Get(ctx, id)
 	if err != nil {
 		return fmt.Errorf("could not fetch share: %w", err)
 	}
@@ -230,18 +231,19 @@ func (s *server) handleShareGet(c echo.Context) error {
 }
 
 func (s *server) handleShareCreate(c echo.Context) error {
+	ctx := c.Request().Context()
 	code, err := io.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("could not read request body: %w", err)
 	}
 	for retryCount := 0; retryCount <= 3; retryCount++ {
 		id := generateRandomString(SNIPPET_ID_LENGTH)
-		resp, err := s.etcdClient.Get(context.Background(), id)
+		resp, err := s.etcdClient.Get(ctx, id)
 		if err != nil {
 			return fmt.Errorf("could not fetch share: %w", err)
 		}
 		if resp.Count == 0 {
-			_, err = s.etcdClient.Put(context.Background(), id, string(code))
+			_, err = s.etcdClient.Put(ctx, id, string(code))
 			if err != nil {
 				return fmt.Errorf("could not save share: %w", err)
 			}
@@ -254,8 +256,9 @@ func (s *server) handleShareCreate(c echo.Context) error {
 }
 
 func (s *server) handleHealth(c echo.Context) error {
+	ctx := c.Request().Context()
 	for _, endpoint := range s.etcdClient.Endpoints() {
-		if _, err := s.etcdClient.Status(context.Background(), endpoint); err != nil {
+		if _, err := s.etcdClient.Status(ctx, endpoint); err != nil {
 			return fmt.Errorf("could not check etcd status: %w", err)
 		}
 	}
