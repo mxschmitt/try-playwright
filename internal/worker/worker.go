@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/mxschmitt/try-playwright/internal/workertypes"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type executionHandler func(worker *Worker, code string) error

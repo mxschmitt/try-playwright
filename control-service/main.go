@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"math/rand"
+	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,7 +22,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	sentryecho "github.com/getsentry/sentry-go/echo"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -35,7 +36,6 @@ const (
 )
 
 func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
 	log.SetFormatter(&log.TextFormatter{
 		TimestampFormat: time.StampMilli,
 	})
@@ -228,7 +228,7 @@ func (s *server) handleShareGet(c echo.Context) error {
 }
 
 func (s *server) handleShareCreate(c echo.Context) error {
-	code, err := ioutil.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1<<20))
+	code, err := io.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("could not read request body: %w", err)
 	}
@@ -304,10 +304,11 @@ func main() {
 }
 
 func generateRandomString(n int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvpxyz1234567890")
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+		idx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(letterRunes))))
+		b[i] = letterRunes[idx.Int64()]
 	}
 	return string(b)
 }

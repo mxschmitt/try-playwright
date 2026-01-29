@@ -11,8 +11,8 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/minio/minio-go/v7 v7.0.98
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/sirupsen/logrus v1.9.4
-	github.com/streadway/amqp v1.1.0
 	go.etcd.io/etcd/client/v3 v3.5.18
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0

@@ -11,12 +11,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 type Workers struct {
@@ -167,8 +167,8 @@ func (w *Worker) createPod() error {
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy:                v1.RestartPolicy(v1.RestartPolicyNever),
-			AutomountServiceAccountToken: pointer.BoolPtr(false),
-			EnableServiceLinks:           pointer.BoolPtr(false),
+			AutomountServiceAccountToken: ptr.To(false),
+			EnableServiceLinks:           ptr.To(false),
 			Containers: []v1.Container{
 				{
 					Name:            "worker",
@@ -245,7 +245,7 @@ func (w *Worker) Publish(code string) error {
 func (w *Worker) Cleanup() error {
 	if err := w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).
 		Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{
-			GracePeriodSeconds: pointer.Int64Ptr(0),
+			GracePeriodSeconds: ptr.To(int64(0)),
 		}); err != nil {
 		return fmt.Errorf("could not delete pod: %w", err)
 	}
