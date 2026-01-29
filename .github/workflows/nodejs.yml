@@ -74,6 +74,9 @@ jobs:
         echo ""
         echo "=== etcd Logs ==="
         kubectl logs deploy/etcd --tail=50 || true
+        echo ""
+        echo "=== File Service Logs ==="
+        kubectl logs deploy/file --tail=100 || true
     - name: Upload playwright-report
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
