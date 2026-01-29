@@ -16,9 +16,9 @@ const { chromium } = require('playwright');
     await page.locator('.pagetop > a').first().click();
     await page.getByRole('link', { name: 'comments', exact: true }).click();
     await page.getByRole('link', { name: 'ask', exact: true }).click();
-    await page.getByRole('link', { name: 'show' }).click();
-    await page.getByRole('link', { name: 'jobs' }).click();
-    await page.getByRole('link', { name: 'login' }).click();
+    await page.getByRole('link', { name: 'show', exact: true }).click();
+    await page.getByRole('link', { name: 'jobs', exact: true }).click();
+    await page.getByRole('link', { name: 'login', exact: true }).click();
   }
 
   await browser.close();
