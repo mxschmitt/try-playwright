@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/mxschmitt/try-playwright/internal/worker"
@@ -49,14 +50,7 @@ func transformOutput(input string) string {
 	lines := strings.Split(input, NEW_LINE_SEPARATOR)
 	out := []string{}
 	for _, line := range lines {
-		lineIsOk := true
-		for _, forbidenLine := range forbiddenLines {
-			if forbidenLine == line {
-				lineIsOk = false
-				break
-			}
-		}
-		if lineIsOk {
+		if !slices.Contains(forbiddenLines, line) {
 			out = append(out, line)
 		}
 	}
