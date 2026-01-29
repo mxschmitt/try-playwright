@@ -49,11 +49,34 @@ jobs:
         FRONTEND_PORT=$(kubectl get svc frontend -o=jsonpath='{.spec.ports[0].nodePort}')
         FRONTEND_URL="http://127.0.0.1:$FRONTEND_PORT"
         echo "Host: $FRONTEND_URL"
-        npx wait-on "$FRONTEND_URL/service/control/health"
+        npx wait-on --timeout 120000 "$FRONTEND_URL/service/control/health"
         kubectl wait --timeout 10m --for=condition=ready pod -l role=worker
         ROOT_TEST_URL=$FRONTEND_URL npm run test
       env:
         FLAKINESS_ACCESS_TOKEN: ${{ secrets.FLAKINESS_ACCESS_TOKEN }}
+    - name: Debug on failure
+      if: failure()
+      run: |
+        echo "=== Pod Status ==="
+        kubectl get pods -o wide
+        echo ""
+        echo "=== Control Service Logs ==="
+        kubectl logs -l app=control --tail=100 || true
+        echo ""
+        echo "=== Control Service Describe ==="
+        kubectl describe pod -l app=control || true
+        echo ""
+        echo "=== RabbitMQ Logs ==="
+        kubectl logs -l app=rabbitmq --tail=50 || true
+        echo ""
+        echo "=== etcd Logs ==="
+        kubectl logs -l app=etcd --tail=50 || true
+        echo ""
+        echo "=== Services ==="
+        kubectl get svc
+        echo ""
+        echo "=== Try health endpoint directly ==="
+        kubectl exec deploy/control -- wget -qO- http://localhost:8080/service/control/health || true
     - name: Upload playwright-report
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
