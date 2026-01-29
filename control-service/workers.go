@@ -25,14 +25,12 @@ type Workers struct {
 	amqpReplyQueueName string
 	amqpChannel        *amqp.Channel
 	k8ClientSet        kubernetes.Interface
-	repliesMu          sync.Mutex
-	replies            map[string]chan *workertypes.WorkerResponsePayload
+	replies            sync.Map // map[string]chan *workertypes.WorkerResponsePayload
 }
 
 func newWorkers(language workertypes.WorkerLanguage, workerCount int, k8ClientSet kubernetes.Interface, amqpChannel *amqp.Channel) (*Workers, error) {
 	w := &Workers{
 		language:    language,
-		replies:     make(map[string]chan *workertypes.WorkerResponsePayload),
 		k8ClientSet: k8ClientSet,
 		amqpChannel: amqpChannel,
 		workers:     make(chan *Worker, workerCount),
@@ -75,13 +73,12 @@ func (w *Workers) consumeReplies() error {
 	go func() {
 		for msg := range msgs {
 			log.Printf("received rpc callback, corr id: %v", msg.CorrelationId)
-			w.repliesMu.Lock()
-			replyChan, ok := w.replies[msg.CorrelationId]
-			w.repliesMu.Unlock()
+			value, ok := w.replies.Load(msg.CorrelationId)
 			if !ok {
 				log.Printf("no reply channel exists for worker %s", msg.CorrelationId)
 				continue
 			}
+			replyChan := value.(chan *workertypes.WorkerResponsePayload)
 			var reply *workertypes.WorkerResponsePayload
 			if err := json.Unmarshal(msg.Body, &reply); err != nil {
 				log.Printf("could not unmarshal reply json: %v", err)
@@ -132,9 +129,7 @@ func newWorker(workers *Workers) (*Worker, error) {
 		language: workers.language,
 	}
 
-	w.workers.repliesMu.Lock()
-	w.workers.replies[w.id] = make(chan *workertypes.WorkerResponsePayload, 1)
-	w.workers.repliesMu.Unlock()
+	w.workers.replies.Store(w.id, make(chan *workertypes.WorkerResponsePayload, 1))
 
 	_, err := w.workers.amqpChannel.QueueDeclare(
 		fmt.Sprintf("rpc_queue_%s", w.id), // name
@@ -249,16 +244,11 @@ func (w *Worker) Cleanup() error {
 		}); err != nil {
 		return fmt.Errorf("could not delete pod: %w", err)
 	}
-	w.workers.repliesMu.Lock()
-	delete(w.workers.replies, w.id)
-	w.workers.repliesMu.Unlock()
-
+	w.workers.replies.Delete(w.id)
 	return nil
 }
 
 func (w *Worker) Subscribe() <-chan *workertypes.WorkerResponsePayload {
-	w.workers.repliesMu.Lock()
-	ch := w.workers.replies[w.id]
-	w.workers.repliesMu.Unlock()
-	return ch
+	value, _ := w.workers.replies.Load(w.id)
+	return value.(chan *workertypes.WorkerResponsePayload)
 }
