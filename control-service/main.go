@@ -46,7 +46,8 @@ type server struct {
 
 	etcdClient *clientv3.Client
 
-	amqpErrorChan chan *amqp.Error
+	amqpConnection *amqp.Connection
+	amqpErrorChan  chan *amqp.Error
 
 	workers map[workertypes.WorkerLanguage]*Workers
 }
@@ -105,9 +106,10 @@ func newServer() (*server, error) {
 	}
 
 	s := &server{
-		etcdClient:    etcdClient,
-		amqpErrorChan: amqpErrorChan,
-		workers:       workersMap,
+		etcdClient:     etcdClient,
+		amqpConnection: amqpConnection,
+		amqpErrorChan:  amqpErrorChan,
+		workers:        workersMap,
 	}
 
 	s.initializeHttpServer()
@@ -273,7 +275,9 @@ func (s *server) Stop() error {
 			return fmt.Errorf("could not cleanup workers: %w", err)
 		}
 	}
-
+	if err := s.amqpConnection.Close(); err != nil {
+		return fmt.Errorf("could not close amqp connection: %w", err)
+	}
 	return s.etcdClient.Close()
 }
 

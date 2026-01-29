@@ -167,17 +167,8 @@ func (w *Worker) uploadFiles() ([]workertypes.File, error) {
 	var b bytes.Buffer
 	requestWriter := multipart.NewWriter(&b)
 	for i, filePath := range w.files {
-		fw, err := requestWriter.CreateFormFile(fmt.Sprintf("file-%d", i), filepath.Base(filePath))
-		if err != nil {
-			return nil, fmt.Errorf("could not create form file: %w", err)
-		}
-		f, err := os.Open(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("could not open file: %w", err)
-		}
-		defer f.Close()
-		if _, err = io.Copy(fw, f); err != nil {
-			return nil, fmt.Errorf("could not copy file into form file writer %w", err)
+		if err := copyFileToMultipart(requestWriter, i, filePath); err != nil {
+			return nil, err
 		}
 	}
 	if err := requestWriter.Close(); err != nil {
@@ -203,6 +194,22 @@ func (w *Worker) uploadFiles() ([]workertypes.File, error) {
 		return nil, fmt.Errorf("could not decode upload file response: %w", err)
 	}
 	return respBody, nil
+}
+
+func copyFileToMultipart(w *multipart.Writer, index int, filePath string) error {
+	fw, err := w.CreateFormFile(fmt.Sprintf("file-%d", index), filepath.Base(filePath))
+	if err != nil {
+		return fmt.Errorf("could not create form file: %w", err)
+	}
+	f, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("could not open file: %w", err)
+	}
+	defer f.Close()
+	if _, err = io.Copy(fw, f); err != nil {
+		return fmt.Errorf("could not copy file into form file writer: %w", err)
+	}
+	return nil
 }
 
 type WorkerExectionOptions struct {
