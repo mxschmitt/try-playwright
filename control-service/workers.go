@@ -249,6 +249,12 @@ func (w *Worker) Cleanup() error {
 }
 
 func (w *Worker) Subscribe() <-chan *workertypes.WorkerResponsePayload {
-	value, _ := w.workers.replies.Load(w.id)
+	value, ok := w.workers.replies.Load(w.id)
+	if !ok {
+		// This shouldn't happen, but return a closed channel to avoid panic
+		ch := make(chan *workertypes.WorkerResponsePayload)
+		close(ch)
+		return ch
+	}
 	return value.(chan *workertypes.WorkerResponsePayload)
 }
