@@ -61,22 +61,19 @@ jobs:
         kubectl get pods -o wide
         echo ""
         echo "=== Control Service Logs ==="
-        kubectl logs -l app=control --tail=100 || true
+        kubectl logs deploy/control --tail=200 || true
+        echo ""
+        echo "=== Control Service Previous Logs (crashed) ==="
+        kubectl logs deploy/control --previous --tail=200 || true
         echo ""
         echo "=== Control Service Describe ==="
-        kubectl describe pod -l app=control || true
+        kubectl describe pod -l io.kompose.service=control || true
         echo ""
         echo "=== RabbitMQ Logs ==="
-        kubectl logs -l app=rabbitmq --tail=50 || true
+        kubectl logs deploy/rabbitmq --tail=50 || true
         echo ""
         echo "=== etcd Logs ==="
-        kubectl logs -l app=etcd --tail=50 || true
-        echo ""
-        echo "=== Services ==="
-        kubectl get svc
-        echo ""
-        echo "=== Try health endpoint directly ==="
-        kubectl exec deploy/control -- wget -qO- http://localhost:8080/service/control/health || true
+        kubectl logs deploy/etcd --tail=50 || true
     - name: Upload playwright-report
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
