@@ -21,7 +21,7 @@ import (
 type executionHandler func(worker *Worker, code string) error
 
 type Worker struct {
-	options *WorkerExectionOptions
+	options *WorkerExecutionOptions
 	channel *amqp.Channel
 	TmpDir  string
 	output  *bytes.Buffer
@@ -212,14 +212,14 @@ func copyFileToMultipart(w *multipart.Writer, index int, filePath string) error 
 	return nil
 }
 
-type WorkerExectionOptions struct {
+type WorkerExecutionOptions struct {
 	Handler            executionHandler
 	ExecutionDirectory string
 	TransformOutput    func(output string) string
 	IgnoreFilePatterns []string
 }
 
-func NewWorker(options *WorkerExectionOptions) *Worker {
+func NewWorker(options *WorkerExecutionOptions) *Worker {
 	if options.TransformOutput == nil {
 		options.TransformOutput = DefaultTransformOutput
 	}

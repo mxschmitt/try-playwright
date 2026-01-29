@@ -70,7 +70,7 @@ func main() {
 	}
 	classPath = fmt.Sprintf("%s./", mavenClassesOutput)
 
-	worker.NewWorker(&worker.WorkerExectionOptions{
+	worker.NewWorker(&worker.WorkerExecutionOptions{
 		Handler:            handler,
 		ExecutionDirectory: projectDir,
 		TransformOutput:    transformOutput,

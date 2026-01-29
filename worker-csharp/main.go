@@ -18,7 +18,7 @@ func handler(w *worker.Worker, code string) error {
 }
 
 func main() {
-	worker.NewWorker(&worker.WorkerExectionOptions{
+	worker.NewWorker(&worker.WorkerExecutionOptions{
 		Handler:            handler,
 		ExecutionDirectory: projectDir,
 	}).Run()
