@@ -5,11 +5,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"syscall"
 	"time"
 
@@ -33,6 +35,13 @@ type server struct {
 }
 
 const BUCKET_NAME = "file-uploads"
+
+var allowedMimeTypes = []string{
+	"application/pdf",
+	"image/png",
+	"video/webm",
+	"application/zip",
+}
 
 func newServer() (*server, error) {
 	err := sentry.Init(sentry.ClientOptions{
@@ -100,41 +109,54 @@ func (s *server) handleUploadImage(c echo.Context) error {
 	outFiles := []publicFile{}
 	for _, files := range c.Request().MultipartForm.File {
 		for i := range files {
-			file, err := files[i].Open()
+			pf, err := s.processUploadedFile(c.Request().Context(), files[i])
 			if err != nil {
-				return fmt.Errorf("could not open file: %w", err)
+				return err
 			}
-			fileContent, err := io.ReadAll(file)
-			if err != nil {
-				return fmt.Errorf("could not read file: %w", err)
-			}
-			defer file.Close()
-			mimeType, err := filetype.Match(fileContent)
-			if err != nil {
-				return fmt.Errorf("could not detect mime-type: %w", err)
-			}
-			if mimeType.MIME.Value != "application/pdf" && mimeType.MIME.Value != "image/png" && mimeType.MIME.Value != "video/webm" && mimeType.MIME.Value != "application/zip" {
-				return fmt.Errorf("not allowed mime-type (%s): %s", mimeType.MIME.Value, files[i].Filename)
-			}
-			fileExtension := filepath.Ext(files[i].Filename)
-			objectName := uuid.New().String() + fileExtension
-			if _, err := s.minioClient.PutObject(context.Background(), BUCKET_NAME, objectName, bytes.NewBuffer(fileContent), files[i].Size, minio.PutObjectOptions{
-				ContentType: mimeType.MIME.Value,
-			}); err != nil {
-				return fmt.Errorf("could not put object: %w", err)
-			}
-			publicURL, err := s.minioClient.PresignedGetObject(context.Background(), BUCKET_NAME, objectName, time.Minute*10, url.Values{})
-			if err != nil {
-				return fmt.Errorf("could not generate public URL: %w", err)
-			}
-			outFiles = append(outFiles, publicFile{
-				Extension: fileExtension,
-				FileName:  files[i].Filename,
-				PublicURL: publicURL.EscapedPath() + "?" + publicURL.RawQuery,
-			})
+			outFiles = append(outFiles, pf)
 		}
 	}
 	return c.JSON(http.StatusCreated, outFiles)
+}
+
+func (s *server) processUploadedFile(ctx context.Context, fh *multipart.FileHeader) (publicFile, error) {
+	file, err := fh.Open()
+	if err != nil {
+		return publicFile{}, fmt.Errorf("could not open file: %w", err)
+	}
+	defer file.Close()
+
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		return publicFile{}, fmt.Errorf("could not read file: %w", err)
+	}
+
+	mimeType, err := filetype.Match(fileContent)
+	if err != nil {
+		return publicFile{}, fmt.Errorf("could not detect mime-type: %w", err)
+	}
+	if !slices.Contains(allowedMimeTypes, mimeType.MIME.Value) {
+		return publicFile{}, fmt.Errorf("not allowed mime-type (%s): %s", mimeType.MIME.Value, fh.Filename)
+	}
+
+	fileExtension := filepath.Ext(fh.Filename)
+	objectName := uuid.New().String() + fileExtension
+	if _, err := s.minioClient.PutObject(ctx, BUCKET_NAME, objectName, bytes.NewBuffer(fileContent), fh.Size, minio.PutObjectOptions{
+		ContentType: mimeType.MIME.Value,
+	}); err != nil {
+		return publicFile{}, fmt.Errorf("could not put object: %w", err)
+	}
+
+	publicURL, err := s.minioClient.PresignedGetObject(ctx, BUCKET_NAME, objectName, time.Minute*10, url.Values{})
+	if err != nil {
+		return publicFile{}, fmt.Errorf("could not generate public URL: %w", err)
+	}
+
+	return publicFile{
+		Extension: fileExtension,
+		FileName:  fh.Filename,
+		PublicURL: publicURL.EscapedPath() + "?" + publicURL.RawQuery,
+	}, nil
 }
 
 func (s *server) handleHealth(c echo.Context) error {

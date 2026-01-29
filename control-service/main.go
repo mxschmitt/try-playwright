@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"math/rand"
+	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,7 +22,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	sentryecho "github.com/getsentry/sentry-go/echo"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -35,7 +36,6 @@ const (
 )
 
 func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
 	log.SetFormatter(&log.TextFormatter{
 		TimestampFormat: time.StampMilli,
 	})
@@ -46,7 +46,8 @@ type server struct {
 
 	etcdClient *clientv3.Client
 
-	amqpErrorChan chan *amqp.Error
+	amqpConnection *amqp.Connection
+	amqpErrorChan  chan *amqp.Error
 
 	workers map[workertypes.WorkerLanguage]*Workers
 }
@@ -105,9 +106,10 @@ func newServer() (*server, error) {
 	}
 
 	s := &server{
-		etcdClient:    etcdClient,
-		amqpErrorChan: amqpErrorChan,
-		workers:       workersMap,
+		etcdClient:     etcdClient,
+		amqpConnection: amqpConnection,
+		amqpErrorChan:  amqpErrorChan,
+		workers:        workersMap,
 	}
 
 	s.initializeHttpServer()
@@ -216,8 +218,9 @@ func (s *server) handleRun(c echo.Context) error {
 }
 
 func (s *server) handleShareGet(c echo.Context) error {
+	ctx := c.Request().Context()
 	id := c.Param("id")
-	resp, err := s.etcdClient.Get(context.Background(), id)
+	resp, err := s.etcdClient.Get(ctx, id)
 	if err != nil {
 		return fmt.Errorf("could not fetch share: %w", err)
 	}
@@ -228,18 +231,19 @@ func (s *server) handleShareGet(c echo.Context) error {
 }
 
 func (s *server) handleShareCreate(c echo.Context) error {
-	code, err := ioutil.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1<<20))
+	ctx := c.Request().Context()
+	code, err := io.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("could not read request body: %w", err)
 	}
 	for retryCount := 0; retryCount <= 3; retryCount++ {
 		id := generateRandomString(SNIPPET_ID_LENGTH)
-		resp, err := s.etcdClient.Get(context.Background(), id)
+		resp, err := s.etcdClient.Get(ctx, id)
 		if err != nil {
 			return fmt.Errorf("could not fetch share: %w", err)
 		}
 		if resp.Count == 0 {
-			_, err = s.etcdClient.Put(context.Background(), id, string(code))
+			_, err = s.etcdClient.Put(ctx, id, string(code))
 			if err != nil {
 				return fmt.Errorf("could not save share: %w", err)
 			}
@@ -252,8 +256,9 @@ func (s *server) handleShareCreate(c echo.Context) error {
 }
 
 func (s *server) handleHealth(c echo.Context) error {
+	ctx := c.Request().Context()
 	for _, endpoint := range s.etcdClient.Endpoints() {
-		if _, err := s.etcdClient.Status(context.Background(), endpoint); err != nil {
+		if _, err := s.etcdClient.Status(ctx, endpoint); err != nil {
 			return fmt.Errorf("could not check etcd status: %w", err)
 		}
 	}
@@ -273,7 +278,9 @@ func (s *server) Stop() error {
 			return fmt.Errorf("could not cleanup workers: %w", err)
 		}
 	}
-
+	if err := s.amqpConnection.Close(); err != nil {
+		return fmt.Errorf("could not close amqp connection: %w", err)
+	}
 	return s.etcdClient.Close()
 }
 
@@ -304,10 +311,11 @@ func main() {
 }
 
 func generateRandomString(n int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvpxyz1234567890")
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+		idx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(letterRunes))))
+		b[i] = letterRunes[idx.Int64()]
 	}
 	return string(b)
 }

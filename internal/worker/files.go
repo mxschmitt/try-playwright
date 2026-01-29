@@ -58,7 +58,7 @@ func (fw *filesCollector) watch() {
 			}
 			if event.Op&fsnotify.Create == fsnotify.Create {
 				if err := fw.consumeCreateEvent(event); err != nil {
-					log.Printf("could n ot consume create event: %v", err)
+					log.Printf("could not consume create event: %v", err)
 					return
 				}
 			}
@@ -88,7 +88,7 @@ func (fw *filesCollector) consumeCreateEvent(event fsnotify.Event) error {
 	}
 	if fi.IsDir() {
 		if err := fw.watcher.Add(event.Name); err != nil {
-			return fmt.Errorf("could not add folder recursivelyt: %w", err)
+			return fmt.Errorf("could not add folder recursively: %w", err)
 		}
 		return nil
 	}

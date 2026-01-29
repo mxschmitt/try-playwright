@@ -11,12 +11,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 type Workers struct {
@@ -25,14 +25,12 @@ type Workers struct {
 	amqpReplyQueueName string
 	amqpChannel        *amqp.Channel
 	k8ClientSet        kubernetes.Interface
-	repliesMu          sync.Mutex
-	replies            map[string]chan *workertypes.WorkerResponsePayload
+	replies            sync.Map // map[string]chan *workertypes.WorkerResponsePayload
 }
 
 func newWorkers(language workertypes.WorkerLanguage, workerCount int, k8ClientSet kubernetes.Interface, amqpChannel *amqp.Channel) (*Workers, error) {
 	w := &Workers{
 		language:    language,
-		replies:     make(map[string]chan *workertypes.WorkerResponsePayload),
 		k8ClientSet: k8ClientSet,
 		amqpChannel: amqpChannel,
 		workers:     make(chan *Worker, workerCount),
@@ -75,13 +73,12 @@ func (w *Workers) consumeReplies() error {
 	go func() {
 		for msg := range msgs {
 			log.Printf("received rpc callback, corr id: %v", msg.CorrelationId)
-			w.repliesMu.Lock()
-			replyChan, ok := w.replies[msg.CorrelationId]
-			w.repliesMu.Unlock()
+			value, ok := w.replies.Load(msg.CorrelationId)
 			if !ok {
 				log.Printf("no reply channel exists for worker %s", msg.CorrelationId)
 				continue
 			}
+			replyChan := value.(chan *workertypes.WorkerResponsePayload)
 			var reply *workertypes.WorkerResponsePayload
 			if err := json.Unmarshal(msg.Body, &reply); err != nil {
 				log.Printf("could not unmarshal reply json: %v", err)
@@ -132,9 +129,7 @@ func newWorker(workers *Workers) (*Worker, error) {
 		language: workers.language,
 	}
 
-	w.workers.repliesMu.Lock()
-	w.workers.replies[w.id] = make(chan *workertypes.WorkerResponsePayload, 1)
-	w.workers.repliesMu.Unlock()
+	w.workers.replies.Store(w.id, make(chan *workertypes.WorkerResponsePayload, 1))
 
 	_, err := w.workers.amqpChannel.QueueDeclare(
 		fmt.Sprintf("rpc_queue_%s", w.id), // name
@@ -167,8 +162,8 @@ func (w *Worker) createPod() error {
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy:                v1.RestartPolicy(v1.RestartPolicyNever),
-			AutomountServiceAccountToken: pointer.BoolPtr(false),
-			EnableServiceLinks:           pointer.BoolPtr(false),
+			AutomountServiceAccountToken: ptr.To(false),
+			EnableServiceLinks:           ptr.To(false),
 			Containers: []v1.Container{
 				{
 					Name:            "worker",
@@ -181,7 +176,7 @@ func (w *Worker) createPod() error {
 						},
 						{
 							Name:  "AMQP_URL",
-							Value: "amqp://rabbitmq:5672?heartbeat=5s",
+							Value: "amqp://rabbitmq:5672?heartbeat=5",
 						},
 						{
 							Name:  "WORKER_HTTP_PROXY",
@@ -245,20 +240,21 @@ func (w *Worker) Publish(code string) error {
 func (w *Worker) Cleanup() error {
 	if err := w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).
 		Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{
-			GracePeriodSeconds: pointer.Int64Ptr(0),
+			GracePeriodSeconds: ptr.To(int64(0)),
 		}); err != nil {
 		return fmt.Errorf("could not delete pod: %w", err)
 	}
-	w.workers.repliesMu.Lock()
-	delete(w.workers.replies, w.id)
-	w.workers.repliesMu.Unlock()
-
+	w.workers.replies.Delete(w.id)
 	return nil
 }
 
 func (w *Worker) Subscribe() <-chan *workertypes.WorkerResponsePayload {
-	w.workers.repliesMu.Lock()
-	ch := w.workers.replies[w.id]
-	w.workers.repliesMu.Unlock()
-	return ch
+	value, ok := w.workers.replies.Load(w.id)
+	if !ok {
+		// This shouldn't happen, but return a closed channel to avoid panic
+		ch := make(chan *workertypes.WorkerResponsePayload)
+		close(ch)
+		return ch
+	}
+	return value.(chan *workertypes.WorkerResponsePayload)
 }

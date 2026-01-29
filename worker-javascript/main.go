@@ -27,7 +27,7 @@ func handler(w *worker.Worker, code string) error {
 }
 
 func main() {
-	worker.NewWorker(&worker.WorkerExectionOptions{
+	worker.NewWorker(&worker.WorkerExecutionOptions{
 		Handler: handler,
 		IgnoreFilePatterns: []string{"**/*.last-run.json", "**/.playwright-artifacts-*/**"},
 	}).Run()

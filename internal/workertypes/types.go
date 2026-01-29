@@ -1,5 +1,7 @@
 package workertypes
 
+import "slices"
+
 type File struct {
 	PublicURL string `json:"publicURL"`
 	FileName  string `json:"fileName"`
@@ -38,10 +40,5 @@ var SUPPORTED_LANGUAGES = []WorkerLanguage{
 }
 
 func (givenLanguage WorkerLanguage) IsValid() bool {
-	for _, language := range SUPPORTED_LANGUAGES {
-		if string(givenLanguage) == string(language) {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(SUPPORTED_LANGUAGES, givenLanguage)
 }
