@@ -176,7 +176,7 @@ func (w *Worker) createPod() error {
 						},
 						{
 							Name:  "AMQP_URL",
-							Value: "amqp://rabbitmq:5672?heartbeat=5s",
+							Value: "amqp://rabbitmq:5672?heartbeat=5",
 						},
 						{
 							Name:  "WORKER_HTTP_PROXY",
