@@ -1,4 +1,4 @@
-FROM node:22-alpine as client-builder
+FROM node:24-alpine as client-builder
 
 WORKDIR /frontend
 
@@ -12,7 +12,7 @@ COPY frontend/src /frontend/src
 
 RUN npm run build
 
-FROM caddy:2.8.4-alpine
+FROM caddy:2.10.2-alpine
 
 COPY frontend/Caddyfile /etc/caddy/Caddyfile
 
