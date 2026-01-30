@@ -7,6 +7,7 @@ COPY frontend/package-lock.json /frontend
 RUN npm ci
 
 COPY frontend/vite.config.ts frontend/tsconfig.json frontend/tsconfig.node.json frontend/index.html /frontend/
+COPY frontend/public /frontend/public
 COPY frontend/src /frontend/src
 
 RUN npm run build
