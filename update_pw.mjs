@@ -153,9 +153,13 @@ async function getVersionForLanguageBinding(lang) {
             return npmData['dist-tags'].latest;
 
         case 'java':
-            const mavenResponse = await fetch('https://search.maven.org/solrsearch/select?q=g:com.microsoft.playwright+AND+a:playwright&rows=1&wt=json');
+            // central.sonatype.com is the authoritative source; search.maven.org's
+            // solr index lags and reported a stale latestVersion (e.g. 1.52.0).
+            const mavenResponse = await fetch('https://central.sonatype.com/api/internal/browse/component/versions?sortField=normalizedVersion&sortDirection=desc&page=0&size=1&filter=namespace%3Acom.microsoft.playwright%2Cname%3Aplaywright', {
+                headers: { 'Accept': 'application/json' },
+            });
             const mavenData = await mavenResponse.json();
-            return mavenData.response.docs[0].latestVersion;
+            return mavenData.components[0].version;
 
         case 'python':
             const pypiResponse = await fetch('https://pypi.org/pypi/playwright/json');

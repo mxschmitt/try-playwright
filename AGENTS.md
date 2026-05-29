@@ -15,7 +15,7 @@ This is the Try Playwright monorepo. It contains:
 
 ## Tooling and Environment
 
-- Go `1.25.x` (see `go.mod`)
+- Go `1.26.x` (see `go.mod`)
 - Node.js `20+` and npm
 - Docker for image builds
 - `kubectl` + k3s for full integration/e2e flows

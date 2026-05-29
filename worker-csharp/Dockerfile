@@ -1,5 +1,5 @@
-ARG PLAYWRIGHT_VERSION=1.57.0
-FROM golang:1.25-alpine AS builder
+ARG PLAYWRIGHT_VERSION=1.60.0
+FROM golang:1.26-alpine AS builder
 WORKDIR /root
 COPY go.mod /root/
 COPY go.sum /root/
