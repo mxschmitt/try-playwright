@@ -1,12 +1,13 @@
 package echoutils
 
 import (
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
-func HTTPErrorHandler(e *echo.Echo) func(err error, c echo.Context) {
-	return func(err error, c echo.Context) {
-		e.Logger.Error(err)
-		e.DefaultHTTPErrorHandler(err, c)
+func HTTPErrorHandler(e *echo.Echo) echo.HTTPErrorHandler {
+	defaultHandler := echo.DefaultHTTPErrorHandler(false)
+	return func(c *echo.Context, err error) {
+		e.Logger.Error("request error", "error", err)
+		defaultHandler(c, err)
 	}
 }

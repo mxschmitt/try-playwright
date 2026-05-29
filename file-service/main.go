@@ -24,14 +24,15 @@ import (
 
 	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 type server struct {
-	server      *echo.Echo
+	echo        *echo.Echo
+	httpServer  *http.Server
 	minioClient *minio.Client
 }
 
@@ -87,12 +88,12 @@ func newServer() (*server, error) {
 		minioClient: minioClient,
 	}
 
-	s.server = echo.New()
-	s.server.HTTPErrorHandler = echoutils.HTTPErrorHandler(s.server)
-	s.server.Use(sentryecho.New(sentryecho.Options{}))
-	s.server.GET("/api/v1/health", s.handleHealth)
-	s.server.HEAD("/api/v1/health", s.handleHealth)
-	s.server.POST("/api/v1/file/upload", s.handleUploadImage)
+	s.echo = echo.New()
+	s.echo.HTTPErrorHandler = echoutils.HTTPErrorHandler(s.echo)
+	s.echo.Use(sentryecho.New(sentryecho.Options{}))
+	s.echo.GET("/api/v1/health", s.handleHealth)
+	s.echo.HEAD("/api/v1/health", s.handleHealth)
+	s.echo.POST("/api/v1/file/upload", s.handleUploadImage)
 	return s, nil
 }
 
@@ -102,7 +103,7 @@ type publicFile struct {
 	Extension string `json:"extension"`
 }
 
-func (s *server) handleUploadImage(c echo.Context) error {
+func (s *server) handleUploadImage(c *echo.Context) error {
 	requestID := c.Request().Header.Get("X-Request-ID")
 	if requestID == "" {
 		requestID = uuid.New().String()
@@ -187,16 +188,20 @@ func (s *server) processUploadedFile(ctx context.Context, fh *multipart.FileHead
 	}, nil
 }
 
-func (s *server) handleHealth(c echo.Context) error {
+func (s *server) handleHealth(c *echo.Context) error {
 	return c.String(http.StatusOK, "OK")
 }
 
 func (s *server) ListenAndServe() error {
-	return s.server.Start(fmt.Sprintf(":%s", os.Getenv("FILE_HTTP_PORT")))
+	s.httpServer = &http.Server{
+		Addr:    fmt.Sprintf(":%s", os.Getenv("FILE_HTTP_PORT")),
+		Handler: s.echo,
+	}
+	return s.httpServer.ListenAndServe()
 }
 
 func (s *server) Stop() error {
-	return s.server.Shutdown(context.Background())
+	return s.httpServer.Shutdown(context.Background())
 }
 
 func main() {
