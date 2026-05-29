@@ -27,7 +27,7 @@ export default [
   }, {
     id: "record-video",
     title: "Video recording",
-    description: "This example navigates to 'github.com', searches for Playwright, and clicks on its first finding.",
+    description: "This example records a video while navigating through the playwright.dev documentation.",
     code: codeRecordVideo,
   }, {
     id: "evaluate-javascript",
