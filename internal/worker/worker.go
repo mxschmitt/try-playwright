@@ -29,7 +29,6 @@ type Worker struct {
 	requestID string
 	testID    string
 	logger    *log.Logger
-	logBuffer *bytes.Buffer
 	output    *bytes.Buffer
 	files     []string
 	env       []string
@@ -38,7 +37,6 @@ type Worker struct {
 var queue_name = fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
 
 func (w *Worker) Run() {
-	w.logBuffer = new(bytes.Buffer)
 	w.logger = log.New()
 	w.logger.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
@@ -46,7 +44,7 @@ func (w *Worker) Run() {
 			log.FieldKeyMsg: "message",
 		},
 	})
-	w.logger.SetOutput(io.MultiWriter(os.Stdout, w.logBuffer))
+	w.logger.SetOutput(os.Stdout)
 	w.logger.SetLevel(log.InfoLevel)
 	w.logger.AddHook(logagg.NewHook())
 
@@ -145,7 +143,6 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 	}
 	w.requestID = incomingMessageParsed.RequestID
 	w.testID = incomingMessageParsed.TestID
-	defer logagg.DeferPost("worker", &w.testID, &w.requestID, w.logBuffer)
 	if w.requestID != "" {
 		w.AddEnv("PLAYWRIGHT_REQUEST_ID", w.requestID)
 	}

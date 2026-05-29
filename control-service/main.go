@@ -163,7 +163,6 @@ func (s *server) handleRun(c echo.Context) error {
 	c.Response().Header().Set("X-Request-ID", requestID)
 	c.Response().Header().Set("X-Test-ID", testID)
 	logBuffer := &bytes.Buffer{}
-	defer logagg.DeferPost("control", &testID, &requestID, logBuffer)
 	requestScopedLogger := log.New()
 	requestScopedLogger.SetFormatter(log.StandardLogger().Formatter)
 	requestScopedLogger.SetLevel(log.GetLevel())

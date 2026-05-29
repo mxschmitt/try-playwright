@@ -66,22 +66,3 @@ func Post(ctx context.Context, service, testID, requestID, message string) {
 	}
 	resp.Body.Close()
 }
-
-// DeferPost returns a function intended to be deferred so logs are sent at the end of a request.
-// testID/requestID may be nil; the buffer is read at call-time.
-func DeferPost(service string, testID, requestID *string, buf *bytes.Buffer) func() {
-	return func() {
-		if buf == nil {
-			return
-		}
-		tid := ""
-		rid := ""
-		if testID != nil {
-			tid = *testID
-		}
-		if requestID != nil {
-			rid = *requestID
-		}
-		Post(context.Background(), service, tid, rid, buf.String())
-	}
-}

@@ -111,8 +111,6 @@ func (s *server) handleUploadImage(c echo.Context) error {
 	if testID == "" {
 		testID = requestID
 	}
-	logBuffer := &bytes.Buffer{}
-	defer logagg.DeferPost("file-service", &testID, &requestID, logBuffer)
 	requestScopedLogger := log.New()
 	requestScopedLogger.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
@@ -121,7 +119,7 @@ func (s *server) handleUploadImage(c echo.Context) error {
 		},
 	})
 	requestScopedLogger.SetLevel(log.GetLevel())
-	requestScopedLogger.SetOutput(io.MultiWriter(os.Stdout, logBuffer))
+	requestScopedLogger.SetOutput(os.Stdout)
 	logger := requestScopedLogger.WithFields(log.Fields{
 		"request-id": requestID,
 		"testId":     testID,
