@@ -10,16 +10,11 @@ const { chromium } = require('playwright');
   });
   const page = await context.newPage();
 
-  for (let i = 0; i < 3; i++) {
-    await page.goto('https://news.ycombinator.com/');
-    await page.getByRole('link', { name: 'new', exact: true }).click();
-    await page.locator('.pagetop > a').first().click();
-    await page.getByRole('link', { name: 'comments', exact: true }).click();
-    await page.getByRole('link', { name: 'ask', exact: true }).click();
-    await page.getByRole('link', { name: 'show', exact: true }).click();
-    await page.getByRole('link', { name: 'jobs', exact: true }).click();
-    await page.getByRole('link', { name: 'login', exact: true }).click();
-  }
+  await page.goto('https://playwright.dev');
+  await page.getByRole('link', { name: 'Get started' }).click();
+  await page.getByRole('link', { name: 'Installation', exact: true }).click();
+  await page.getByRole('link', { name: 'Writing tests', exact: true }).click();
+  await page.getByRole('link', { name: 'Running and debugging tests', exact: true }).click();
 
   await browser.close();
 })();
