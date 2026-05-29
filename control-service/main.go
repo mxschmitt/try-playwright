@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/mxschmitt/try-playwright/internal/echoutils"
 	"github.com/mxschmitt/try-playwright/internal/logagg"
 	"github.com/mxschmitt/try-playwright/internal/workertypes"
@@ -48,7 +48,8 @@ func init() {
 }
 
 type server struct {
-	server *echo.Echo
+	echo       *echo.Echo
+	httpServer *http.Server
 
 	etcdClient *clientv3.Client
 
@@ -123,17 +124,17 @@ func newServer() (*server, error) {
 }
 
 func (s *server) initializeHttpServer() {
-	s.server = echo.New()
-	s.server.HTTPErrorHandler = echoutils.HTTPErrorHandler(s.server)
-	s.server.Use(sentryecho.New(sentryecho.Options{}))
-	s.server.GET("/service/control/health", s.handleHealth)
-	s.server.HEAD("/service/control/health", s.handleHealth)
-	s.server.POST("/service/control/run", s.handleRun)
-	s.server.GET("/service/control/share/get/:id", s.handleShareGet)
-	s.server.POST("/service/control/share/create", s.handleShareCreate)
+	s.echo = echo.New()
+	s.echo.HTTPErrorHandler = echoutils.HTTPErrorHandler(s.echo)
+	s.echo.Use(sentryecho.New(sentryecho.Options{}))
+	s.echo.GET("/service/control/health", s.handleHealth)
+	s.echo.HEAD("/service/control/health", s.handleHealth)
+	s.echo.POST("/service/control/run", s.handleRun)
+	s.echo.GET("/service/control/share/get/:id", s.handleShareGet)
+	s.echo.POST("/service/control/share/create", s.handleShareCreate)
 }
 
-func getTurnstileIP(c echo.Context) string {
+func getTurnstileIP(c *echo.Context) string {
 	cfConnectingIP := c.Request().Header.Get("CF-Connecting-IP")
 	if cfConnectingIP != "" {
 		return cfConnectingIP
@@ -141,18 +142,18 @@ func getTurnstileIP(c echo.Context) string {
 	return c.RealIP()
 }
 
-func respondError(c echo.Context, status int, requestID, testID string, logBuffer *bytes.Buffer, msg string) error {
-	return c.JSON(status, echo.Map{
+func respondError(c *echo.Context, status int, requestID, testID string, logBuffer *bytes.Buffer, msg string) error {
+	return c.JSON(status, map[string]any{
 		"error":     msg,
 		"requestId": requestID,
 		"testId":    testID,
-		"logs": echo.Map{
+		"logs": map[string]any{
 			"control": logBuffer.String(),
 		},
 	})
 }
 
-func (s *server) handleRun(c echo.Context) error {
+func (s *server) handleRun(c *echo.Context) error {
 	requestID := uuid.New().String()
 	testID := c.Request().Header.Get("X-Test-ID")
 	if testID == "" {
@@ -245,11 +246,11 @@ func (s *server) handleRun(c echo.Context) error {
 	}()
 
 	if timeout {
-		return c.JSON(http.StatusServiceUnavailable, echo.Map{
+		return c.JSON(http.StatusServiceUnavailable, map[string]any{
 			"error":     "Execution timeout!",
 			"requestId": requestID,
 			"testId":    testID,
-			"logs": echo.Map{
+			"logs": map[string]any{
 				"control": logBuffer.String(),
 			},
 		})
@@ -263,7 +264,7 @@ func (s *server) handleRun(c echo.Context) error {
 	return c.JSON(http.StatusOK, payload)
 }
 
-func (s *server) handleShareGet(c echo.Context) error {
+func (s *server) handleShareGet(c *echo.Context) error {
 	ctx := c.Request().Context()
 	id := c.Param("id")
 	resp, err := s.etcdClient.Get(ctx, id)
@@ -276,9 +277,9 @@ func (s *server) handleShareGet(c echo.Context) error {
 	return c.Blob(http.StatusOK, "application/json", resp.Kvs[0].Value)
 }
 
-func (s *server) handleShareCreate(c echo.Context) error {
+func (s *server) handleShareCreate(c *echo.Context) error {
 	ctx := c.Request().Context()
-	code, err := io.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 1<<20))
+	code, err := io.ReadAll(http.MaxBytesReader(c.Response(), c.Request().Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("could not read request body: %w", err)
 	}
@@ -293,7 +294,7 @@ func (s *server) handleShareCreate(c echo.Context) error {
 			if err != nil {
 				return fmt.Errorf("could not save share: %w", err)
 			}
-			return c.JSON(http.StatusCreated, echo.Map{
+			return c.JSON(http.StatusCreated, map[string]any{
 				"key": id,
 			})
 		}
@@ -301,7 +302,7 @@ func (s *server) handleShareCreate(c echo.Context) error {
 	return errors.New("could not generate a key")
 }
 
-func (s *server) handleHealth(c echo.Context) error {
+func (s *server) handleHealth(c *echo.Context) error {
 	ctx := c.Request().Context()
 	for _, endpoint := range s.etcdClient.Endpoints() {
 		if _, err := s.etcdClient.Status(ctx, endpoint); err != nil {
@@ -312,11 +313,15 @@ func (s *server) handleHealth(c echo.Context) error {
 }
 
 func (s *server) ListenAndServe() error {
-	return s.server.Start(fmt.Sprintf(":%s", os.Getenv("CONTROL_HTTP_PORT")))
+	s.httpServer = &http.Server{
+		Addr:    fmt.Sprintf(":%s", os.Getenv("CONTROL_HTTP_PORT")),
+		Handler: s.echo,
+	}
+	return s.httpServer.ListenAndServe()
 }
 
 func (s *server) Stop() error {
-	if err := s.server.Shutdown(context.Background()); err != nil {
+	if err := s.httpServer.Shutdown(context.Background()); err != nil {
 		return fmt.Errorf("could not shutdown server: %w", err)
 	}
 	for language := range s.workers {
