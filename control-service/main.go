@@ -260,8 +260,6 @@ func (s *server) handleRun(c echo.Context) error {
 	if !payload.Success {
 		return c.JSON(http.StatusBadRequest, payload)
 	}
-	c.Response().Header().Set("X-Request-ID", requestID)
-	c.Response().Header().Set("X-Test-ID", testID)
 	return c.JSON(http.StatusOK, payload)
 }
 
