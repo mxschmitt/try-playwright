@@ -4,6 +4,7 @@ EXPOSE 3128
 
 ADD ./squid/squid.conf /etc/squid/squid.conf
 
-RUN apk add squid=7.5-r0
+RUN apk add --no-cache squid
 
-ENTRYPOINT ["squid", "-f", "/etc/squid/squid.conf", "-NYCd", "1"]
+COPY ./squid/entrypoint.sh /usr/local/bin/squid-entrypoint
+ENTRYPOINT ["/usr/local/bin/squid-entrypoint"]
