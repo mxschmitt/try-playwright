@@ -34,7 +34,13 @@ type Worker struct {
 	env       []string
 }
 
-var queue_name = fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
+var (
+	errAMQPChannelClosed = errors.New("amqp delivery channel closed")
+)
+
+func workerQueueName() string {
+	return fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
+}
 
 func (w *Worker) Run() {
 	w.logger = log.New()
@@ -58,18 +64,51 @@ func (w *Worker) Run() {
 		}
 	}
 
+	backoff := time.Second
+	for {
+		err := w.consumeOnce()
+		if err == nil {
+			return
+		}
+		if !isRetryableAMQPError(err) {
+			log.Fatalf("could not consume messages: %v", err)
+		}
+		w.logger.WithError(err).Warn("amqp consumer disconnected, retrying")
+		time.Sleep(backoff)
+		if backoff < 10*time.Second {
+			backoff *= 2
+		}
+	}
+}
+
+func (w *Worker) consumeOnce() error {
 	conn, err := amqp.Dial(os.Getenv("AMQP_URL"))
 	if err != nil {
-		log.Fatalf("could not dial to amqp: %v", err)
+		return fmt.Errorf("could not dial to amqp: %w", err)
 	}
 	defer conn.Close()
 
-	w.channel, err = conn.Channel()
+	channel, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("could not open a channel: %v", err)
+		return fmt.Errorf("could not open a channel: %w", err)
 	}
-	msgs, err := w.channel.Consume(
-		queue_name,
+	defer channel.Close()
+	w.channel = channel
+
+	queueName := workerQueueName()
+	if _, err := channel.QueueDeclare(
+		queueName,
+		false, // durable
+		true,  // delete when unused
+		false, // exclusive
+		false, // noWait
+		nil,   // arguments
+	); err != nil {
+		return fmt.Errorf("could not declare worker queue: %w", err)
+	}
+
+	msgs, err := channel.Consume(
+		queueName,
 		"",    // consumer
 		false, // auto-ack
 		false, // exclusive
@@ -78,12 +117,24 @@ func (w *Worker) Run() {
 		nil,   // args
 	)
 	if err != nil {
-		log.Fatalf("could not consume channel messages: %v", err)
+		return fmt.Errorf("could not consume channel messages: %w", err)
 	}
-	if err := w.consumeMessage(msgs); err != nil {
-		log.Fatalf("could not consume messages: %v", err)
+
+	return w.consumeMessage(msgs)
+}
+
+func isRetryableAMQPError(err error) bool {
+	if err == nil {
+		return false
 	}
-	defer w.channel.Close()
+	if errors.Is(err, errAMQPChannelClosed) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "could not dial to amqp") ||
+		strings.Contains(msg, "could not open a channel") ||
+		strings.Contains(msg, "could not declare worker queue") ||
+		strings.Contains(msg, "could not consume channel messages")
 }
 
 func (w *Worker) AddEnv(key, value string) {
@@ -136,7 +187,10 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 }
 
 func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
-	incomingMessage := <-incomingMessages
+	incomingMessage, ok := <-incomingMessages
+	if !ok {
+		return errAMQPChannelClosed
+	}
 	var incomingMessageParsed *workertypes.WorkerRequestPayload
 	if err := json.Unmarshal(incomingMessage.Body, &incomingMessageParsed); err != nil {
 		return fmt.Errorf("could not parse incoming amqp message: %w", err)
@@ -177,6 +231,9 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 	outgoingMessageBody, err := json.Marshal(outgoingMessage)
 	if err != nil {
 		return fmt.Errorf("could not marshal outgoing message payload: %w", err)
+	}
+	if w.channel == nil {
+		return fmt.Errorf("could not publish message: amqp channel is nil")
 	}
 	err = w.channel.Publish(
 		"",                      // exchange
@@ -273,11 +330,14 @@ func NewWorker(options *WorkerExecutionOptions) *Worker {
 	if options.TransformOutput == nil {
 		options.TransformOutput = DefaultTransformOutput
 	}
+	logger := log.New()
+	logger.SetOutput(os.Stdout)
 	return &Worker{
 		options: options,
 		output:  new(bytes.Buffer),
 		files:   make([]string, 0),
 		env:     make([]string, 0),
+		logger:  logger,
 	}
 }
 
