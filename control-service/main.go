@@ -195,8 +195,10 @@ func (s *server) handleRun(c *echo.Context) error {
 	logger = logger.WithField("request-id", requestID)
 	logger.Printf("Validated turnstile successfully")
 	logger.Printf("Obtaining worker")
-	worker, err := s.workers[req.Language].Take(WORKER_TIMEOUT * time.Second)
-	if err != nil {
+	var worker *Worker
+	select {
+	case worker = <-s.workers[req.Language].GetCh():
+	case <-time.After(WORKER_TIMEOUT * time.Second):
 		logger.Println("Got Worker timeout, was not able to get a worker!")
 		return respondError(c, http.StatusServiceUnavailable, requestID, testID, logBuffer, "Timeout in getting a worker!")
 	}

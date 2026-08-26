@@ -35,12 +35,9 @@ type Worker struct {
 }
 
 var (
+	queue_name           = fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
 	errAMQPChannelClosed = errors.New("amqp delivery channel closed")
 )
-
-func workerQueueName() string {
-	return fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
-}
 
 func (w *Worker) Run() {
 	w.logger = log.New()
@@ -64,77 +61,62 @@ func (w *Worker) Run() {
 		}
 	}
 
-	backoff := time.Second
 	for {
-		err := w.consumeOnce()
+		conn, err := amqp.Dial(os.Getenv("AMQP_URL"))
+		if err != nil {
+			log.Printf("could not dial to amqp: %v", err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		w.channel, err = conn.Channel()
+		if err != nil {
+			conn.Close()
+			log.Printf("could not open a channel: %v", err)
+			time.Sleep(time.Second)
+			continue
+		}
+		if _, err := w.channel.QueueDeclare(
+			queue_name,
+			false, // durable
+			true,  // delete when unused
+			false, // exclusive
+			false, // noWait
+			nil,   // args
+		); err != nil {
+			conn.Close()
+			log.Printf("could not declare queue: %v", err)
+			time.Sleep(time.Second)
+			continue
+		}
+		msgs, err := w.channel.Consume(
+			queue_name,
+			"",    // consumer
+			false, // auto-ack
+			false, // exclusive
+			false, // no-local
+			false, // no-wait
+			nil,   // args
+		)
+		if err != nil {
+			conn.Close()
+			log.Printf("could not consume channel messages: %v", err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		err = w.consumeMessage(msgs)
+		conn.Close()
 		if err == nil {
 			return
 		}
-		if !isRetryableAMQPError(err) {
-			log.Fatalf("could not consume messages: %v", err)
+		if errors.Is(err, errAMQPChannelClosed) {
+			log.Printf("amqp delivery channel closed, reconnecting")
+			time.Sleep(time.Second)
+			continue
 		}
-		w.logger.WithError(err).Warn("amqp consumer disconnected, retrying")
-		time.Sleep(backoff)
-		if backoff < 10*time.Second {
-			backoff *= 2
-		}
+		log.Fatalf("could not consume messages: %v", err)
 	}
-}
-
-func (w *Worker) consumeOnce() error {
-	conn, err := amqp.Dial(os.Getenv("AMQP_URL"))
-	if err != nil {
-		return fmt.Errorf("could not dial to amqp: %w", err)
-	}
-	defer conn.Close()
-
-	channel, err := conn.Channel()
-	if err != nil {
-		return fmt.Errorf("could not open a channel: %w", err)
-	}
-	defer channel.Close()
-	w.channel = channel
-
-	queueName := workerQueueName()
-	if _, err := channel.QueueDeclare(
-		queueName,
-		false, // durable
-		true,  // delete when unused
-		false, // exclusive
-		false, // noWait
-		nil,   // arguments
-	); err != nil {
-		return fmt.Errorf("could not declare worker queue: %w", err)
-	}
-
-	msgs, err := channel.Consume(
-		queueName,
-		"",    // consumer
-		false, // auto-ack
-		false, // exclusive
-		false, // no-local
-		false, // no-wait
-		nil,   // args
-	)
-	if err != nil {
-		return fmt.Errorf("could not consume channel messages: %w", err)
-	}
-
-	return w.consumeMessage(msgs)
-}
-
-func isRetryableAMQPError(err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, errAMQPChannelClosed) {
-		return true
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "could not dial to amqp") ||
-		strings.Contains(msg, "could not open a channel") ||
-		strings.Contains(msg, "could not declare worker queue") ||
-		strings.Contains(msg, "could not consume channel messages")
 }
 
 func (w *Worker) AddEnv(key, value string) {
@@ -232,9 +214,6 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 	if err != nil {
 		return fmt.Errorf("could not marshal outgoing message payload: %w", err)
 	}
-	if w.channel == nil {
-		return fmt.Errorf("could not publish message: amqp channel is nil")
-	}
 	err = w.channel.Publish(
 		"",                      // exchange
 		incomingMessage.ReplyTo, // routing key
@@ -330,14 +309,11 @@ func NewWorker(options *WorkerExecutionOptions) *Worker {
 	if options.TransformOutput == nil {
 		options.TransformOutput = DefaultTransformOutput
 	}
-	logger := log.New()
-	logger.SetOutput(os.Stdout)
 	return &Worker{
 		options: options,
 		output:  new(bytes.Buffer),
 		files:   make([]string, 0),
 		env:     make([]string, 0),
-		logger:  logger,
 	}
 }
 

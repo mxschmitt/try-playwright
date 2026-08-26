@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/mxschmitt/try-playwright/internal/workertypes"
 	log "github.com/sirupsen/logrus"
@@ -21,8 +19,6 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-var errWorkerTimeout = errors.New("timeout in getting a worker")
-
 type Workers struct {
 	language           workertypes.WorkerLanguage
 	workers            chan *Worker
@@ -30,12 +26,6 @@ type Workers struct {
 	amqpChannel        *amqp.Channel
 	k8ClientSet        kubernetes.Interface
 	replies            sync.Map // map[string]chan *workertypes.WorkerResponsePayload
-
-	desired int
-	mu      sync.Mutex
-	live    int
-	closed  bool
-	stop    chan struct{}
 }
 
 func newWorkers(language workertypes.WorkerLanguage, workerCount int, k8ClientSet kubernetes.Interface, amqpChannel *amqp.Channel) (*Workers, error) {
@@ -44,8 +34,6 @@ func newWorkers(language workertypes.WorkerLanguage, workerCount int, k8ClientSe
 		k8ClientSet: k8ClientSet,
 		amqpChannel: amqpChannel,
 		workers:     make(chan *Worker, workerCount),
-		desired:     workerCount,
-		stop:        make(chan struct{}),
 	}
 	if err := w.consumeReplies(); err != nil {
 		return nil, fmt.Errorf("could not consume replies: %w", err)
@@ -54,7 +42,6 @@ func newWorkers(language workertypes.WorkerLanguage, workerCount int, k8ClientSe
 	if err := w.AddWorkers(workerCount); err != nil {
 		return nil, fmt.Errorf("could not add initial workers: %w", err)
 	}
-	w.startPoolMaintainer()
 	return w, nil
 }
 
@@ -105,118 +92,13 @@ func (w *Workers) consumeReplies() error {
 
 func (w *Workers) AddWorkers(amount int) error {
 	for i := 0; i < amount; i++ {
-		if err := w.addWorkerIfNeeded(); err != nil {
-			return err
+		worker, err := newWorker(w)
+		if err != nil {
+			return fmt.Errorf("could not create new worker: %w", err)
 		}
+		w.workers <- worker
 	}
 	return nil
-}
-
-func (w *Workers) addWorkerIfNeeded() error {
-	w.mu.Lock()
-	if w.closed {
-		w.mu.Unlock()
-		return errors.New("workers are closed")
-	}
-	if w.desired > 0 && w.live >= w.desired {
-		w.mu.Unlock()
-		return nil
-	}
-	w.live++
-	w.mu.Unlock()
-
-	worker, err := newWorker(w)
-	if err != nil {
-		w.mu.Lock()
-		w.live--
-		w.mu.Unlock()
-		return fmt.Errorf("could not create new worker: %w", err)
-	}
-
-	if w.stop == nil {
-		w.workers <- worker
-		return nil
-	}
-	return w.enqueue(worker)
-}
-
-func (w *Workers) enqueue(worker *Worker) (err error) {
-	defer func() {
-		if recover() != nil {
-			_ = worker.Cleanup()
-			err = errors.New("workers are closed")
-		}
-	}()
-	select {
-	case <-w.stop:
-		_ = worker.Cleanup()
-		return errors.New("workers are closed")
-	case w.workers <- worker:
-		return nil
-	}
-}
-
-func (w *Workers) startPoolMaintainer() {
-	go func() {
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-w.stop:
-				return
-			case <-ticker.C:
-				w.fillPool()
-			}
-		}
-	}()
-}
-
-func (w *Workers) fillPool() {
-	for {
-		w.mu.Lock()
-		missing := w.desired - w.live
-		closed := w.closed
-		w.mu.Unlock()
-		if closed || missing <= 0 {
-			return
-		}
-		if err := w.addWorkerIfNeeded(); err != nil {
-			log.Printf("could not refill %s worker pool: %v", w.language, err)
-			return
-		}
-	}
-}
-
-func (w *Workers) Take(timeout time.Duration) (*Worker, error) {
-	deadline := time.NewTimer(timeout)
-	defer deadline.Stop()
-	for {
-		select {
-		case worker, ok := <-w.workers:
-			if !ok {
-				return nil, errors.New("workers channel closed")
-			}
-			if worker.isHealthy() {
-				return worker, nil
-			}
-			log.Printf("discarding unhealthy %s worker %s", w.language, worker.id)
-			go w.replaceUnhealthy(worker)
-		case <-deadline.C:
-			return nil, errWorkerTimeout
-		}
-	}
-}
-
-func (w *Workers) replaceUnhealthy(worker *Worker) {
-	if err := worker.Cleanup(); err != nil {
-		log.Printf("could not cleanup unhealthy worker: %v", err)
-	}
-	if w.amqpChannel == nil {
-		return
-	}
-	if err := w.AddWorkers(1); err != nil {
-		log.Printf("could not replace unhealthy worker: %v", err)
-	}
 }
 
 func (w *Workers) GetCh() <-chan *Worker {
@@ -224,14 +106,6 @@ func (w *Workers) GetCh() <-chan *Worker {
 }
 
 func (w *Workers) Cleanup() error {
-	w.mu.Lock()
-	if !w.closed {
-		w.closed = true
-		if w.stop != nil {
-			close(w.stop)
-		}
-	}
-	w.mu.Unlock()
 	close(w.workers)
 	for worker := range w.workers {
 		if err := worker.Cleanup(); err != nil {
@@ -373,41 +247,15 @@ func (w *Worker) Publish(code string, requestID string, testID string) error {
 	return nil
 }
 
-func (w *Worker) isHealthy() bool {
-	if w.pod == nil || w.workers == nil || w.workers.k8ClientSet == nil {
-		return false
-	}
-	pod, err := w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).Get(context.Background(), w.pod.Name, metav1.GetOptions{})
-	if err != nil {
-		return false
-	}
-	return isWorkerPodUsable(pod.Status.Phase)
-}
-
-func isWorkerPodUsable(phase v1.PodPhase) bool {
-	return phase != v1.PodFailed && phase != v1.PodSucceeded
-}
-
 func (w *Worker) Cleanup() error {
-	defer w.workers.noteStopped()
-	if w.pod != nil && w.workers.k8ClientSet != nil {
-		if err := w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).
-			Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{
-				GracePeriodSeconds: ptr.To(int64(0)),
-			}); err != nil {
-			return fmt.Errorf("could not delete pod: %w", err)
-		}
+	if err := w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).
+		Delete(context.Background(), w.pod.Name, metav1.DeleteOptions{
+			GracePeriodSeconds: ptr.To(int64(0)),
+		}); err != nil {
+		return fmt.Errorf("could not delete pod: %w", err)
 	}
 	w.workers.replies.Delete(w.id)
 	return nil
-}
-
-func (w *Workers) noteStopped() {
-	w.mu.Lock()
-	if w.live > 0 {
-		w.live--
-	}
-	w.mu.Unlock()
 }
 
 func (w *Worker) Subscribe() <-chan *workertypes.WorkerResponsePayload {
