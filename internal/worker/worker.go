@@ -34,7 +34,10 @@ type Worker struct {
 	env       []string
 }
 
-var queue_name = fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
+var (
+	queue_name           = fmt.Sprintf("rpc_queue_%s", os.Getenv("WORKER_ID"))
+	errAMQPChannelClosed = errors.New("amqp delivery channel closed")
+)
 
 func (w *Worker) Run() {
 	w.logger = log.New()
@@ -58,15 +61,43 @@ func (w *Worker) Run() {
 		}
 	}
 
+	for {
+		err := w.consumeOnce()
+		if err == nil {
+			return
+		}
+		if errors.Is(err, errAMQPChannelClosed) {
+			log.Printf("amqp delivery channel closed, reconnecting")
+			time.Sleep(time.Second)
+			continue
+		}
+		log.Printf("%v", err)
+		time.Sleep(time.Second)
+	}
+}
+
+func (w *Worker) consumeOnce() error {
 	conn, err := amqp.Dial(os.Getenv("AMQP_URL"))
 	if err != nil {
-		log.Fatalf("could not dial to amqp: %v", err)
+		return fmt.Errorf("could not dial to amqp: %w", err)
 	}
 	defer conn.Close()
 
 	w.channel, err = conn.Channel()
 	if err != nil {
-		log.Fatalf("could not open a channel: %v", err)
+		return fmt.Errorf("could not open a channel: %w", err)
+	}
+	defer w.channel.Close()
+
+	if _, err := w.channel.QueueDeclare(
+		queue_name,
+		false, // durable
+		true,  // delete when unused
+		false, // exclusive
+		false, // noWait
+		nil,   // args
+	); err != nil {
+		return fmt.Errorf("could not declare queue: %w", err)
 	}
 	msgs, err := w.channel.Consume(
 		queue_name,
@@ -78,12 +109,14 @@ func (w *Worker) Run() {
 		nil,   // args
 	)
 	if err != nil {
-		log.Fatalf("could not consume channel messages: %v", err)
+		return fmt.Errorf("could not consume channel messages: %w", err)
 	}
-	if err := w.consumeMessage(msgs); err != nil {
-		log.Fatalf("could not consume messages: %v", err)
+	err = w.consumeMessage(msgs)
+	if err == nil || errors.Is(err, errAMQPChannelClosed) {
+		return err
 	}
-	defer w.channel.Close()
+	log.Fatalf("could not consume messages: %v", err)
+	return nil
 }
 
 func (w *Worker) AddEnv(key, value string) {
@@ -136,7 +169,10 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 }
 
 func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
-	incomingMessage := <-incomingMessages
+	incomingMessage, ok := <-incomingMessages
+	if !ok {
+		return errAMQPChannelClosed
+	}
 	var incomingMessageParsed *workertypes.WorkerRequestPayload
 	if err := json.Unmarshal(incomingMessage.Body, &incomingMessageParsed); err != nil {
 		return fmt.Errorf("could not parse incoming amqp message: %w", err)
