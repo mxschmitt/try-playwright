@@ -39,7 +39,9 @@ jobs:
       env:
         WORKER_COUNT: 1
     - name: Deploy to k3s
-      run: kubectl apply -f k8/
+      run: |
+        kubectl delete deployment,service minio --ignore-not-found
+        kubectl apply -f k8/
 
     - name: Install Playwright
       run: npx playwright install --with-deps

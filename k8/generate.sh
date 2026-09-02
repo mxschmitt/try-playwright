@@ -13,6 +13,16 @@ if [ -z "$CI" ]; then
   : "${TURNSTILE_SECRET_KEY:?Need to set TURNSTILE_SECRET_KEY}"
 fi
 
+# Drop generated manifests whose templates were removed (e.g. leftover MinIO files).
+for generated in k8/generated-*.yaml; do
+    [ -e "$generated" ] || continue
+    template="k8/${generated#k8/generated-}"
+    template="${template%.yaml}.yaml.tpl"
+    if [ ! -f "$template" ]; then
+        rm -f "$generated"
+    fi
+done
+
 for file_path in k8/*.yaml.tpl; do
     filename="$(basename ${file_path})"
     outname="k8/generated-${filename/%.yaml.tpl/.yaml}"

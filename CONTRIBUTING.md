@@ -26,6 +26,8 @@ RabbitMQ as a queue is used to distribute the worker jobs to its workers.
 
 [RustFS](https://github.com/rustfs/rustfs) is used to store the artifacts (screenshots, videos, downloads) and delete them automatically after a few minutes. It is S3-compatible, so the file service talks to it with the existing S3 client.
 
+After upgrading an existing cluster, delete leftover MinIO resources (`kubectl delete deployment,service minio --ignore-not-found`) before or after `kubectl apply -f k8/`. `k8/generate.sh` also removes stale `k8/generated-minio-*.yaml` files from earlier checkouts.
+
 ### Etcd
 
 Etcd is used to store the shared snippets.

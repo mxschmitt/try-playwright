@@ -19,6 +19,8 @@ cd try-playwright
 export RUSTFS_ACCESS_KEY="tryplaywright"
 export RUSTFS_SECRET_KEY=$(openssl rand -base64 32)
 bash k8/generate.sh
+# Remove MinIO if this cluster was created before the RustFS migration.
+kubectl delete deployment,service minio --ignore-not-found
 kubectl apply -f k8/
 ```
 
