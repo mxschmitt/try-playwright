@@ -31,9 +31,9 @@ import (
 )
 
 type server struct {
-	echo        *echo.Echo
-	httpServer  *http.Server
-	minioClient *minio.Client
+	echo       *echo.Echo
+	httpServer *http.Server
+	s3Client   *minio.Client
 }
 
 const BUCKET_NAME = "file-uploads"
@@ -52,17 +52,24 @@ func newServer() (*server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not init Sentry: %w", err)
 	}
-	minioClient, err := minio.New(os.Getenv("MINIO_ENDPOINT"), &minio.Options{
-		Creds:  credentials.NewStaticV4(os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), ""),
-		Secure: false,
+	endpoint := os.Getenv("S3_ENDPOINT")
+	accessKey := os.Getenv("S3_ACCESS_KEY")
+	secretKey := os.Getenv("S3_SECRET_KEY")
+	if endpoint == "" || accessKey == "" || secretKey == "" {
+		return nil, fmt.Errorf("S3_ENDPOINT, S3_ACCESS_KEY, and S3_SECRET_KEY must be set")
+	}
+	s3Client, err := minio.New(endpoint, &minio.Options{
+		Creds:        credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure:       false,
+		BucketLookup: minio.BucketLookupPath,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not init minio client: %w", err)
+		return nil, fmt.Errorf("could not init S3 client: %w", err)
 	}
-	err = minioClient.MakeBucket(context.Background(), BUCKET_NAME, minio.MakeBucketOptions{})
+	err = s3Client.MakeBucket(context.Background(), BUCKET_NAME, minio.MakeBucketOptions{})
 	if err != nil {
 		// Check to see if we already own this bucket (which happens if you run this twice)
-		exists, errBucketExists := minioClient.BucketExists(context.Background(), BUCKET_NAME)
+		exists, errBucketExists := s3Client.BucketExists(context.Background(), BUCKET_NAME)
 		if errBucketExists == nil && exists {
 			log.Printf("We already own %s\n", BUCKET_NAME)
 		} else {
@@ -80,12 +87,12 @@ func newServer() (*server, error) {
 				},
 			},
 		}
-		if err := minioClient.SetBucketLifecycle(context.Background(), BUCKET_NAME, config); err != nil {
+		if err := s3Client.SetBucketLifecycle(context.Background(), BUCKET_NAME, config); err != nil {
 			return nil, fmt.Errorf("could not set bucket lifecycle rule: %w", err)
 		}
 	}
 	s := &server{
-		minioClient: minioClient,
+		s3Client: s3Client,
 	}
 
 	s.echo = echo.New()
@@ -170,13 +177,13 @@ func (s *server) processUploadedFile(ctx context.Context, fh *multipart.FileHead
 
 	fileExtension := filepath.Ext(fh.Filename)
 	objectName := uuid.New().String() + fileExtension
-	if _, err := s.minioClient.PutObject(ctx, BUCKET_NAME, objectName, bytes.NewBuffer(fileContent), fh.Size, minio.PutObjectOptions{
+	if _, err := s.s3Client.PutObject(ctx, BUCKET_NAME, objectName, bytes.NewBuffer(fileContent), fh.Size, minio.PutObjectOptions{
 		ContentType: mimeType.MIME.Value,
 	}); err != nil {
 		return publicFile{}, fmt.Errorf("could not put object: %w", err)
 	}
 
-	publicURL, err := s.minioClient.PresignedGetObject(ctx, BUCKET_NAME, objectName, time.Minute*10, url.Values{})
+	publicURL, err := s.s3Client.PresignedGetObject(ctx, BUCKET_NAME, objectName, time.Minute*10, url.Values{})
 	if err != nil {
 		return publicFile{}, fmt.Errorf("could not generate public URL: %w", err)
 	}

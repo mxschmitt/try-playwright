@@ -19,12 +19,12 @@ spec:
         - env:
             - name: FILE_HTTP_PORT
               value: "8080"
-            - name: MINIO_ENDPOINT
-              value: minio:9000
-            - name: MINIO_ACCESS_KEY
-              value: "${MINIO_ROOT_USER}"
-            - name: MINIO_SECRET_KEY
-              value: "${MINIO_ROOT_PASSWORD}"
+            - name: S3_ENDPOINT
+              value: rustfs:9000
+            - name: S3_ACCESS_KEY
+              value: "${RUSTFS_ACCESS_KEY}"
+            - name: S3_SECRET_KEY
+              value: "${RUSTFS_SECRET_KEY}"
             - name: FILE_SERVICE_SENTRY_DSN
               value: https://3911972a34944ec5bd8b681a252d4f1d@o359550.ingest.sentry.io/5479804
             - name: LOG_AGGREGATOR_URL

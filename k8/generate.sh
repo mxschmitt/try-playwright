@@ -6,8 +6,8 @@ export DOCKER_TAG="${1:-latest}"
 export WORKER_COUNT="${WORKER_COUNT:-2}"
 
 # Validate required environment variables
-: "${MINIO_ROOT_USER:?Need to set MINIO_ROOT_USER}"
-: "${MINIO_ROOT_PASSWORD:?Need to set MINIO_ROOT_PASSWORD}"
+: "${RUSTFS_ACCESS_KEY:?Need to set RUSTFS_ACCESS_KEY}"
+: "${RUSTFS_SECRET_KEY:?Need to set RUSTFS_SECRET_KEY}"
 # Skip TURNSTILE_SECRET_KEY validation in CI environments
 if [ -z "$CI" ]; then
   : "${TURNSTILE_SECRET_KEY:?Need to set TURNSTILE_SECRET_KEY}"

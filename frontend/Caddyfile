@@ -11,7 +11,7 @@ header *.tff Cache-Control max-age=86400
 log
 
 reverse_proxy /service/control/* control:8080
-reverse_proxy /file-uploads/* minio:9000 {
-	header_up Host minio:9000
+reverse_proxy /file-uploads/* rustfs:9000 {
+	header_up Host rustfs:9000
 	method GET
 }

@@ -31,8 +31,8 @@ jobs:
     - name: Generate K8 files
       run: |
         version="$(bash .github/workflows/determine_docker_image_tag.sh)"
-        export MINIO_ROOT_USER="minioadmin"
-        export MINIO_ROOT_PASSWORD=$(openssl rand -base64 32)
+        export RUSTFS_ACCESS_KEY="tryplaywright"
+        export RUSTFS_SECRET_KEY=$(openssl rand -base64 32)
         export LOG_AGGREGATOR_URL="http://log-aggregator:8080"
         export LOG_AGGREGATOR_ENABLED="true"
         bash k8/generate.sh $version
@@ -81,6 +81,12 @@ jobs:
         echo ""
         echo "=== File Service Logs ==="
         kubectl logs deploy/file --tail=100 || true
+        echo ""
+        echo "=== RustFS Logs ==="
+        kubectl logs deploy/rustfs --tail=100 || true
+        echo ""
+        echo "=== RustFS Describe ==="
+        kubectl describe pod -l io.kompose.service=rustfs || true
     - name: Upload playwright-report
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
