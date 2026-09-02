@@ -22,9 +22,11 @@ Build the Docker containers each time and delete the deployment. Important there
 
 RabbitMQ as a queue is used to distribute the worker jobs to its workers.
 
-### Minio
+### RustFS
 
-Minio is used to store the artifacts (screenshots, videos, downloads) and delete them automatically after a few minutes.
+[RustFS](https://github.com/rustfs/rustfs) is used to store the artifacts (screenshots, videos, downloads) and delete them automatically after a few minutes. It is S3-compatible, so the file service talks to it with the existing S3 client.
+
+After upgrading an existing cluster, delete leftover MinIO resources (`kubectl delete deployment,service minio --ignore-not-found`) before or after `kubectl apply -f k8/`. `k8/generate.sh` also removes stale `k8/generated-minio-*.yaml` files from earlier checkouts.
 
 ### Etcd
 
@@ -36,7 +38,7 @@ The Kubernetes Pods are isolated from the external internet and only http traffi
 
 ### File
 
-The worker Pods only have access to the queue, file service, and squid proxy. The file proxy does upload the files to Minio after doing validation.
+The worker Pods only have access to the queue, file service, and squid proxy. The file service uploads the files to RustFS after doing validation.
 
 ### Control
 

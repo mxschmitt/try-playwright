@@ -6,12 +6,22 @@ export DOCKER_TAG="${1:-latest}"
 export WORKER_COUNT="${WORKER_COUNT:-2}"
 
 # Validate required environment variables
-: "${MINIO_ROOT_USER:?Need to set MINIO_ROOT_USER}"
-: "${MINIO_ROOT_PASSWORD:?Need to set MINIO_ROOT_PASSWORD}"
+: "${RUSTFS_ACCESS_KEY:?Need to set RUSTFS_ACCESS_KEY}"
+: "${RUSTFS_SECRET_KEY:?Need to set RUSTFS_SECRET_KEY}"
 # Skip TURNSTILE_SECRET_KEY validation in CI environments
 if [ -z "$CI" ]; then
   : "${TURNSTILE_SECRET_KEY:?Need to set TURNSTILE_SECRET_KEY}"
 fi
+
+# Drop generated manifests whose templates were removed (e.g. leftover MinIO files).
+for generated in k8/generated-*.yaml; do
+    [ -e "$generated" ] || continue
+    template="k8/${generated#k8/generated-}"
+    template="${template%.yaml}.yaml.tpl"
+    if [ ! -f "$template" ]; then
+        rm -f "$generated"
+    fi
+done
 
 for file_path in k8/*.yaml.tpl; do
     filename="$(basename ${file_path})"

@@ -1,0 +1,140 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
+)
+
+// 1x1 transparent PNG.
+var png1x1 = []byte{
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+	0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+	0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+	0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+	0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+}
+
+func TestNewServerRequiresS3Env(t *testing.T) {
+	t.Setenv("S3_ENDPOINT", "")
+	t.Setenv("S3_ACCESS_KEY", "")
+	t.Setenv("S3_SECRET_KEY", "")
+	t.Setenv("FILE_SERVICE_SENTRY_DSN", "")
+
+	_, err := newServer()
+	if err == nil {
+		t.Fatal("expected error when S3 env vars are missing")
+	}
+	if !strings.Contains(err.Error(), "S3_ENDPOINT") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUploadPNGAgainstRustFS(t *testing.T) {
+	if os.Getenv("S3_ENDPOINT") == "" {
+		t.Skip("S3_ENDPOINT is not set")
+	}
+
+	s, err := newServer()
+	if err != nil {
+		t.Fatalf("could not init server: %v", err)
+	}
+
+	healthReq := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
+	healthRec := httptest.NewRecorder()
+	s.echo.ServeHTTP(healthRec, healthReq)
+	if healthRec.Code != http.StatusOK {
+		t.Fatalf("health status = %d, body = %s", healthRec.Code, healthRec.Body.String())
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "example.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write(png1x1); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/file/upload", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	s.echo.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("upload status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	var files []publicFile
+	if err := json.Unmarshal(rec.Body.Bytes(), &files); err != nil {
+		t.Fatalf("could not decode upload response: %v", err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("expected 1 file, got %d", len(files))
+	}
+	if files[0].Extension != ".png" {
+		t.Fatalf("extension = %q", files[0].Extension)
+	}
+	if !strings.HasPrefix(files[0].PublicURL, "/file-uploads/") {
+		t.Fatalf("public URL is not path-style: %s", files[0].PublicURL)
+	}
+
+	objectURL := "http://" + os.Getenv("S3_ENDPOINT") + files[0].PublicURL
+	resp, err := http.Get(objectURL)
+	if err != nil {
+		t.Fatalf("could not GET stored object: %v", err)
+	}
+	defer resp.Body.Close()
+	got, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET object status = %d, body = %s", resp.StatusCode, got)
+	}
+	if !bytes.Equal(got, png1x1) {
+		t.Fatalf("stored object did not round-trip, got %d bytes", len(got))
+	}
+}
+
+func TestRejectsDisallowedMimeType(t *testing.T) {
+	if os.Getenv("S3_ENDPOINT") == "" {
+		t.Skip("S3_ENDPOINT is not set")
+	}
+
+	s, err := newServer()
+	if err != nil {
+		t.Fatalf("could not init server: %v", err)
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "notes.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write([]byte("hello")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/file/upload", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	s.echo.ServeHTTP(rec, req)
+	if rec.Code == http.StatusCreated {
+		t.Fatalf("expected rejected upload, got %d", rec.Code)
+	}
+}
