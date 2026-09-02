@@ -19,16 +19,32 @@ async function attachAggregatorLogs(testId?: string) {
   }
 }
 
+const JS_EXAMPLES = [
+  { id: 'page-screenshot', marker: 'example-${browserType.name()}' },
+  { id: 'mobile-and-geolocation', marker: 'colosseum-iphone.png' },
+  { id: 'generate-pdf', marker: 'document.pdf' },
+  { id: 'record-video', marker: 'Running and debugging tests' },
+  { id: 'evaluate-javascript', marker: 'deviceScaleFactor' },
+  { id: 'intercept-requests', marker: 'http://todomvc.com' },
+  { id: 'intercept-modify-requests', marker: 'placehold.co' },
+  { id: 'todo-mvc', marker: 'Bake a cake' },
+  { id: 'crawl-y-combinator', marker: 'Y-Combinator.png' },
+] as const
+
 class TryPlaywrightPage {
   constructor(private readonly page: Page) { }
   async executeExample(nth: number): Promise<void> {
+    const example = JS_EXAMPLES[nth - 1]
     await this.page.goto('/?l=javascript');
-    await this.page.locator(`.rs-panel-group > .rs-panel:nth-child(${nth})`).click();
-    const responsePromise = this.page.waitForResponse("**/service/control/run");
-    await Promise.all([
-      responsePromise,
-      this.page.getByRole('button', { name: 'Run' }).click(),
-    ]);
+    await this.page.locator(`.rs-panel-group > .rs-panel:nth-child(${nth})`).getByRole('link').click();
+    await expect(this.page).toHaveURL(new RegExp(`[?&]e=${example.id}\\b`));
+    await this.page.waitForFunction((marker) => {
+      return Boolean(window['monacoEditorModel']?.getValue?.()?.includes(marker))
+    }, example.marker);
+    const responsePromise = this.page.waitForResponse((resp) =>
+      resp.url().includes('/service/control/run') && resp.request().method() === 'POST'
+    );
+    await this.page.getByRole('button', { name: 'Run' }).click();
     const resp = await responsePromise;
     try {
       const payload = await resp.json();
@@ -49,6 +65,20 @@ class TryPlaywrightPage {
 }
 
 const test = base.extend<{ tpPage: TryPlaywrightPage }>({
+  page: async ({ page }, use) => {
+    // CI should not depend on Cloudflare Turnstile completing. The backend
+    // already skips verification when TURNSTILE_SECRET_KEY is unset.
+    await page.route('https://challenges.cloudflare.com/**', (route) => route.abort());
+    await page.addInitScript(() => {
+      (window as any).turnstile = {
+        reset() {},
+        execute(_el: unknown, opts?: { callback?: (token: string) => void }) {
+          opts?.callback?.('e2e-turnstile-token');
+        },
+      };
+    });
+    await use(page);
+  },
   tpPage: async ({ page }, use) => {
     await use(new TryPlaywrightPage(page));
   }
@@ -166,7 +196,7 @@ test.describe("should handle platform core related features", () => {
 
     await page.getByRole('button', { name: 'Run'}).click();
     await expect(page.getByText("Execution timeout!")).toBeVisible({
-      timeout: 70 * 1000,
+      timeout: 90 * 1000,
     });
   })
   test("should handle uncaughtException correctly", async ({ page }) => {

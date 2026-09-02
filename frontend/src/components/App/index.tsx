@@ -3,6 +3,7 @@ import { Col, Grid, IconButton, Loader, Panel, CustomProvider } from 'rsuite'
 import PlayIcon from '@rsuite/icons/PlayOutline';
 
 import { ExecutionResponse, runCode, trackEvent } from '../../utils'
+import { waitForTurnstileToken } from '../../turnstile'
 import RightPanel from '../RightPanel'
 import Header from '../Header'
 import Editor from '../Editor'
@@ -21,31 +22,47 @@ const App: React.FunctionComponent = () => {
   const handleExecutionRef = useRef<() => Promise<void>>(undefined)
   const [darkMode] = useDarkMode()
   const turnstileRef = useRef<HTMLDivElement>(null)
+  const codeRef = useRef(code)
+  codeRef.current = code
 
   const handleExecution = async (): Promise<void> => {
     setLoading(true)
     setResponse(null)
 
     trackEvent()
-    const turnstileToken = await new Promise<string>((resolve) => {
-      try {
-        (window as any).turnstile.reset();
-      } catch (error) {}
-      (window as any).turnstile.execute(turnstileRef.current, {
-        sitekey: VITE_TURNSTILE_SITEKEY,
-        callback: (token: string) => resolve(token),
-        'error-callback': () => resolve(''),
-      });
-    });
-    setResponse(await runCode(code, codeLanguage, turnstileToken))
-    setLoading(false)
-    onChangeRightPanelMode(false)
+    const started = Date.now()
+    const turnstileToken = await waitForTurnstileToken({
+      turnstile: (window as any).turnstile,
+      container: turnstileRef.current,
+      sitekey: VITE_TURNSTILE_SITEKEY,
+    })
+    // Read from Monaco so a just-clicked example is executed even if React
+    // state has not re-rendered yet.
+    const codeToRun = (window as any).monacoEditorModel?.getValue?.() ?? codeRef.current
+    console.info('[try-playwright] executing', {
+      turnstileMs: Date.now() - started,
+      turnstileTokenLength: turnstileToken.length,
+      codeLength: codeToRun.length,
+      codeLanguage,
+    })
+    try {
+      setResponse(await runCode(codeToRun, codeLanguage, turnstileToken))
+    } finally {
+      setLoading(false)
+      onChangeRightPanelMode(false)
+    }
   }
   handleExecutionRef.current = handleExecution
 
   return (
     <CustomProvider theme={darkMode ? 'dark' : 'light'}>
-      <div ref={turnstileRef} style={{ display: 'none' }} />
+      {/* Keep the widget laid out (not display:none). Chromium throttles timers
+          in display:none iframes, which can prevent Turnstile callbacks. */}
+      <div
+        ref={turnstileRef}
+        aria-hidden="true"
+        style={{ position: 'fixed', left: 0, bottom: 0, width: 300, height: 65, opacity: 0.01, pointerEvents: 'none', overflow: 'hidden' }}
+      />
       <Header />
       <Grid fluid className={styles.grid}>
         <Col span={{ xs: 24, md: 12 }}>
