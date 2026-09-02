@@ -2,7 +2,15 @@
 
 root * /frontend
 
-file_server
+handle /runtime-config.js {
+	header Content-Type text/javascript
+	header Cache-Control no-store
+	respond "window.__TRY_PLAYWRIGHT__={skipTurnstile:{$SKIP_TURNSTILE:false}};"
+}
+
+handle {
+	file_server
+}
 
 header *.js Cache-Control max-age=86400
 header *.css Cache-Control max-age=86400

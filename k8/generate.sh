@@ -8,9 +8,13 @@ export WORKER_COUNT="${WORKER_COUNT:-2}"
 # Validate required environment variables
 : "${RUSTFS_ACCESS_KEY:?Need to set RUSTFS_ACCESS_KEY}"
 : "${RUSTFS_SECRET_KEY:?Need to set RUSTFS_SECRET_KEY}"
-# Skip TURNSTILE_SECRET_KEY validation in CI environments
-if [ -z "$CI" ]; then
+# Skip TURNSTILE_SECRET_KEY validation in CI environments.
+# Also skip the frontend widget so CI never waits on Cloudflare.
+if [ -n "${CI:-}" ]; then
+  export SKIP_TURNSTILE=true
+else
   : "${TURNSTILE_SECRET_KEY:?Need to set TURNSTILE_SECRET_KEY}"
+  export SKIP_TURNSTILE="${SKIP_TURNSTILE:-false}"
 fi
 
 # Drop generated manifests whose templates were removed (e.g. leftover MinIO files).

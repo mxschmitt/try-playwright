@@ -17,6 +17,9 @@ spec:
       containers:
         - image: ghcr.io/mxschmitt/try-playwright/frontend:${DOCKER_TAG}
           name: frontend
+          env:
+            - name: SKIP_TURNSTILE
+              value: "${SKIP_TURNSTILE}"
           ports:
             - containerPort: 8080
           imagePullPolicy: IfNotPresent

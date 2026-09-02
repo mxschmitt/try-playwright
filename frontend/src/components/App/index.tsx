@@ -16,35 +16,27 @@ import useDarkMode from '../../hooks/useDarkMode';
 const VITE_TURNSTILE_SITEKEY = '0x4AAAAAAA_K0T_2LZ0rgUtv';
 
 const App: React.FunctionComponent = () => {
-  const { code, onChangeRightPanelMode, codeLanguage, onLanguageChange } = useContext(CodeContext)
+  const { getCode, onChangeRightPanelMode, codeLanguage, onLanguageChange } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<ExecutionResponse|null>(null)
   const handleExecutionRef = useRef<() => Promise<void>>(undefined)
   const [darkMode] = useDarkMode()
   const turnstileRef = useRef<HTMLDivElement>(null)
-  const codeRef = useRef(code)
-  codeRef.current = code
+  const skipTurnstile = Boolean(window.__TRY_PLAYWRIGHT__?.skipTurnstile)
 
   const handleExecution = async (): Promise<void> => {
     setLoading(true)
     setResponse(null)
 
     trackEvent()
-    const started = Date.now()
-    const turnstileToken = await waitForTurnstileToken({
-      turnstile: (window as any).turnstile,
-      container: turnstileRef.current,
-      sitekey: VITE_TURNSTILE_SITEKEY,
-    })
-    // Read from Monaco so a just-clicked example is executed even if React
-    // state has not re-rendered yet.
-    const codeToRun = (window as any).monacoEditorModel?.getValue?.() ?? codeRef.current
-    console.info('[try-playwright] executing', {
-      turnstileMs: Date.now() - started,
-      turnstileTokenLength: turnstileToken.length,
-      codeLength: codeToRun.length,
-      codeLanguage,
-    })
+    const turnstileToken = skipTurnstile
+      ? ''
+      : await waitForTurnstileToken({
+          turnstile: window.turnstile,
+          container: turnstileRef.current,
+          sitekey: VITE_TURNSTILE_SITEKEY,
+        })
+    const codeToRun = getCode()
     try {
       setResponse(await runCode(codeToRun, codeLanguage, turnstileToken))
     } finally {
@@ -56,13 +48,13 @@ const App: React.FunctionComponent = () => {
 
   return (
     <CustomProvider theme={darkMode ? 'dark' : 'light'}>
-      {/* Keep the widget laid out (not display:none). Chromium throttles timers
-          in display:none iframes, which can prevent Turnstile callbacks. */}
-      <div
-        ref={turnstileRef}
-        aria-hidden="true"
-        style={{ position: 'fixed', left: 0, bottom: 0, width: 300, height: 65, opacity: 0.01, pointerEvents: 'none', overflow: 'hidden' }}
-      />
+      {!skipTurnstile && (
+        <div
+          ref={turnstileRef}
+          aria-hidden="true"
+          style={{ position: 'fixed', left: 0, bottom: 0, width: 300, height: 65, opacity: 0.01, pointerEvents: 'none', overflow: 'hidden' }}
+        />
+      )}
       <Header />
       <Grid fluid className={styles.grid}>
         <Col span={{ xs: 24, md: 12 }}>
