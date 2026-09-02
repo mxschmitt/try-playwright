@@ -19,6 +19,8 @@ spec:
         - env:
             - name: WORKER_COUNT
               value: "${WORKER_COUNT}"
+            - name: WORKER_LANGUAGES
+              value: "${WORKER_LANGUAGES}"
             - name: CONTROL_HTTP_PORT
               value: "8080"
             - name: ETCD_ENDPOINT

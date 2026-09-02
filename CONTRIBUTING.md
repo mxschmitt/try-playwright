@@ -45,6 +45,9 @@ The control microservice is the server that receives requests from the user. It 
 ### Worker
 
 For each of the languages, there are individual Docker images and worker implementations since each language gets executed differently.
+The control service enables all supported languages by default. Set the
+comma-separated `WORKER_LANGUAGES` environment variable before generating the
+Kubernetes manifests to run only a subset, for example `javascript,python`.
 
 ## Generate / Update autocompletion
 

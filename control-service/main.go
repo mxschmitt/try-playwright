@@ -104,8 +104,12 @@ func newServer() (*server, error) {
 		}
 	}
 
+	workerLanguages, err := parseWorkerLanguages(os.Getenv("WORKER_LANGUAGES"))
+	if err != nil {
+		return nil, err
+	}
 	workersMap := map[workertypes.WorkerLanguage]*Workers{}
-	for _, lang := range workertypes.SUPPORTED_LANGUAGES {
+	for _, lang := range workerLanguages {
 		workersMap[lang], err = newWorkers(lang, workerCount, k8ClientSet, amqpChannel)
 		if err != nil {
 			return nil, fmt.Errorf("could not create new %s workers: %w", lang, err)
@@ -186,6 +190,10 @@ func (s *server) handleRun(c *echo.Context) error {
 	if !req.Language.IsValid() {
 		return respondError(c, http.StatusBadRequest, requestID, testID, logBuffer, "could not recognize language")
 	}
+	workers, enabled := s.workers[req.Language]
+	if !enabled {
+		return respondError(c, http.StatusBadRequest, requestID, testID, logBuffer, "language is not enabled")
+	}
 
 	logger.Printf("Validating turnstile")
 	if err := ValidateTurnstile(c.Request().Context(), req.Token, getTurnstileIP(c), os.Getenv("TURNSTILE_SECRET_KEY")); err != nil {
@@ -197,7 +205,7 @@ func (s *server) handleRun(c *echo.Context) error {
 	logger.Printf("Obtaining worker")
 	var worker *Worker
 	select {
-	case worker = <-s.workers[req.Language].GetCh():
+	case worker = <-workers.GetCh():
 	case <-time.After(WORKER_TIMEOUT * time.Second):
 		logger.Println("Got Worker timeout, was not able to get a worker!")
 		return respondError(c, http.StatusServiceUnavailable, requestID, testID, logBuffer, "Timeout in getting a worker!")
@@ -238,7 +246,7 @@ func (s *server) handleRun(c *echo.Context) error {
 		logger.Println("Finished worker cleanup")
 
 		logger.Println("Adding new worker")
-		if err := s.workers[req.Language].AddWorkers(1); err != nil {
+		if err := workers.AddWorkers(1); err != nil {
 			logger.Printf("could not create new worker: %v", err)
 			return
 		}
