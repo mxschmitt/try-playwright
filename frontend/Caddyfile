@@ -2,31 +2,16 @@
 
 root * /frontend
 
-# Path-specific handles are mutually exclusive. A catch-all file_server
-# handle would 404 /service/control/* before reverse_proxy could run.
-handle /runtime-config.js {
-	header Content-Type text/javascript
-	header Cache-Control no-store
-	respond "window.__TRY_PLAYWRIGHT__={skipTurnstile:{$SKIP_TURNSTILE:false}};"
-}
-
-handle /service/control/* {
-	reverse_proxy control:8080
-}
-
-handle /file-uploads/* {
-	reverse_proxy rustfs:9000 {
-		header_up Host rustfs:9000
-		method GET
-	}
-}
-
-handle {
-	file_server
-}
+file_server
 
 header *.js Cache-Control max-age=86400
 header *.css Cache-Control max-age=86400
 header *.tff Cache-Control max-age=86400
 
 log
+
+reverse_proxy /service/control/* control:8080
+reverse_proxy /file-uploads/* rustfs:9000 {
+	header_up Host rustfs:9000
+	method GET
+}
