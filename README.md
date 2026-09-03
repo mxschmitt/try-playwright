@@ -1,8 +1,10 @@
-# Monaco + Firefox: tab SIGSEGV on reload (Playwright 1.62.1)
+# Monaco + Playwright Firefox 153: tab SIGSEGV on reload
 
 Upstream: https://github.com/microsoft/playwright/issues/42555
 
-Minimal reproduction of a Firefox **content-process SIGSEGV** when Playwright's bundled Firefox 153 (Juggler) reloads a page that has Monaco Editor's ~7MB TypeScript language worker running.
+Firefox **content-process SIGSEGV** (`signal 11`) when Playwright's bundled Firefox **153** (Juggler `firefox-1538`) reloads a Vite production page that has Monaco Editor running with a language worker.
+
+This is a **1.62 regression**. The same page does not crash on Playwright **1.61.1** (Firefox 151.0) or **1.60.0** (Firefox 150.0.2).
 
 ## Repro
 
@@ -12,30 +14,47 @@ npx playwright install firefox
 npm test
 ```
 
-`npm test` production-builds the page (`vite build`) and runs the Firefox test. The failure is **flaky**. If the first run passes, re-run a few times, or:
-
-```bash
-DEBUG=pw:browser npx playwright test --repeat-each=5 --workers=2
-```
-
-Passing is not success — look for:
+`npm test` production-builds the page and runs the Firefox test. Expect:
 
 ```
+EVENT page.crash
 page.reload: Page crashed
 [Parent …, IPC I/O Parent] WARNING: process … exited on signal 11
 ```
 
-Chromium / WebKit and stock Mozilla Firefox (WebDriver BiDi, no Juggler) have not reproduced this.
+Tighter loop (typically 5–8 crashes out of 8 sessions):
 
-## What the page does
+```bash
+npm run build
+SESSIONS=8 RELOADS=5 node crash-loop.mjs
+```
 
-1. Vite production bundle of `monaco-editor@0.55.1`
-2. `ts.worker?worker` (~6.9MB) for `language: "javascript"`
-3. `javascriptDefaults.addExtraLib` with a ~2.3MB `.d.ts` (Playwright's public types)
-4. Wait 4s so the worker is live, then `page.reload()`, repeat
+## What matters
 
-## Environment (where this was observed)
+1. Vite **production** build of `monaco-editor@0.55.1`
+2. A Monaco language worker actually starts (`language: "javascript"` → `ts.worker` here; `editor.worker` alone also crashed)
+3. `page.reload()` **immediately** after the editor is on screen — do **not** wait for the worker to go idle
 
-- `@playwright/test@1.62.1` (npm `latest` as of 2026-09-03)
-- Bundled Firefox `153.0` (`firefox-1538`)
-- Ubuntu 24.04, Node 22, headless
+Waiting several seconds after load (previous draft) made this flaky. Immediate reload is the reliable trigger.
+
+Not required: `addExtraLib`, Playwright `.d.ts`, `getSemanticDiagnostics`, Share URL, multiple tabs.
+
+`import * as monaco from "monaco-editor/esm/vs/editor/editor.api"` with `language: "plaintext"` never started a worker and did **not** crash.
+
+## Version bisect (this machine, 2026-09-03)
+
+| Playwright | Bundled Firefox | Immediate reload loop |
+|---|---|---|
+| 1.60.0 | 150.0.2 (`firefox-1522`) | 0/8 crash |
+| 1.61.1 | 151.0 (`firefox-1532`) | 0/8 crash |
+| **1.62.1** | **153.0 (`firefox-1538`)** | **5–8/8 crash** |
+
+Firefox 153 shipped in Playwright **1.62.0**. Chromium was not re-tested in this pass; the original investigation did not crash Chromium/WebKit.
+
+## Environment
+
+```
+@playwright/test@1.62.1
+monaco-editor@0.55.1
+Ubuntu 24.04, Node 22, headless Firefox
+```

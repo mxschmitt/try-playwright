@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "test": "vite build && playwright test"
+    "test": "vite build && playwright test",
+    "loop": "vite build && node crash-loop.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

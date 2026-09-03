@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("firefox tab does not SIGSEGV when reloading Monaco + TS worker", async ({ page }) => {
+test("Firefox tab stays alive across immediate Monaco reloads", async ({ page }) => {
   page.on("crash", () => {
     console.log("EVENT page.crash");
   });
@@ -8,9 +8,8 @@ test("firefox tab does not SIGSEGV when reloading Monaco + TS worker", async ({ 
   await page.goto("/");
   await page.waitForFunction(() => window.__editorReady === true);
 
-  for (let i = 1; i <= 12; i++) {
-    await page.waitForTimeout(4000);
-    await page.reload({ waitUntil: "domcontentloaded" });
+  for (let i = 1; i <= 8; i++) {
+    await page.reload({ waitUntil: "load" });
     await page.waitForFunction(() => window.__editorReady === true);
   }
 
