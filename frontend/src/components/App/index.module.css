@@ -4,3 +4,10 @@
     height: 100%;
     margin: 0;
 }
+
+@media (max-width: 767px) {
+    .editorColumn {
+        min-height: 500px;
+        height: auto;
+    }
+}

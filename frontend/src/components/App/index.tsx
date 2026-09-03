@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect, useRef } from 'react';
-import { Box, Container, Content, CustomProvider, HStack, IconButton, Loader, Panel } from 'rsuite'
+import { Col, Container, Content, CustomProvider, Grid, HStack, IconButton, Loader, Panel, Row } from 'rsuite'
 import PlayIcon from '@rsuite/icons/PlayOutline';
 
 import { ExecutionResponse, runCode, trackEvent } from '../../utils'
@@ -12,7 +12,7 @@ import { CodeContext } from '../CodeContext'
 
 import CodeLanguageSelector from '../CodeLanguageSelector';
 import useDarkMode from '../../hooks/useDarkMode';
-import './index.module.css'
+import styles from './index.module.css'
 
 const VITE_TURNSTILE_SITEKEY = '0x4AAAAAAA_K0T_2LZ0rgUtv';
 
@@ -75,59 +75,39 @@ const App: React.FunctionComponent = () => {
     <CustomProvider theme={darkMode ? 'dark' : 'light'}>
       <Container h="100%">
         <Header />
-        <Content minh={0} w="100%" overflow={{ xs: 'auto', md: 'hidden' }}>
-          <HStack
-            data-testid="app-main"
-            align="stretch"
-            wrap
-            spacing={0}
-            h="100%"
-            w="100%"
-          >
-            <Box
-              data-testid="app-editor-column"
-              flex={{ xs: '1 1 100%', md: '1 1 0%' }}
-              minw={0}
-              minh={{ xs: 500, md: 0 }}
-              h={{ md: '100%' }}
-              px={6}
-              pos="relative"
-            >
-              {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
-              <Panel
-                bodyFill
-                h="100%"
-                display="flex"
-                direction="column"
-                overflow="hidden"
-                bodyProps={{ style: filledPanelBody }}
-                header={
-                  <HStack justify="space-between" align="center" w="100%" spacing={12}>
-                    <span>Editor</span>
-                    <HStack spacing={10} align="center">
-                      <Box ref={turnstileRef} display="inline-block" pos="relative" z={11} />
-                      <CodeLanguageSelector codeLanguage={codeLanguage} onLanguageChange={onLanguageChange} />
-                      <IconButton onClick={handleExecution} icon={<PlayIcon />} disabled={running}>
-                          Run
-                      </IconButton>
+        <Content minh={0} overflow="auto">
+          <Grid fluid data-testid="app-main" h={{ md: '100%' }} w="100%">
+            <Row h={{ md: '100%' }}>
+              <Col span={{ xs: 24, md: 12 }} h={{ md: '100%' }} minw={0} pos="relative" className={styles.editorColumn} data-testid="app-editor-column">
+                {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
+                <Panel
+                  bodyFill
+                  h="100%"
+                  display="flex"
+                  direction="column"
+                  overflow="hidden"
+                  bodyProps={{ style: filledPanelBody }}
+                  header={
+                    <HStack justify="space-between" align="center" w="100%" spacing={12}>
+                      <span>Editor</span>
+                      <HStack spacing={10} align="center">
+                        <div ref={turnstileRef} />
+                        <CodeLanguageSelector codeLanguage={codeLanguage} onLanguageChange={onLanguageChange} />
+                        <IconButton onClick={handleExecution} icon={<PlayIcon />} disabled={running}>
+                            Run
+                        </IconButton>
+                      </HStack>
                     </HStack>
-                  </HStack>
-                }
-              >
-                <Editor onExecution={handleExecutionRef} />
-              </Panel>
-            </Box>
-            <Box
-              data-testid="app-examples-column"
-              flex={{ xs: '1 1 100%', md: '1 1 0%' }}
-              minw={0}
-              minh={0}
-              h={{ md: '100%' }}
-              px={6}
-            >
-              <RightPanel resp={resp} />
-            </Box>
-          </HStack>
+                  }
+                >
+                  <Editor onExecution={handleExecutionRef} />
+                </Panel>
+              </Col>
+              <Col span={{ xs: 24, md: 12 }} h={{ md: '100%' }} minw={0} data-testid="app-examples-column">
+                <RightPanel resp={resp} />
+              </Col>
+            </Row>
+          </Grid>
         </Content>
         <Footer />
       </Container>
