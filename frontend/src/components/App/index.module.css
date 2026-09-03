@@ -11,13 +11,43 @@
     flex-direction: column;
 }
 
-.grid {
+.main {
     flex: 1;
     min-height: 0;
+    min-width: 0;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
 }
 
-.editorPanel > :global.rs-panel-body {
-    height: inherit
+.column {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0 6px;
+    position: relative;
+}
+
+.editorPanel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.editorPanel :global(.rs-panel-body) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
 }
 
 .loader {
@@ -25,7 +55,10 @@
 }
 
 .codeHeaderButtons {
-    float: right
+    margin-inline-start: auto;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .turnstile {
@@ -40,18 +73,12 @@
     margin-left: 10px
 }
 
-@media (min-width: 992px) {
-    .grid {
-        display: flex;
-    }
-    .editorPanel {
-        height: 100%;
-        min-height: 0;
-    }
-}
-
 @media (max-width: 991px) {
+    .main {
+        grid-template-columns: 1fr;
+        overflow: auto;
+    }
     .editorPanel {
-        height: 500px;
+        min-height: 500px;
     }
 }

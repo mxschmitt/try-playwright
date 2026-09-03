@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect, useRef } from 'react';
-import { Col, Grid, IconButton, Loader, Panel, CustomProvider } from 'rsuite'
+import { IconButton, Loader, Panel, CustomProvider } from 'rsuite'
 import PlayIcon from '@rsuite/icons/PlayOutline';
 
 import { ExecutionResponse, runCode, trackEvent } from '../../utils'
@@ -68,14 +68,14 @@ const App: React.FunctionComponent = () => {
     <CustomProvider theme={darkMode ? 'dark' : 'light'}>
       <div className={styles.shell}>
         <Header />
-        <Grid fluid className={styles.grid}>
-          <Col span={{ xs: 24, md: 12 }}>
+        <div className={styles.main} data-testid="app-main">
+          <div className={styles.column} data-testid="app-editor-column">
             {loading && <Loader center content="loading" backdrop className={styles.loader} />}
             <Panel
               bodyFill
               className={styles.editorPanel}
               header={
-                <>
+                <div className={styles.panelHeader}>
                   Editor
                   <div className={styles.codeHeaderButtons}>
                     <div ref={turnstileRef} className={styles.turnstile} />
@@ -84,16 +84,16 @@ const App: React.FunctionComponent = () => {
                         Run
                     </IconButton>
                   </div>
-                </>
+                </div>
               }
             >
               <Editor onExecution={handleExecutionRef} />
             </Panel>
-          </Col>
-          <Col span={{ xs: 24, md: 12 }}>
+          </div>
+          <div className={styles.column} data-testid="app-examples-column">
             <RightPanel resp={resp} />
-          </Col>
-        </Grid>
+          </div>
+        </div>
         <Footer />
       </div>
     </CustomProvider>

@@ -25,12 +25,13 @@ const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
     return (
         <Panel
             bodyFill
+            className={styles.panel}
             header={
-                <>
+                <div className={styles.header}>
                     {getHeaderText(!rightPanelMode)}
-                    <ShareButton />
                     <Button onClick={handleShowExamplesClick} className={styles.togglePanelModeButton} data-test-id="toggel-right-panel">Show {getHeaderText(rightPanelMode)}</Button>
-                </>
+                    <ShareButton />
+                </div>
             }
         >
             <div className={styles.rightPanelWrapper} data-testid='right-panel'>

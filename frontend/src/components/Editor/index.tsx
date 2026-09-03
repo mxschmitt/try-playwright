@@ -91,12 +91,21 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     }, [rootNode])
 
     useEffect(() => {
-        if (editorRef.current) {
-            const resizeListener = () => editorRef.current?.layout()
-            window.addEventListener('resize', resizeListener);
-            return () => window.removeEventListener('resize', resizeListener);
+        const editor = editorRef.current
+        const node = rootNode.current
+        if (!editor || !node) {
+            return
         }
-    }, [editorRef])
+        const layout = () => editor.layout()
+        layout()
+        const observer = new ResizeObserver(layout)
+        observer.observe(node)
+        window.addEventListener('resize', layout)
+        return () => {
+            observer.disconnect()
+            window.removeEventListener('resize', layout)
+        }
+    }, [rootNode])
     const tsTypesAlreadyLoaded = useRef(false)
     useEffect(()=>{
         if (editorRef.current)
