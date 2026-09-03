@@ -179,6 +179,15 @@ class Program
             using var playwright = await Playwright.CreateAsync();
             await using var browser = await playwright.Chromium.LaunchAsync();
             var page = await browser.NewPageAsync();
+            Console.WriteLine(await page.EvaluateAsync<int>("1 + 1"));
+          }
+    }`
+    const resp = await executeCode(code, "csharp")
+    await expect(resp).toBeOK()
+    const body = await resp.json()
+    expect(body).toHaveProperty('success', true)
+    expect(body).toHaveProperty('error', '')
+    expectValidVersion(body)
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
   })
@@ -187,12 +196,12 @@ class Program
 test.describe("Live logs", () => {
   test("streams stdout over log-watch before done", async ({ request }) => {
     const testId = test.info().testId
-    const code = `
-console.log('early');
-const end = Date.now() + 3000;
-while (Date.now() < end) {}
-console.log('late');
-`
+    const code = [
+      "console.log('early');",
+      "const end = Date.now() + 3000;",
+      "while (Date.now() < end) {}",
+      "console.log('late');",
+    ].join('\n')
     const started = Date.now()
     const startResp = await request.post('/service/control/run', {
       headers: {
@@ -206,11 +215,12 @@ console.log('late');
       timeout: 30 * 1000,
     })
     expect(startResp.status()).toBe(202)
-    const { id } = await startResp.json()
+    const startedBody = await startResp.json()
+    const id = startedBody.id
     expect(id).toBeTruthy()
     expect(Date.now() - started).toBeLessThan(2000)
 
-    const watch = await request.get(`/service/control/run/${id}/log-watch`, {
+    const watch = await request.get('/service/control/run/' + id + '/log-watch', {
       timeout: 30 * 1000,
     })
     expect(watch.ok()).toBeTruthy()
@@ -220,8 +230,8 @@ console.log('late');
     expect(text).toContain('early')
     const doneChunk = text.split('\n\n').find(chunk => chunk.includes('event: done'))
     expect(doneChunk).toBeTruthy()
-    const dataLine = doneChunk!.split('\n').find(line => line.startsWith('data: '))
-    const donePayload = JSON.parse(dataLine!.slice(6))
+    const dataLine = doneChunk.split('\n').find(line => line.startsWith('data: '))
+    const donePayload = JSON.parse(dataLine.slice(6))
     expect(donePayload).toMatchObject({
       success: true,
       error: '',
