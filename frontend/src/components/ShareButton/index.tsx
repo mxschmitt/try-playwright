@@ -2,7 +2,6 @@ import { useEffect, useContext } from 'react'
 import { IconButton, Notification, toaster } from 'rsuite'
 import ShareIcon from '@rsuite/icons/ShareOutline';
 import { CodeContext } from '../CodeContext'
-import styles from './index.module.css'
 import { pushNewURL } from '../../utils'
 
 const ShareButton: React.FunctionComponent = () => {
@@ -78,7 +77,7 @@ const ShareButton: React.FunctionComponent = () => {
             window.removeEventListener("keyup", keyupHandler)
         }
     })
-    return (<IconButton className={styles.iconButton} onClick={handleOnClick} icon={<ShareIcon />}>
+    return (<IconButton onClick={handleOnClick} icon={<ShareIcon />}>
         Share
     </IconButton>)
 }

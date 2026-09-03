@@ -5,10 +5,10 @@ import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
+import { Box } from 'rsuite'
 import { CodeLanguage, CODE_LANG_2_MONACO_LANG } from '../../constants';
 import useDarkMode from "../../hooks/useDarkMode"
 import { CodeContext } from '../CodeContext';
-import styles from './index.module.css'
 
 import * as monaco from 'monaco-editor';
 
@@ -129,7 +129,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     }, [darkMode])
 
     return (
-        <div className={styles.monacoEditorWrapper} ref={rootNode} />
+        <Box ref={rootNode} h="100%" flex={1} minh={0} pt={5} pb={20} />
     )
 }
 
