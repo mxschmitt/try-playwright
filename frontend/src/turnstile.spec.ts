@@ -120,8 +120,7 @@ test('overlapping getToken shares one widget callback', async () => {
   const gate = new CloudflareTurnstileGate('sitekey', { getApi: () => api })
   const first = gate.getToken(container)
   const second = gate.getToken(container)
-  await Promise.resolve()
-  expect(executeCount).toBe(1)
+  await expect.poll(() => executeCount).toBe(1)
   options[0]?.callback?.('tok')
   expect(await Promise.all([first, second])).toEqual(['tok', 'tok'])
 })
@@ -149,19 +148,20 @@ test('reuses the rendered widget on a later getToken', async () => {
   expect(resetCount).toBe(1)
 })
 
-test('waits for window.turnstile when the script loads after getToken', async () => {
+test('waits for the Turnstile API when it appears after getToken', async () => {
   const { api, options } = mockApi()
   api.execute = () => {
     options.at(-1)?.callback?.('late-tok')
   }
-  const previous = window.turnstile
-  delete window.turnstile
-  const gate = new CloudflareTurnstileGate('sitekey', { timeoutMs: 1000 })
+  let current: TurnstileApi | null = null
+  const gate = new CloudflareTurnstileGate('sitekey', {
+    timeoutMs: 1000,
+    getApi: () => current,
+  })
   const pending = gate.getToken(container)
   await new Promise((resolve) => setTimeout(resolve, 20))
-  window.turnstile = api
+  current = api
   expect(await pending).toBe('late-tok')
-  window.turnstile = previous
 })
 
 test('cloudflare gate resolves empty on error-callback', async () => {

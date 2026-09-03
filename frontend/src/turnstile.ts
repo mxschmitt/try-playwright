@@ -81,11 +81,13 @@ export class CloudflareTurnstileGate implements TurnstileGate {
     if (isUsableApi(immediate)) {
       return Promise.resolve(immediate)
     }
-    // Injected getApi is the source of truth for tests; do not poll window.turnstile.
-    if (this.options.getApi) {
+    // Injected getApi without a wait budget is the source of truth for tests.
+    const pollMs = this.options.getApi
+      ? this.options.timeoutMs
+      : (this.options.timeoutMs ?? 15_000)
+    if (pollMs === undefined) {
       return Promise.resolve(null)
     }
-    const timeoutMs = this.options.timeoutMs ?? 15_000
     return new Promise((resolve) => {
       const started = Date.now()
       const poll = () => {
@@ -94,7 +96,7 @@ export class CloudflareTurnstileGate implements TurnstileGate {
           resolve(api)
           return
         }
-        if (Date.now() - started >= timeoutMs) {
+        if (Date.now() - started >= pollMs) {
           resolve(null)
           return
         }
