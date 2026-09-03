@@ -1,5 +1,7 @@
 # Monaco + Firefox: tab SIGSEGV on reload (Playwright 1.62.1)
 
+Upstream: https://github.com/microsoft/playwright/issues/42555
+
 Minimal reproduction of a Firefox **content-process SIGSEGV** when Playwright's bundled Firefox 153 (Juggler) reloads a page that has Monaco Editor's ~7MB TypeScript language worker running.
 
 ## Repro
