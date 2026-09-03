@@ -44,6 +44,10 @@ export class NoopTurnstileGate implements TurnstileGate {
   remove(): void {}
 }
 
+function isUsableApi(api: TurnstileApi | null | undefined): api is TurnstileApi {
+  return typeof api?.render === 'function' && typeof api?.execute === 'function'
+}
+
 function whenReady(turnstile: TurnstileApi): Promise<void> {
   return new Promise((resolve) => {
     if (typeof turnstile.ready === 'function') {
@@ -70,6 +74,36 @@ export class CloudflareTurnstileGate implements TurnstileGate {
 
   private api(): TurnstileApi | null | undefined {
     return this.options.getApi?.() ?? (typeof window !== 'undefined' ? window.turnstile : undefined)
+  }
+
+  private waitForApi(): Promise<TurnstileApi | null> {
+    const immediate = this.api()
+    if (isUsableApi(immediate)) {
+      return Promise.resolve(immediate)
+    }
+    // Injected getApi without a wait budget is the source of truth for tests.
+    const pollMs = this.options.getApi
+      ? this.options.timeoutMs
+      : (this.options.timeoutMs ?? 15_000)
+    if (pollMs === undefined) {
+      return Promise.resolve(null)
+    }
+    return new Promise((resolve) => {
+      const started = Date.now()
+      const poll = () => {
+        const api = this.api()
+        if (isUsableApi(api)) {
+          resolve(api)
+          return
+        }
+        if (Date.now() - started >= pollMs) {
+          resolve(null)
+          return
+        }
+        setTimeout(poll, 50)
+      }
+      poll()
+    })
   }
 
   async getToken(container: HTMLElement | null): Promise<string> {
@@ -100,10 +134,7 @@ export class CloudflareTurnstileGate implements TurnstileGate {
   }
 
   private requestToken(container: HTMLElement | null): Promise<string> {
-    const api = this.api()
-    const hasRender = typeof api?.render === 'function'
-    const hasExecute = typeof api?.execute === 'function'
-    if (!api || !hasRender || !hasExecute || !container) {
+    if (!container) {
       return Promise.resolve('')
     }
 
@@ -127,10 +158,19 @@ export class CloudflareTurnstileGate implements TurnstileGate {
 
       void (async () => {
         try {
+          const api = await this.waitForApi()
+          if (settled) {
+            return
+          }
+          if (!isUsableApi(api)) {
+            done('')
+            return
+          }
           await whenReady(api)
           if (settled) {
             return
           }
+          const alreadyRendered = Boolean(this.widgetId)
           if (!this.widgetId) {
             this.widgetId = api.render(container, {
               sitekey: this.sitekey,
@@ -162,12 +202,17 @@ export class CloudflareTurnstileGate implements TurnstileGate {
               },
             })
           }
-          try {
-            api.reset(this.widgetId)
-          } catch {
-            // First run has nothing to reset.
+          // Reset only on later runs. reset() on a widget that has never
+          // executed can fire error-callback and settle with an empty token
+          // before execute() produces a real one.
+          if (alreadyRendered) {
+            try {
+              api.reset(this.widgetId)
+            } catch {
+              // Widget may already be idle.
+            }
           }
-          api.execute(this.widgetId)
+          api.execute(this.widgetId ?? container)
         } catch {
           if (timer) {
             clearTimeout(timer)
