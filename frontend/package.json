@@ -10,7 +10,7 @@
   "dependencies": {
     "@rsuite/icons": "^1.4.1",
     "@sentry/browser": "^10.73.0",
-    "monaco-editor": "0.56.0",
+    "monaco-editor": "0.55.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "rsuite": "6.2.4"

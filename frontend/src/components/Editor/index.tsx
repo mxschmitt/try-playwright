@@ -1,30 +1,38 @@
 
-
 import { useEffect, useContext, useRef } from 'react'
-import tsWorker from 'monaco-editor/language/typescript/ts.worker?worker'
-import editorWorker from 'monaco-editor/editor/editor.worker?worker'
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import * as monaco from 'monaco-editor';
 
 import { Box } from 'rsuite'
 import { CodeLanguage, CODE_LANG_2_MONACO_LANG } from '../../constants';
 import useDarkMode from "../../hooks/useDarkMode"
 import { CodeContext } from '../CodeContext';
+import staticTypes from './types.txt?raw';
+
+const monacoWorkers: Worker[] = []
+const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent)
 
 self.MonacoEnvironment = {
 	getWorker: function (workerId, label) {
-		switch (label) {
-			case 'javascript':
-            case 'typescript':
-                return new tsWorker()
-            default:
-				return new editorWorker();
-		}
+		// Firefox 153+ (Playwright 1.62 browser roll) SIGSEGVs the tab when a
+		// large worker is torn down mid-compile on reload. Skip the ~7MB
+		// TypeScript language worker there. Chromium and WebKit are fine.
+		// https://github.com/microsoft/playwright/issues/42565
+		const useTsWorker = !isFirefox && (label === 'javascript' || label === 'typescript')
+		const worker: Worker = useTsWorker ? new tsWorker() : new editorWorker()
+		monacoWorkers.push(worker)
+		return worker
 	},
     // Can removed once https://github.com/microsoft/vscode/pull/185454 is released.
     createTrustedTypesPolicy: () => undefined,
 };
 
-import staticTypes from './types.txt?raw';
+const terminateMonacoWorkers = () => {
+    while (monacoWorkers.length) {
+        monacoWorkers.pop()?.terminate()
+    }
+}
 
 const MONACO_OPTIONS: monaco.editor.IEditorConstructionOptions = {
     minimap: {
@@ -86,6 +94,24 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         // @ts-ignore
         editor._standaloneKeybindingService.addDynamicKeybinding("-expandLineSelection", 0, () => {});
         editor.focus()
+        let disposed = false
+        const disposeEditor = () => {
+            if (disposed)
+                return
+            disposed = true
+            const model = editor.getModel()
+            editor.dispose()
+            terminateMonacoWorkers()
+            // @ts-ignore
+            if (window.monacoEditorModel === model)
+                // @ts-ignore
+                delete window.monacoEditorModel
+        }
+        window.addEventListener('beforeunload', disposeEditor)
+        return () => {
+            window.removeEventListener('beforeunload', disposeEditor)
+            disposeEditor()
+        }
     }, [rootNode])
 
     useEffect(() => {
@@ -108,7 +134,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     useEffect(()=>{
         if (editorRef.current)
             monaco.editor.setModelLanguage(editorRef.current.getModel()!, CODE_LANG_2_MONACO_LANG[codeLanguage])
-        if ([CodeLanguage.PLAYWRIGHT_TEST, CodeLanguage.JAVASCRIPT].includes(codeLanguage) && tsTypesAlreadyLoaded.current === false) {
+        if (!isFirefox && [CodeLanguage.PLAYWRIGHT_TEST, CodeLanguage.JAVASCRIPT].includes(codeLanguage) && tsTypesAlreadyLoaded.current === false) {
             tsTypesAlreadyLoaded.current = true
             monaco.typescript.javascriptDefaults.addExtraLib(staticTypes)
             monaco.typescript.javascriptDefaults.setDiagnosticsOptions({
