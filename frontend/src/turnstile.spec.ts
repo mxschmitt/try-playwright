@@ -75,26 +75,38 @@ test('cloudflare gate does not hang when render throws', async () => {
   expect(await gate.getToken(container)).toBe('')
 })
 
-test('cloudflare gate renders then execute(widgetId)', async () => {
+test('cloudflare gate renders then execute(widgetId) without reset on first run', async () => {
   const { api, options } = mockApi()
   let executedWith: unknown
-  let resetWith: unknown
+  let resetCount = 0
   api.execute = (target) => {
     executedWith = target
     options.at(-1)?.callback?.('tok')
   }
-  api.reset = (target) => {
-    resetWith = target
+  api.reset = () => {
+    resetCount += 1
   }
   const gate = new CloudflareTurnstileGate('sitekey', { getApi: () => api })
   expect(await gate.getToken(container)).toBe('tok')
   expect(executedWith).toBe('widget-1')
-  expect(resetWith).toBe('widget-1')
+  expect(resetCount).toBe(0)
   expect(options[0]).toMatchObject({
     sitekey: 'sitekey',
     execution: 'execute',
     appearance: 'interaction-only',
   })
+})
+
+test('first-run reset error-callback does not eat the execute token', async () => {
+  const { api, options } = mockApi()
+  api.reset = () => {
+    options.at(-1)?.['error-callback']?.()
+  }
+  api.execute = () => {
+    options.at(-1)?.callback?.('tok')
+  }
+  const gate = new CloudflareTurnstileGate('sitekey', { getApi: () => api })
+  expect(await gate.getToken(container)).toBe('tok')
 })
 
 test('overlapping getToken shares one widget callback', async () => {
@@ -116,6 +128,7 @@ test('overlapping getToken shares one widget callback', async () => {
 
 test('reuses the rendered widget on a later getToken', async () => {
   let renderCount = 0
+  let resetCount = 0
   const { api, options } = mockApi({
     render: (_container, renderOptions) => {
       renderCount += 1
@@ -123,13 +136,32 @@ test('reuses the rendered widget on a later getToken', async () => {
       return 'widget-1'
     },
   })
+  api.reset = () => {
+    resetCount += 1
+  }
   api.execute = () => {
-    options.at(-1)?.callback?.(`tok-${renderCount}`)
+    options.at(-1)?.callback?.(`tok-${renderCount}-${resetCount}`)
   }
   const gate = new CloudflareTurnstileGate('sitekey', { getApi: () => api })
-  await gate.getToken(container)
-  expect(await gate.getToken(container)).toBe('tok-1')
+  expect(await gate.getToken(container)).toBe('tok-1-0')
+  expect(await gate.getToken(container)).toBe('tok-1-1')
   expect(renderCount).toBe(1)
+  expect(resetCount).toBe(1)
+})
+
+test('waits for window.turnstile when the script loads after getToken', async () => {
+  const { api, options } = mockApi()
+  api.execute = () => {
+    options.at(-1)?.callback?.('late-tok')
+  }
+  const previous = window.turnstile
+  delete window.turnstile
+  const gate = new CloudflareTurnstileGate('sitekey', { timeoutMs: 1000 })
+  const pending = gate.getToken(container)
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  window.turnstile = api
+  expect(await pending).toBe('late-tok')
+  window.turnstile = previous
 })
 
 test('cloudflare gate resolves empty on error-callback', async () => {

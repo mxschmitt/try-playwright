@@ -50,6 +50,9 @@ const App: React.FunctionComponent = () => {
       // Keep the loader off until the widget has a token so an interactive
       // challenge is not covered by the editor backdrop (z-index 10).
       const turnstileToken = await gateRef.current!.getToken(turnstileRef.current)
+      if (gateRef.current!.mode === 'cloudflare' && !turnstileToken) {
+        throw new Error('Could not complete bot check. Please try again.')
+      }
       setLoading(true)
       // After await: do not use render-time `code` (stale vs example select).
       setResponse(await runCode(getCode(), codeLanguage, turnstileToken))
