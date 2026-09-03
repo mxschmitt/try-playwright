@@ -146,6 +146,16 @@ func getTurnstileIP(c *echo.Context) string {
 	return c.RealIP()
 }
 
+func resolveRunTestID(headerTestID, bodyTestID, requestID string) string {
+	if bodyTestID != "" {
+		return bodyTestID
+	}
+	if headerTestID != "" {
+		return headerTestID
+	}
+	return requestID
+}
+
 func respondError(c *echo.Context, status int, requestID, testID string, logBuffer *bytes.Buffer, msg string) error {
 	return c.JSON(status, map[string]any{
 		"error":     msg,
@@ -159,10 +169,8 @@ func respondError(c *echo.Context, status int, requestID, testID string, logBuff
 
 func (s *server) handleRun(c *echo.Context) error {
 	requestID := uuid.New().String()
-	testID := c.Request().Header.Get("X-Test-ID")
-	if testID == "" {
-		testID = requestID
-	}
+	headerTestID := c.Request().Header.Get("X-Test-ID")
+	testID := resolveRunTestID(headerTestID, "", requestID)
 	c.Set("requestId", requestID)
 	c.Set("testId", testID)
 	c.Response().Header().Set("X-Request-ID", requestID)
@@ -184,9 +192,11 @@ func (s *server) handleRun(c *echo.Context) error {
 		return respondError(c, http.StatusBadRequest, requestID, testID, logBuffer, "could not decode request body")
 	}
 	req.RequestID = requestID
-	if req.TestID == "" {
-		req.TestID = testID
-	}
+	testID = resolveRunTestID(headerTestID, req.TestID, requestID)
+	req.TestID = testID
+	c.Set("testId", testID)
+	c.Response().Header().Set("X-Test-ID", testID)
+	logger = logger.WithField("testId", testID)
 	if !req.Language.IsValid() {
 		return respondError(c, http.StatusBadRequest, requestID, testID, logBuffer, "could not recognize language")
 	}

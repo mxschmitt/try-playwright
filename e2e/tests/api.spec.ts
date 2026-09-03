@@ -1,23 +1,5 @@
 import { expect, test as base, APIResponse } from '@playwright/test';
-
-async function attachAggregatorLogs(testId?: string) {
-  const testInfo = test.info();
-  const effectiveTestId = testId || testInfo.testId;
-  const base = (process.env.LOG_AGGREGATOR_URL || '').replace(/\/$/, '');
-  if (!base) return;
-  try {
-    const res = await fetch(`${base}/logs/${encodeURIComponent(effectiveTestId)}`);
-    if (!res.ok) return;
-    const body = await res.text();
-    if (body.trim().length === 0) return;
-    await testInfo.attach(`logs-${effectiveTestId}`, {
-      body,
-      contentType: 'text/plain',
-    });
-  } catch {
-    // best-effort; ignore
-  }
-}
+import { attachAggregatorLogs } from './logAggregator';
 
 type TestFixtures = {
   executeCode: (code: string, language: string) => Promise<APIResponse>

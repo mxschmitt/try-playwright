@@ -28,6 +28,9 @@ export const runCode = async (code: string, codeLanguage: CodeLanguage, turnstil
       code,
       language: codeLanguage,
       token: turnstileToken,
+      ...(window.__TRY_PLAYWRIGHT_TEST_ID__
+        ? { testId: window.__TRY_PLAYWRIGHT_TEST_ID__ }
+        : {}),
     })
   })
 
@@ -46,6 +49,7 @@ export const runCode = async (code: string, codeLanguage: CodeLanguage, turnstil
 declare global {
   interface Window {
     gtag?: (kind: string, event: string, metaData: Record<string, string>) => void
+    __TRY_PLAYWRIGHT_TEST_ID__?: string
   }
 }
 
