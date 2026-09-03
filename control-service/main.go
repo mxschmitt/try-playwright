@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -224,6 +226,14 @@ func (s *server) handleRun(c *echo.Context) error {
 	}
 	logger.Println("Published message")
 
+	// Flush headers immediately so Firefox does not abort the fetch while the
+	// worker runs (no bytes for several seconds → TypeError: NetworkError).
+	if err := flushRunPreamble(c); err != nil {
+		logger.Printf("could not flush run preamble: %v", err)
+		return err
+	}
+	stopHeartbeat := startRunHeartbeat(c)
+
 	start := time.Now()
 
 	var payload *workertypes.WorkerResponsePayload
@@ -236,6 +246,7 @@ func (s *server) handleRun(c *echo.Context) error {
 		logger.Println("Got execution timeout!")
 		timeout = true
 	}
+	stopHeartbeat()
 
 	go func() {
 		logger.Println("Starting worker cleanup")
@@ -254,7 +265,7 @@ func (s *server) handleRun(c *echo.Context) error {
 	}()
 
 	if timeout {
-		return c.JSON(http.StatusServiceUnavailable, map[string]any{
+		return encodeRunJSON(c, map[string]any{
 			"error":     "Execution timeout!",
 			"requestId": requestID,
 			"testId":    testID,
@@ -266,10 +277,53 @@ func (s *server) handleRun(c *echo.Context) error {
 
 	payload.RequestID = requestID
 	payload.TestID = testID
-	if !payload.Success {
-		return c.JSON(http.StatusBadRequest, payload)
+	return encodeRunJSON(c, payload)
+}
+
+func flushRunPreamble(c *echo.Context) error {
+	resp := c.Response()
+	resp.Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
+	resp.Header().Set("X-Accel-Buffering", "no")
+	resp.Header().Set("Cache-Control", "no-store")
+	resp.WriteHeader(http.StatusOK)
+	if _, err := resp.Write([]byte("\n")); err != nil {
+		return err
 	}
-	return c.JSON(http.StatusOK, payload)
+	if flusher, ok := resp.(http.Flusher); ok {
+		flusher.Flush()
+	}
+	return nil
+}
+
+func startRunHeartbeat(c *echo.Context) func() {
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				resp := c.Response()
+				_, _ = resp.Write([]byte("\n"))
+				if flusher, ok := resp.(http.Flusher); ok {
+					flusher.Flush()
+				}
+			}
+		}
+	}()
+	return func() {
+		close(stop)
+		wg.Wait()
+	}
+}
+
+func encodeRunJSON(c *echo.Context, v any) error {
+	return json.NewEncoder(c.Response()).Encode(v)
 }
 
 func (s *server) handleShareGet(c *echo.Context) error {
