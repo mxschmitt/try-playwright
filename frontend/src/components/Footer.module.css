@@ -1,0 +1,12 @@
+.footer {
+  padding: 8px 16px;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: right;
+  opacity: 0.7;
+}
+
+.footer a {
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

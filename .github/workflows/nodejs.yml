@@ -116,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build image
-        run: docker build . --file ${{ matrix.directory }}/Dockerfile --tag local-image
+        run: docker build . --file ${{ matrix.directory }}/Dockerfile --tag local-image --build-arg GIT_SHA=${{ github.sha }}
       - name: Login to GitHub Package Registry
         uses: docker/login-action@v4
         with:
