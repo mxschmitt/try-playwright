@@ -37,6 +37,7 @@ const App: React.FunctionComponent = () => {
         'error-callback': () => resolve(''),
       });
     });
+    // After await: do not use render-time `code` (stale vs example select).
     setResponse(await runCode(getCode(), codeLanguage, turnstileToken))
     setLoading(false)
     onChangeRightPanelMode(false)

@@ -34,6 +34,9 @@ type CodeContextProviderProps = {
 
 const CodeContextProvider: React.FC<CodeContextProviderProps> = ({ children }) => {
     const [code, setCode] = useState<string>("")
+    // Mailbox for execution: setState does not update `code` in this click or
+    // after await (Turnstile). Copying into a ref in useEffect is still stale
+    // in that click — write the ref here. Repro: src/repro/staleStateRepro.tsx
     const latestCode = useRef(code)
     const [rightPanelMode, setRightPanelMode] = useState(true)
     const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>(determineLanguage())
