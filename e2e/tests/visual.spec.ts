@@ -8,10 +8,10 @@ class TryPlaywrightPage {
     const panel = this.page.locator('.rs-panel-group > .rs-panel').nth(nth - 1);
     await panel.getByRole('link').click();
     await expect(panel).toHaveClass(/rs-panel-in/);
-    const responsePromise = this.page.waitForResponse("**/service/control/run");
+    const watchPromise = this.page.waitForResponse((response) => response.url().includes("/service/control/run/") && response.url().includes("/log-watch"));
     try {
       await Promise.all([
-        responsePromise,
+        watchPromise.then((response) => response.finished()),
         this.page.getByRole('button', { name: 'Run' }).click(),
       ]);
     } finally {

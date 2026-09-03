@@ -25,7 +25,7 @@ type Workers struct {
 	amqpReplyQueueName string
 	amqpChannel        *amqp.Channel
 	k8ClientSet        kubernetes.Interface
-	replies            sync.Map // map[string]chan *workertypes.WorkerResponsePayload
+	replies            sync.Map // map[string]*runSession
 }
 
 func newWorkers(language workertypes.WorkerLanguage, workerCount int, k8ClientSet kubernetes.Interface, amqpChannel *amqp.Channel) (*Workers, error) {
@@ -78,13 +78,8 @@ func (w *Workers) consumeReplies() error {
 				log.Printf("no reply channel exists for worker %s", msg.CorrelationId)
 				continue
 			}
-			replyChan := value.(chan *workertypes.WorkerResponsePayload)
-			var reply *workertypes.WorkerResponsePayload
-			if err := json.Unmarshal(msg.Body, &reply); err != nil {
-				log.Printf("could not unmarshal reply json: %v", err)
-				continue
-			}
-			replyChan <- reply
+			session := value.(*runSession)
+			applyWorkerEvent(session, msg.Body)
 		}
 	}()
 	return nil
@@ -128,9 +123,6 @@ func newWorker(workers *Workers) (*Worker, error) {
 		workers:  workers,
 		language: workers.language,
 	}
-
-	w.workers.replies.Store(w.id, make(chan *workertypes.WorkerResponsePayload, 1))
-
 	_, err := w.workers.amqpChannel.QueueDeclare(
 		fmt.Sprintf("rpc_queue_%s", w.id), // name
 		false,                             // durable
@@ -256,15 +248,4 @@ func (w *Worker) Cleanup() error {
 	}
 	w.workers.replies.Delete(w.id)
 	return nil
-}
-
-func (w *Worker) Subscribe() <-chan *workertypes.WorkerResponsePayload {
-	value, ok := w.workers.replies.Load(w.id)
-	if !ok {
-		// This shouldn't happen, but return a closed channel to avoid panic
-		ch := make(chan *workertypes.WorkerResponsePayload)
-		close(ch)
-		return ch
-	}
-	return value.(chan *workertypes.WorkerResponsePayload)
 }

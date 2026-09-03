@@ -16,11 +16,17 @@ export type ExecutionResponse = Partial<{
   output: string;
 }>
 
-export const runCode = async (code: string, codeLanguage: CodeLanguage, turnstileToken: string): Promise<ExecutionResponse> => {
+export const runCode = async (
+  code: string,
+  codeLanguage: CodeLanguage,
+  turnstileToken: string,
+  onUpdate?: (resp: ExecutionResponse) => void,
+): Promise<ExecutionResponse> => {
   if (codeLanguage === CodeLanguage.PLAYWRIGHT_TEST)
     codeLanguage = CodeLanguage.JAVASCRIPT
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "Accept": "text/event-stream",
   }
   if (window.__TRY_PLAYWRIGHT_TEST_ID__) {
     headers["X-Test-ID"] = window.__TRY_PLAYWRIGHT_TEST_ID__
@@ -35,16 +41,60 @@ export const runCode = async (code: string, codeLanguage: CodeLanguage, turnstil
     })
   })
 
-  if (!resp.ok) {
-    if (resp.status === 429) {
-      return { error: "You are rate limited, please try again in a few minutes." }
+  if (resp.status === 429) {
+    return { error: "You are rate limited, please try again in a few minutes." }
+  }
+  if (resp.status === 202) {
+    const body = await resp.json() as { id?: string }
+    if (!body.id) {
+      return { error: "Execution was not successful, please try again in a few minutes." }
     }
+    return watchRunLogs(body.id, onUpdate)
+  }
+  if (!resp.ok) {
     if (resp.headers.get("Content-Type")?.includes("application/json")) {
       return await resp.json()
     }
     return { error: "Execution was not successful, please try again in a few minutes." }
   }
   return await resp.json()
+}
+
+const watchRunLogs = (id: string, onUpdate?: (resp: ExecutionResponse) => void): Promise<ExecutionResponse> => {
+  return new Promise((resolve, reject) => {
+    const es = new EventSource(`/service/control/run/${encodeURIComponent(id)}/log-watch`)
+    let output = ""
+    let settled = false
+    const finish = (value: ExecutionResponse) => {
+      if (settled) {
+        return
+      }
+      settled = true
+      es.close()
+      resolve(value)
+    }
+    es.addEventListener("log", (ev) => {
+      const data = JSON.parse((ev as MessageEvent).data) as { line?: string }
+      const line = data.line ?? ""
+      output = output ? `${output}\n${line}` : line
+      onUpdate?.({ output })
+    })
+    es.addEventListener("done", (ev) => {
+      const data = JSON.parse((ev as MessageEvent).data) as ExecutionResponse
+      if (data.output === undefined || data.output === "") {
+        data.output = output
+      }
+      finish(data)
+    })
+    es.onerror = () => {
+      if (settled) {
+        return
+      }
+      settled = true
+      es.close()
+      reject(new Error("log watch failed"))
+    }
+  })
 }
 
 declare global {

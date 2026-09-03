@@ -52,7 +52,12 @@ const App: React.FunctionComponent = () => {
       const turnstileToken = await gateRef.current!.getToken(turnstileRef.current)
       setLoading(true)
       // After await: do not use render-time `code` (stale vs example select).
-      setResponse(await runCode(getCode(), codeLanguage, turnstileToken))
+      const result = await runCode(getCode(), codeLanguage, turnstileToken, (partial) => {
+        setLoading(false)
+        onChangeRightPanelMode(false)
+        setResponse(partial)
+      })
+      setResponse(result)
     } catch (error) {
       setResponse({ error: String(error) })
     } finally {

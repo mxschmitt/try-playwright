@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mxschmitt/try-playwright/internal/logagg"
@@ -25,6 +27,9 @@ type executionHandler func(worker *Worker, code string) error
 type Worker struct {
 	options   *WorkerExecutionOptions
 	channel   *amqp.Channel
+	pubMu     sync.Mutex
+	replyTo   string
+	corrID    string
 	TmpDir    string
 	requestID string
 	testID    string
@@ -32,6 +37,7 @@ type Worker struct {
 	output    *bytes.Buffer
 	files     []string
 	env       []string
+	onLog     func(line string)
 }
 
 var (
@@ -149,15 +155,39 @@ func (w *Worker) ExecCommand(name string, args ...string) error {
 		env = append(env, e...)
 	}
 
+	env = append(env, "PYTHONUNBUFFERED=1")
+
+	cmdPath := path
+	cmdArgs := append([]string{name}, args...)
+	if stdbuf, err := exec.LookPath("stdbuf"); err == nil {
+		cmdPath = stdbuf
+		cmdArgs = append([]string{"stdbuf", "-oL", "-eL", path}, args...)
+	}
+
+	pr, pw := io.Pipe()
 	c := exec.Cmd{
 		Dir:    w.TmpDir,
-		Path:   path,
-		Args:   append([]string{name}, args...),
-		Stdout: io.MultiWriter(os.Stdout, w.output),
-		Stderr: io.MultiWriter(os.Stderr, w.output),
+		Path:   cmdPath,
+		Args:   cmdArgs,
+		Stdout: io.MultiWriter(os.Stdout, pw),
+		Stderr: io.MultiWriter(os.Stderr, pw),
 		Env:    env,
 	}
-	if err := c.Run(); err != nil {
+
+	scanDone := make(chan struct{})
+	go func() {
+		defer close(scanDone)
+		scanner := bufio.NewScanner(pr)
+		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		for scanner.Scan() {
+			w.emitLog(scanner.Text())
+		}
+	}()
+
+	runErr := c.Run()
+	_ = pw.Close()
+	<-scanDone
+	if runErr != nil {
 		return errors.New("could not run command")
 	}
 	files, err := collector.Collect()
@@ -179,6 +209,8 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 	}
 	w.requestID = incomingMessageParsed.RequestID
 	w.testID = incomingMessageParsed.TestID
+	w.replyTo = incomingMessage.ReplyTo
+	w.corrID = incomingMessage.CorrelationId
 	if w.requestID != "" {
 		w.AddEnv("PLAYWRIGHT_REQUEST_ID", w.requestID)
 	}
@@ -210,26 +242,54 @@ func (w *Worker) consumeMessage(incomingMessages <-chan amqp.Delivery) error {
 	outgoingMessage.Output = w.options.TransformOutput(w.output.String())
 	outgoingMessage.RequestID = w.requestID
 	outgoingMessage.TestID = w.testID
-	outgoingMessageBody, err := json.Marshal(outgoingMessage)
-	if err != nil {
-		return fmt.Errorf("could not marshal outgoing message payload: %w", err)
-	}
-	err = w.channel.Publish(
-		"",                      // exchange
-		incomingMessage.ReplyTo, // routing key
-		false,                   // mandatory
-		false,                   // immediate
-		amqp.Publishing{
-			ContentType:   "application/json",
-			CorrelationId: incomingMessage.CorrelationId,
-			Body:          outgoingMessageBody,
-		})
-	if err != nil {
+	if err := w.publishEvent(workertypes.WorkerEvent{
+		Type:                  workertypes.WorkerEventDone,
+		WorkerResponsePayload: outgoingMessage,
+	}); err != nil {
 		return fmt.Errorf("could not publish message: %w", err)
 	}
 
 	if err := incomingMessage.Ack(false); err != nil {
 		return fmt.Errorf("could not ack message: %w", err)
+	}
+	return nil
+}
+
+func (w *Worker) emitLog(line string) {
+	if w.onLog != nil {
+		w.onLog(line)
+	}
+	w.output.WriteString(line)
+	w.output.WriteByte('\n')
+	if err := w.publishEvent(workertypes.WorkerEvent{
+		Type: workertypes.WorkerEventLog,
+		Line: line,
+	}); err != nil && w.logger != nil {
+		w.logger.WithError(err).Warn("could not publish log event")
+	}
+}
+
+func (w *Worker) publishEvent(evt workertypes.WorkerEvent) error {
+	if w.channel == nil || w.replyTo == "" {
+		return nil
+	}
+	body, err := json.Marshal(evt)
+	if err != nil {
+		return fmt.Errorf("could not marshal event: %w", err)
+	}
+	w.pubMu.Lock()
+	defer w.pubMu.Unlock()
+	if err := w.channel.Publish(
+		"",
+		w.replyTo,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:   "application/json",
+			CorrelationId: w.corrID,
+			Body:          body,
+		}); err != nil {
+		return fmt.Errorf("could not publish event: %w", err)
 	}
 	return nil
 }

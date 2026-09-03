@@ -179,16 +179,57 @@ class Program
             using var playwright = await Playwright.CreateAsync();
             await using var browser = await playwright.Chromium.LaunchAsync();
             var page = await browser.NewPageAsync();
-            Console.WriteLine(await page.EvaluateAsync<int>("1 + 1"));
-          }
-    }`
-    const resp = await executeCode(code, "csharp")
-    await expect(resp).toBeOK()
-    const body = await resp.json()
-    expect(body).toHaveProperty('success', true)
-    expect(body).toHaveProperty('error', '')
-    expectValidVersion(body)
     expect(body).toHaveProperty('files', [])
     expect(body).toHaveProperty('output', '2')
+  })
+})
+
+test.describe("Live logs", () => {
+  test("streams stdout over log-watch before done", async ({ request }) => {
+    const testId = test.info().testId
+    const code = `
+console.log('early');
+const end = Date.now() + 3000;
+while (Date.now() < end) {}
+console.log('late');
+`
+    const started = Date.now()
+    const startResp = await request.post('/service/control/run', {
+      headers: {
+        'Accept': 'text/event-stream',
+        'X-Test-ID': testId,
+      },
+      data: {
+        code,
+        language: 'javascript',
+      },
+      timeout: 30 * 1000,
+    })
+    expect(startResp.status()).toBe(202)
+    const { id } = await startResp.json()
+    expect(id).toBeTruthy()
+    expect(Date.now() - started).toBeLessThan(2000)
+
+    const watch = await request.get(`/service/control/run/${id}/log-watch`, {
+      timeout: 30 * 1000,
+    })
+    expect(watch.ok()).toBeTruthy()
+    const text = await watch.text()
+    expect(text).toContain(': connected')
+    expect(text).toContain('event: log')
+    expect(text).toContain('early')
+    const doneChunk = text.split('\n\n').find(chunk => chunk.includes('event: done'))
+    expect(doneChunk).toBeTruthy()
+    const dataLine = doneChunk!.split('\n').find(line => line.startsWith('data: '))
+    const donePayload = JSON.parse(dataLine!.slice(6))
+    expect(donePayload).toMatchObject({
+      success: true,
+      error: '',
+      files: [],
+    })
+    expect(donePayload.output).toContain('early')
+    expect(donePayload.output).toContain('late')
+    expectValidVersion(donePayload)
+    await attachAggregatorLogs(testId)
   })
 })
