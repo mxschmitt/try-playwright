@@ -10,6 +10,9 @@ COPY frontend/vite.config.ts frontend/tsconfig.json frontend/tsconfig.node.json 
 COPY frontend/public /frontend/public
 COPY frontend/src /frontend/src
 
+ARG GIT_SHA
+ENV VITE_GIT_SHA=${GIT_SHA}
+
 RUN npm run build
 
 FROM caddy:2.10.2-alpine

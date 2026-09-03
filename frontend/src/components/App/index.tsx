@@ -6,6 +6,7 @@ import { ExecutionResponse, runCode, trackEvent } from '../../utils'
 import { createTurnstileGate, type TurnstileGate } from '../../turnstile'
 import RightPanel from '../RightPanel'
 import Header from '../Header'
+import Footer from '../Footer'
 import Editor from '../Editor'
 import { CodeContext } from '../CodeContext'
 
@@ -65,33 +66,36 @@ const App: React.FunctionComponent = () => {
 
   return (
     <CustomProvider theme={darkMode ? 'dark' : 'light'}>
-      <Header />
-      <Grid fluid className={styles.grid}>
-        <Col span={{ xs: 24, md: 12 }}>
-          {loading && <Loader center content="loading" backdrop className={styles.loader} />}
-          <Panel
-            bodyFill
-            className={styles.editorPanel}
-            header={
-              <>
-                Editor
-                <div className={styles.codeHeaderButtons}>
-                  <div ref={turnstileRef} className={styles.turnstile} />
-                  <CodeLanguageSelector codeLanguage={codeLanguage} onLanguageChange={onLanguageChange} />
-                  <IconButton onClick={handleExecution} icon={<PlayIcon />} disabled={running}>
-                      Run
-                  </IconButton>
-                </div>
-              </>
-            }
-          >
-            <Editor onExecution={handleExecutionRef} />
-          </Panel>
-        </Col>
-        <Col span={{ xs: 24, md: 12 }}>
-          <RightPanel resp={resp} />
-        </Col>
-      </Grid >
+      <div className={styles.shell}>
+        <Header />
+        <Grid fluid className={styles.grid}>
+          <Col span={{ xs: 24, md: 12 }}>
+            {loading && <Loader center content="loading" backdrop className={styles.loader} />}
+            <Panel
+              bodyFill
+              className={styles.editorPanel}
+              header={
+                <>
+                  Editor
+                  <div className={styles.codeHeaderButtons}>
+                    <div ref={turnstileRef} className={styles.turnstile} />
+                    <CodeLanguageSelector codeLanguage={codeLanguage} onLanguageChange={onLanguageChange} />
+                    <IconButton onClick={handleExecution} icon={<PlayIcon />} disabled={running}>
+                        Run
+                    </IconButton>
+                  </div>
+                </>
+              }
+            >
+              <Editor onExecution={handleExecutionRef} />
+            </Panel>
+          </Col>
+          <Col span={{ xs: 24, md: 12 }}>
+            <RightPanel resp={resp} />
+          </Col>
+        </Grid>
+        <Footer />
+      </div>
     </CustomProvider>
   );
 }
