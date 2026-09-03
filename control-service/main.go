@@ -226,8 +226,11 @@ func (s *server) handleRun(c *echo.Context) error {
 	}
 	logger.Println("Published message")
 
-	// Flush headers immediately so Firefox does not abort the fetch while the
-	// worker runs (no bytes for several seconds → TypeError: NetworkError).
+	// Firefox does not resolve fetch() until a body byte is seen, even after
+	// Content-Type and 200 are flushed (Chromium/WebKit resolve on headers).
+	// See https://bugzilla.mozilla.org/show_bug.cgi?id=1544313 and
+	// frontend/src/repro/firefoxFetchFirstByte.spec.ts. The newline is valid
+	// JSON whitespace; encodeRunJSON appends the object afterward.
 	if err := flushRunPreamble(c); err != nil {
 		logger.Printf("could not flush run preamble: %v", err)
 		return err
@@ -295,6 +298,9 @@ func flushRunPreamble(c *echo.Context) error {
 	return nil
 }
 
+// Heartbeat keeps the HTTP/1.1 stream from going idle for the worker wait
+// (up to EXECUTION_TIMEOUT). Not required for fetch() to resolve once the
+// preamble newline has been sent; see firefoxFetchFirstByte.spec.ts.
 func startRunHeartbeat(c *echo.Context) func() {
 	stop := make(chan struct{})
 	var wg sync.WaitGroup

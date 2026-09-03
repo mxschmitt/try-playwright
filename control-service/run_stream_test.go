@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestRunHeartbeatJSONAllowsLeadingNewlines(t *testing.T) {
+func TestRunPreambleJSONAllowsLeadingNewlines(t *testing.T) {
 	var payload map[string]any
 	if err := json.Unmarshal([]byte("\n\n{\"success\":true}\n"), &payload); err != nil {
 		t.Fatalf("JSON.parse-equivalent decode failed after heartbeat newlines: %v", err)
