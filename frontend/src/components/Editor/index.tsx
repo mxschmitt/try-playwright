@@ -1,16 +1,14 @@
 
 
 import { useEffect, useContext, useRef } from 'react'
-import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import tsWorker from 'monaco-editor/language/typescript/ts.worker?worker'
+import editorWorker from 'monaco-editor/editor/editor.worker?worker'
+import * as monaco from 'monaco-editor';
 
 import { Box } from 'rsuite'
 import { CodeLanguage, CODE_LANG_2_MONACO_LANG } from '../../constants';
 import useDarkMode from "../../hooks/useDarkMode"
 import { CodeContext } from '../CodeContext';
-
-import * as monaco from 'monaco-editor';
 
 self.MonacoEnvironment = {
 	getWorker: function (workerId, label) {
@@ -28,7 +26,7 @@ self.MonacoEnvironment = {
 
 import staticTypes from './types.txt?raw';
 
-const MONACO_OPTIONS: monacoEditor.editor.IEditorConstructionOptions = {
+const MONACO_OPTIONS: monaco.editor.IEditorConstructionOptions = {
     minimap: {
         enabled: false
     },
@@ -58,7 +56,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     const [darkMode] = useDarkMode()
     const rootNode = useRef<HTMLDivElement>(null);
     const { code, onChange, codeLanguage } = useContext(CodeContext)
-    const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor>(undefined)
+    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(undefined)
     useEffect(() => {
         if (!rootNode.current)
             return;
@@ -76,8 +74,8 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
         })
         // @ts-ignore
         window.monacoEditorModel = editor.getModel()
-        editor.onKeyDown((event: monacoEditor.IKeyboardEvent) => {
-            if (event.keyCode === monacoEditor.KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
+        editor.onKeyDown((event: monaco.IKeyboardEvent) => {
+            if (event.keyCode === monaco.KeyCode.Enter && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
                 event.stopPropagation()
                 if (onExecution.current) {
