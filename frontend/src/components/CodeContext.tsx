@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext } from 'react'
+import { useState, useEffect, useRef, createContext } from 'react'
 import { CodeLanguage } from '../constants'
 import { Example, Examples } from '../examples'
 
@@ -8,6 +8,7 @@ import { determineCode, determineLanguage, pushNewURL } from '../utils'
 
 interface CodeContextContent {
     code: string;
+    getCode: () => string;
     codeLanguage: CodeLanguage
     onLanguageChange: (language: CodeLanguage) => void,
     examples: Example[],
@@ -18,6 +19,7 @@ interface CodeContextContent {
 
 export const CodeContext = createContext<CodeContextContent>({
     code: "",
+    getCode: () => "",
     codeLanguage: CodeLanguage.JAVASCRIPT,
     onLanguageChange: () => {},
     examples: [],
@@ -32,8 +34,16 @@ type CodeContextProviderProps = {
 
 const CodeContextProvider: React.FC<CodeContextProviderProps> = ({ children }) => {
     const [code, setCode] = useState<string>("")
+    // Mailbox for execution: setState does not update `code` in this click or
+    // after await (Turnstile). A useEffect copy is still stale in that click.
+    const latestCode = useRef(code)
     const [rightPanelMode, setRightPanelMode] = useState(true)
     const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>(determineLanguage())
+
+    const updateCode = (next: string) => {
+        latestCode.current = next
+        setCode(next)
+    }
 
     // Store the code in localstorage with a 500ms debounce on change
     const handleLazyStore = ()=>{
@@ -51,7 +61,7 @@ const CodeContextProvider: React.FC<CodeContextProviderProps> = ({ children }) =
 
     // determine the code which should be loaded on the application start
     useEffect(() => {
-        determineCode(code => setCode(code), examples)
+        determineCode(next => updateCode(next), examples)
     }, [examples])
 
     const handleSetLanguage = (language: CodeLanguage) => {
@@ -61,7 +71,7 @@ const CodeContextProvider: React.FC<CodeContextProviderProps> = ({ children }) =
         params.set("l", language)
         pushNewURL(params)
         setCodeLanguage(language)
-        setCode("")
+        updateCode("")
         if (window.localStorage) {
             window.localStorage.removeItem("code")
         }
@@ -71,10 +81,11 @@ const CodeContextProvider: React.FC<CodeContextProviderProps> = ({ children }) =
     return (
         <CodeContext.Provider value={{
             code,
+            getCode: () => latestCode.current,
             codeLanguage: codeLanguage,
             onLanguageChange: handleSetLanguage,
             examples,
-            onChange: setCode,
+            onChange: updateCode,
             rightPanelMode,
             onChangeRightPanelMode: setRightPanelMode
         }}>
