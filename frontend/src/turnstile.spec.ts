@@ -28,16 +28,17 @@ function mockApi(overrides: Partial<TurnstileApi> = {}): { api: TurnstileApi; op
   return { api, options: rendered }
 }
 
-test('defaults to cloudflare for humans and noop for automated browsers', () => {
-  expect(resolveTurnstileMode({ automated: false })).toBe('cloudflare')
-  expect(resolveTurnstileMode({ automated: true })).toBe('noop')
+test('defaults to noop on loopback and cloudflare elsewhere', () => {
+  expect(resolveTurnstileMode({ hostname: '127.0.0.1' })).toBe('noop')
+  expect(resolveTurnstileMode({ hostname: 'localhost' })).toBe('noop')
+  expect(resolveTurnstileMode({ hostname: 'try.playwright.tech' })).toBe('cloudflare')
 })
 
 test('window override swaps the implementation at runtime', () => {
-  expect(resolveTurnstileMode({ automated: false, override: 'noop' })).toBe('noop')
-  expect(resolveTurnstileMode({ automated: true, override: 'cloudflare' })).toBe('cloudflare')
-  expect(createTurnstileGate({ automated: false, override: 'noop' })).toBeInstanceOf(NoopTurnstileGate)
-  expect(createTurnstileGate({ automated: true, override: 'cloudflare', sitekey: 'k' })).toBeInstanceOf(CloudflareTurnstileGate)
+  expect(resolveTurnstileMode({ hostname: 'try.playwright.tech', override: 'noop' })).toBe('noop')
+  expect(resolveTurnstileMode({ hostname: '127.0.0.1', override: 'cloudflare' })).toBe('cloudflare')
+  expect(createTurnstileGate({ hostname: 'try.playwright.tech', override: 'noop' })).toBeInstanceOf(NoopTurnstileGate)
+  expect(createTurnstileGate({ hostname: '127.0.0.1', override: 'cloudflare', sitekey: 'k' })).toBeInstanceOf(CloudflareTurnstileGate)
 })
 
 test('noop gate never calls Turnstile execute', async () => {

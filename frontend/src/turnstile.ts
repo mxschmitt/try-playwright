@@ -24,6 +24,7 @@ export type TurnstileApi = {
   remove?: (widgetIdOrContainer: HTMLElement | string) => void
 }
 
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
 const WINDOW_OVERRIDE_KEY = '__TRY_PLAYWRIGHT_TURNSTILE__'
 
 declare global {
@@ -180,7 +181,7 @@ export class CloudflareTurnstileGate implements TurnstileGate {
 
 export function resolveTurnstileMode(input?: {
   override?: string | null
-  automated?: boolean
+  hostname?: string
 }): TurnstileMode {
   const override = input?.override !== undefined
     ? input.override
@@ -188,8 +189,8 @@ export function resolveTurnstileMode(input?: {
   if (override === 'noop' || override === 'cloudflare') {
     return override
   }
-  const automated = input?.automated ?? (typeof navigator !== 'undefined' && navigator.webdriver === true)
-  if (automated) {
+  const hostname = input?.hostname ?? (typeof window !== 'undefined' ? window.location.hostname : '')
+  if (LOCAL_HOSTS.has(hostname)) {
     return 'noop'
   }
   return 'cloudflare'
@@ -198,14 +199,14 @@ export function resolveTurnstileMode(input?: {
 export function createTurnstileGate(input?: {
   mode?: TurnstileMode
   override?: string | null
-  automated?: boolean
+  hostname?: string
   sitekey?: string
   timeoutMs?: number
   getApi?: () => TurnstileApi | null | undefined
 }): TurnstileGate {
   const mode = input?.mode ?? resolveTurnstileMode({
     override: input?.override,
-    automated: input?.automated,
+    hostname: input?.hostname,
   })
   if (mode === 'noop') {
     return new NoopTurnstileGate()
