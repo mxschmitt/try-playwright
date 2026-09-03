@@ -10,9 +10,9 @@ jobs:
     needs: [build]
     timeout-minutes: 60
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Use Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
         node-version: 20
     - name: Free Disk Space
@@ -91,7 +91,7 @@ jobs:
         kubectl describe pod -l io.kompose.service=rustfs || true
     - name: Upload playwright-report
       if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: e2e-playwright-report
         path: e2e/playwright-report/
@@ -114,11 +114,11 @@ jobs:
           - log-aggregator
           - squid
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build image
         run: docker build . --file ${{ matrix.directory }}/Dockerfile --tag local-image
       - name: Login to GitHub Package Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
