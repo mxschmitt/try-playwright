@@ -15,7 +15,7 @@ import useDarkMode from '../../hooks/useDarkMode';
 const VITE_TURNSTILE_SITEKEY = '0x4AAAAAAA_K0T_2LZ0rgUtv';
 
 const App: React.FunctionComponent = () => {
-  const { code, onChangeRightPanelMode, codeLanguage, onLanguageChange } = useContext(CodeContext)
+  const { getCode, onChangeRightPanelMode, codeLanguage, onLanguageChange } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
   const [resp, setResponse] = useState<ExecutionResponse|null>(null)
   const handleExecutionRef = useRef<() => Promise<void>>(undefined)
@@ -37,7 +37,7 @@ const App: React.FunctionComponent = () => {
         'error-callback': () => resolve(''),
       });
     });
-    setResponse(await runCode(code, codeLanguage, turnstileToken))
+    setResponse(await runCode(getCode(), codeLanguage, turnstileToken))
     setLoading(false)
     onChangeRightPanelMode(false)
   }

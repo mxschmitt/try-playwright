@@ -23,7 +23,9 @@ class TryPlaywrightPage {
   constructor(private readonly page: Page) { }
   async executeExample(nth: number): Promise<void> {
     await this.page.goto('/?l=javascript');
-    await this.page.locator(`.rs-panel-group > .rs-panel:nth-child(${nth})`).click();
+    const panel = this.page.locator('.rs-panel-group > .rs-panel').nth(nth - 1);
+    await panel.getByRole('link').click();
+    await expect(panel).toHaveClass(/rs-panel-in/);
     const responsePromise = this.page.waitForResponse("**/service/control/run");
     await Promise.all([
       responsePromise,
