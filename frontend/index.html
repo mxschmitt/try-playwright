@@ -7,7 +7,20 @@
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="An interactive playground for Playwright with various examples available."/>
     <title>Try Playwright</title>
-    <script defer src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
+    <script>
+      (function () {
+        var override = window.__TRY_PLAYWRIGHT_TURNSTILE__;
+        var host = window.location.hostname;
+        var skip = override !== 'cloudflare' && (override === 'noop' || host === 'localhost' || host === '127.0.0.1');
+        if (skip) {
+          return;
+        }
+        var script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.defer = true;
+        document.head.appendChild(script);
+      })();
+    </script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-34156117-11"></script>
     <script>
       if (!window.location.search.includes("no-analytics")) {
