@@ -4,7 +4,6 @@ import { attachAggregatorLogs, installE2ETestId } from './logAggregator';
 class TryPlaywrightPage {
   constructor(private readonly page: Page) { }
   async executeExample(nth: number): Promise<void> {
-    await installE2ETestId(this.page)
     await this.page.goto('/?l=javascript');
     await this.page.locator(`.rs-panel-group > .rs-panel:nth-child(${nth})`).click();
     const responsePromise = this.page.waitForResponse("**/service/control/run");
@@ -29,6 +28,10 @@ class TryPlaywrightPage {
 }
 
 const test = base.extend<{ tpPage: TryPlaywrightPage }>({
+  page: async ({ page }, use) => {
+    await installE2ETestId(page)
+    await use(page)
+  },
   tpPage: async ({ page }, use) => {
     await use(new TryPlaywrightPage(page));
   }

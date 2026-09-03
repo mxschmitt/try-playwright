@@ -8,18 +8,14 @@ type TestFixtures = {
 const test = base.extend<TestFixtures>({
   executeCode: async ({ request }, use) => {
     await use(async (code: string, language: string) => {
-      const requestId = test.info().testId; // align requestId with Playwright testId for log correlation
       const testId = test.info().testId;
       const resp = await request.post('/service/control/run', {
         headers: {
-          'X-Request-ID': requestId,
           'X-Test-ID': testId,
         },
         data: {
           code,
           language,
-          requestId,
-          testId,
         },
         timeout: 30 * 1000,
       });

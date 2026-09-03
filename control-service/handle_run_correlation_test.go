@@ -94,7 +94,7 @@ func aggregatorLogs(t *testing.T, aggURL, testID string) string {
 	return string(b)
 }
 
-func TestHandleRunPostsAggregatorLogsUnderJSONTestID(t *testing.T) {
+func TestHandleRunPostsAggregatorLogsUnderHeaderTestID(t *testing.T) {
 	agg := startFakeAggregator(t)
 	t.Cleanup(agg.Close)
 	t.Setenv("LOG_AGGREGATOR_ENABLED", "true")
@@ -104,10 +104,10 @@ func TestHandleRunPostsAggregatorLogsUnderJSONTestID(t *testing.T) {
 	run := newRunTestServer(t)
 	t.Cleanup(run.Close)
 
-	const playwrightID = "visual-pw-test-id"
-	const headerID = "from-x-test-id-header"
+	const headerID = "pw-id"
+	const bodyID = "from-body"
 
-	resp := postRun(t, run.URL, headerID, `{"code":"console.log(1)","language":"javascript","testId":"`+playwrightID+`"}`)
+	resp := postRun(t, run.URL, headerID, `{"code":"console.log(1)","language":"javascript","testId":"`+bodyID+`"}`)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusServiceUnavailable {
 		body, _ := io.ReadAll(resp.Body)
@@ -120,15 +120,15 @@ func TestHandleRunPostsAggregatorLogsUnderJSONTestID(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		t.Fatal(err)
 	}
-	if payload.TestID != playwrightID {
-		t.Fatalf("response testId %q want %q", payload.TestID, playwrightID)
+	if payload.TestID != headerID {
+		t.Fatalf("response testId %q want %q", payload.TestID, headerID)
 	}
 
-	got := aggregatorLogs(t, agg.URL, playwrightID)
+	got := aggregatorLogs(t, agg.URL, headerID)
 	if !strings.Contains(got, "Obtaining worker") && !strings.Contains(got, "Got Worker timeout") {
-		t.Fatalf("no control logs under Playwright test id %q; got %q", playwrightID, got)
+		t.Fatalf("no control logs under X-Test-ID %q; got %q", headerID, got)
 	}
-	if leaked := aggregatorLogs(t, agg.URL, headerID); strings.TrimSpace(leaked) != "" {
-		t.Fatalf("logs were stored under X-Test-ID %q (pre-fix behavior): %q", headerID, leaked)
+	if leaked := aggregatorLogs(t, agg.URL, bodyID); strings.TrimSpace(leaked) != "" {
+		t.Fatalf("logs were stored under JSON testId %q: %q", bodyID, leaked)
 	}
 }
