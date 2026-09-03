@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect, useRef } from 'react';
-import { Col, Grid, IconButton, Loader, Panel, CustomProvider } from 'rsuite'
+import { Col, Container, Content, CustomProvider, Grid, HStack, IconButton, Loader, Panel, Row } from 'rsuite'
 import PlayIcon from '@rsuite/icons/PlayOutline';
 
 import { ExecutionResponse, runCode, trackEvent } from '../../utils'
@@ -10,11 +10,18 @@ import Footer from '../Footer'
 import Editor from '../Editor'
 import { CodeContext } from '../CodeContext'
 
-import styles from './index.module.css'
 import CodeLanguageSelector from '../CodeLanguageSelector';
 import useDarkMode from '../../hooks/useDarkMode';
+import styles from './index.module.css'
 
 const VITE_TURNSTILE_SITEKEY = '0x4AAAAAAA_K0T_2LZ0rgUtv';
+
+const filledPanelBody = {
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+} as const
 
 const App: React.FunctionComponent = () => {
   const { getCode, onChangeRightPanelMode, codeLanguage, onLanguageChange } = useContext(CodeContext)
@@ -69,36 +76,44 @@ const App: React.FunctionComponent = () => {
 
   return (
     <CustomProvider theme={darkMode ? 'dark' : 'light'}>
-      <div className={styles.shell}>
+      <Container h="100%">
         <Header />
-        <Grid fluid className={styles.grid}>
-          <Col span={{ xs: 24, md: 12 }}>
-            {loading && <Loader center content="loading" backdrop className={styles.loader} />}
-            <Panel
-              bodyFill
-              className={styles.editorPanel}
-              header={
-                <>
-                  Editor
-                  <div className={styles.codeHeaderButtons}>
-                    <div ref={turnstileRef} className={styles.turnstile} />
-                    <CodeLanguageSelector codeLanguage={codeLanguage} onLanguageChange={onLanguageChange} />
-                    <IconButton onClick={handleExecution} icon={<PlayIcon />} disabled={running}>
-                        Run
-                    </IconButton>
-                  </div>
-                </>
-              }
-            >
-              <Editor onExecution={handleExecutionRef} />
-            </Panel>
-          </Col>
-          <Col span={{ xs: 24, md: 12 }}>
-            <RightPanel resp={resp} />
-          </Col>
-        </Grid>
+        <Content minh={0} overflow="auto">
+          <Grid fluid data-testid="app-main" h={{ md: '100%' }} w="100%">
+            <Row h={{ md: '100%' }}>
+              <Col span={{ xs: 24, md: 12 }} h={{ md: '100%' }} minw={0} pos="relative" className={styles.editorColumn} data-testid="app-editor-column">
+                {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
+                <Panel
+                  bodyFill
+                  h="100%"
+                  display="flex"
+                  direction="column"
+                  overflow="hidden"
+                  bodyProps={{ style: filledPanelBody }}
+                  header={
+                    <HStack justify="space-between" align="center" w="100%" spacing={12}>
+                      <span>Editor</span>
+                      <HStack spacing={10} align="center">
+                        <div ref={turnstileRef} />
+                        <CodeLanguageSelector codeLanguage={codeLanguage} onLanguageChange={onLanguageChange} />
+                        <IconButton onClick={handleExecution} icon={<PlayIcon />} disabled={running}>
+                            Run
+                        </IconButton>
+                      </HStack>
+                    </HStack>
+                  }
+                >
+                  <Editor onExecution={handleExecutionRef} />
+                </Panel>
+              </Col>
+              <Col span={{ xs: 24, md: 12 }} h={{ md: '100%' }} minw={0} data-testid="app-examples-column">
+                <RightPanel resp={resp} />
+              </Col>
+            </Row>
+          </Grid>
+        </Content>
         <Footer />
-      </div>
+      </Container>
     </CustomProvider>
   );
 }

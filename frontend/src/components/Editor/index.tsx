@@ -5,10 +5,10 @@ import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
+import { Box } from 'rsuite'
 import { CodeLanguage, CODE_LANG_2_MONACO_LANG } from '../../constants';
 import useDarkMode from "../../hooks/useDarkMode"
 import { CodeContext } from '../CodeContext';
-import styles from './index.module.css'
 
 import * as monaco from 'monaco-editor';
 
@@ -91,12 +91,21 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     }, [rootNode])
 
     useEffect(() => {
-        if (editorRef.current) {
-            const resizeListener = () => editorRef.current?.layout()
-            window.addEventListener('resize', resizeListener);
-            return () => window.removeEventListener('resize', resizeListener);
+        const editor = editorRef.current
+        const node = rootNode.current
+        if (!editor || !node) {
+            return
         }
-    }, [editorRef])
+        const layout = () => editor.layout()
+        layout()
+        const observer = new ResizeObserver(layout)
+        observer.observe(node)
+        window.addEventListener('resize', layout)
+        return () => {
+            observer.disconnect()
+            window.removeEventListener('resize', layout)
+        }
+    }, [rootNode])
     const tsTypesAlreadyLoaded = useRef(false)
     useEffect(()=>{
         if (editorRef.current)
@@ -120,7 +129,7 @@ const Editor: React.FunctionComponent<EditorProps> = ({ onExecution }) => {
     }, [darkMode])
 
     return (
-        <div className={styles.monacoEditorWrapper} ref={rootNode} />
+        <Box ref={rootNode} h="100%" flex={1} minh={0} pt={5} pb={20} />
     )
 }
 

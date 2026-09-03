@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { Panel, Button } from 'rsuite'
+import { Box, Button, HStack, Panel } from 'rsuite'
 
 import ShareButton from '../ShareButton'
 
@@ -7,7 +7,6 @@ import RightOutputPanel from './RightOutputPanel'
 import RightExamplesPanel from './RightExamplesPanel'
 import { CodeContext } from '../CodeContext'
 
-import styles from './index.module.css'
 import type { ExecutionResponse } from '../../utils'
 
 interface RightPanelProps {
@@ -25,17 +24,26 @@ const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
     return (
         <Panel
             bodyFill
+            h="100%"
+            display="flex"
+            direction="column"
+            overflow="hidden"
+            bodyProps={{ style: { flex: 1, minHeight: 0, overflow: 'auto' } }}
             header={
-                <>
-                    {getHeaderText(!rightPanelMode)}
-                    <ShareButton />
-                    <Button onClick={handleShowExamplesClick} className={styles.togglePanelModeButton} data-test-id="toggel-right-panel">Show {getHeaderText(rightPanelMode)}</Button>
-                </>
+                <HStack justify="space-between" align="center" w="100%" spacing={10}>
+                    <span>{getHeaderText(!rightPanelMode)}</span>
+                    <HStack spacing={10} align="center">
+                        <Button onClick={handleShowExamplesClick} data-test-id="toggel-right-panel">
+                            Show {getHeaderText(rightPanelMode)}
+                        </Button>
+                        <ShareButton />
+                    </HStack>
+                </HStack>
             }
         >
-            <div className={styles.rightPanelWrapper} data-testid='right-panel'>
+            <Box py={5} data-testid='right-panel'>
                 {rightPanelMode ? <RightExamplesPanel /> : <RightOutputPanel resp={resp} />}
-            </div>
+            </Box>
         </Panel>
     )
 }
