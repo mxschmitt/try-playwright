@@ -84,6 +84,37 @@ test('renders with execution=execute then execute(widgetId)', async () => {
   })
 })
 
+test('overlapping execute shares one widget callback', async () => {
+  const { api, options } = mockTurnstile({
+    execute: () => undefined,
+  })
+  let executeCount = 0
+  api.execute = () => {
+    executeCount += 1
+  }
+  const widgetIdRef = { current: null as string | null }
+  const first = waitForTurnstileToken({
+    turnstile: api,
+    container,
+    sitekey: 'sitekey',
+    hostname: 'try.playwright.tech',
+    widgetIdRef,
+    timeoutMs: 500,
+  })
+  const second = waitForTurnstileToken({
+    turnstile: api,
+    container,
+    sitekey: 'sitekey',
+    hostname: 'try.playwright.tech',
+    widgetIdRef,
+    timeoutMs: 500,
+  })
+  await Promise.resolve()
+  expect(executeCount).toBe(1)
+  options[0]?.callback?.('tok')
+  expect(await Promise.all([first, second])).toEqual(['tok', 'tok'])
+})
+
 test('reuses the rendered widget on a later execute', async () => {
   let renderCount = 0
   const { api, options } = mockTurnstile({

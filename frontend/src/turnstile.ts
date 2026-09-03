@@ -44,6 +44,7 @@ function whenReady(turnstile: TurnstileApi): Promise<void> {
 }
 
 const pendingByWidget = new WeakMap<WidgetIdRef, (token: string, reason: string, extra?: Record<string, unknown>) => void>()
+const inFlightByWidget = new WeakMap<WidgetIdRef, Promise<string>>()
 
 function ensureWidget(options: {
   turnstile: TurnstileApi
@@ -106,11 +107,16 @@ export async function waitForTurnstileToken(options: WaitForTurnstileTokenOption
     return ''
   }
 
+  const existing = inFlightByWidget.get(widgetIdRef)
+  if (existing) {
+    return existing
+  }
+
   const timeoutMs = options.timeoutMs ?? 8_000
   const turnstile = options.turnstile
   const container = options.container
 
-  return await new Promise<string>((resolve) => {
+  const pending = new Promise<string>((resolve) => {
     let settled = false
     const done = (token: string) => {
       if (settled) {
@@ -151,4 +157,12 @@ export async function waitForTurnstileToken(options: WaitForTurnstileTokenOption
       }
     })()
   })
+  inFlightByWidget.set(widgetIdRef, pending)
+  try {
+    return await pending
+  } finally {
+    if (inFlightByWidget.get(widgetIdRef) === pending) {
+      inFlightByWidget.delete(widgetIdRef)
+    }
+  }
 }

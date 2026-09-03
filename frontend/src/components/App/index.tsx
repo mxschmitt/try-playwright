@@ -18,8 +18,10 @@ const VITE_TURNSTILE_SITEKEY = '0x4AAAAAAA_K0T_2LZ0rgUtv';
 const App: React.FunctionComponent = () => {
   const { getCode, onChangeRightPanelMode, codeLanguage, onLanguageChange } = useContext(CodeContext)
   const [loading, setLoading] = useState<boolean>(false)
+  const [running, setRunning] = useState<boolean>(false)
   const [resp, setResponse] = useState<ExecutionResponse|null>(null)
   const handleExecutionRef = useRef<() => Promise<void>>(undefined)
+  const runningRef = useRef(false)
   const [darkMode] = useDarkMode()
   const turnstileRef = useRef<HTMLDivElement>(null)
   const turnstileWidgetIdRef = useRef<string | null>(null)
@@ -31,22 +33,31 @@ const App: React.FunctionComponent = () => {
   }, [])
 
   const handleExecution = async (): Promise<void> => {
-    setLoading(true)
+    if (runningRef.current) {
+      return
+    }
+    runningRef.current = true
+    setRunning(true)
     setResponse(null)
 
     trackEvent()
     try {
+      // Keep the loader off until the widget has a token so an interactive
+      // challenge is not covered by the editor backdrop (z-index 10).
       const turnstileToken = await waitForTurnstileToken({
         turnstile: (window as unknown as { turnstile?: TurnstileApi }).turnstile,
         container: turnstileRef.current,
         sitekey: VITE_TURNSTILE_SITEKEY,
         widgetIdRef: turnstileWidgetIdRef,
       })
+      setLoading(true)
       // After await: do not use render-time `code` (stale vs example select).
       setResponse(await runCode(getCode(), codeLanguage, turnstileToken))
     } catch (error) {
       setResponse({ error: String(error) })
     } finally {
+      runningRef.current = false
+      setRunning(false)
       setLoading(false)
       onChangeRightPanelMode(false)
     }
@@ -68,7 +79,7 @@ const App: React.FunctionComponent = () => {
                 <div className={styles.codeHeaderButtons}>
                   <div ref={turnstileRef} className={styles.turnstile} />
                   <CodeLanguageSelector codeLanguage={codeLanguage} onLanguageChange={onLanguageChange} />
-                  <IconButton onClick={handleExecution} icon={<PlayIcon />}>
+                  <IconButton onClick={handleExecution} icon={<PlayIcon />} disabled={running}>
                       Run
                   </IconButton>
                 </div>
