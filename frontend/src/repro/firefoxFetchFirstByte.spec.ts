@@ -1,6 +1,5 @@
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
-import type { Page } from '@playwright/test'
 import { test, expect } from '@playwright/experimental-ct-react'
 
 /**
@@ -36,6 +35,8 @@ function startServer(): Promise<{ server: http.Server; origin: string }> {
       }
       res.setHeader('content-type', 'application/json')
       res.writeHead(200)
+      // Same as Go's http.Flusher: without this, Node holds headers until the
+      // first body write and every browser waits DELAY_MS.
       res.flushHeaders()
       if (mode === 'dummy') {
         res.write('\n')
@@ -65,9 +66,9 @@ test.afterAll(async () => {
   })
 })
 
-async function timeFetch(page: Page, mode: string) {
+async function timeFetch(page: { goto: (url: string) => Promise<unknown>; evaluate: Function }, mode: string) {
   await page.goto(origin + '/')
-  return await page.evaluate(async ({ url }) => {
+  return await page.evaluate(async ({ url }: { url: string }) => {
     const started = performance.now()
     const resp = await fetch(url, { method: 'POST', cache: 'no-store' })
     const headerMs = Math.round(performance.now() - started)
