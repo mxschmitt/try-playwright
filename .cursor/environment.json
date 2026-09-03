@@ -1,0 +1,16 @@
+{
+  "name": "Try Playwright",
+  "install": "sudo apt-get update && sudo apt-get install -y gettext-base && go mod download && (cd frontend && npm ci && npx playwright install --with-deps chromium) && (cd e2e && npm ci)",
+  "terminals": [
+    {
+      "name": "frontend-dev",
+      "command": "cd frontend && npm run dev -- --host 0.0.0.0 --port 5173"
+    }
+  ],
+  "ports": [
+    {
+      "name": "frontend dev server",
+      "port": 5173
+    }
+  ]
+}
