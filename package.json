@@ -1,0 +1,14 @@
+{
+  "name": "monaco-firefox-reload-crash",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "test": "vite build && playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "monaco-editor": "0.55.1",
+    "vite": "8.2.2"
+  }
+}
