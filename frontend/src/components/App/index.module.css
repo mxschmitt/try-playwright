@@ -10,6 +10,12 @@
     float: right
 }
 
+.turnstile {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
 .codeHeaderButtons > button {
     margin-left: 10px
 }

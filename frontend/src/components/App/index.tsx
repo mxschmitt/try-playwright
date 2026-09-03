@@ -1,8 +1,9 @@
-import { useState, useContext, useRef } from 'react';
+import { useState, useContext, useEffect, useRef } from 'react';
 import { Col, Grid, IconButton, Loader, Panel, CustomProvider } from 'rsuite'
 import PlayIcon from '@rsuite/icons/PlayOutline';
 
 import { ExecutionResponse, runCode, trackEvent } from '../../utils'
+import { removeTurnstileWidget, waitForTurnstileToken, type TurnstileApi } from '../../turnstile'
 import RightPanel from '../RightPanel'
 import Header from '../Header'
 import Editor from '../Editor'
@@ -21,32 +22,39 @@ const App: React.FunctionComponent = () => {
   const handleExecutionRef = useRef<() => Promise<void>>(undefined)
   const [darkMode] = useDarkMode()
   const turnstileRef = useRef<HTMLDivElement>(null)
+  const turnstileWidgetIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      removeTurnstileWidget((window as unknown as { turnstile?: TurnstileApi }).turnstile, turnstileWidgetIdRef)
+    }
+  }, [])
 
   const handleExecution = async (): Promise<void> => {
     setLoading(true)
     setResponse(null)
 
     trackEvent()
-    const turnstileToken = await new Promise<string>((resolve) => {
-      try {
-        (window as any).turnstile.reset();
-      } catch (error) {}
-      (window as any).turnstile.execute(turnstileRef.current, {
+    try {
+      const turnstileToken = await waitForTurnstileToken({
+        turnstile: (window as unknown as { turnstile?: TurnstileApi }).turnstile,
+        container: turnstileRef.current,
         sitekey: VITE_TURNSTILE_SITEKEY,
-        callback: (token: string) => resolve(token),
-        'error-callback': () => resolve(''),
-      });
-    });
-    // After await: do not use render-time `code` (stale vs example select).
-    setResponse(await runCode(getCode(), codeLanguage, turnstileToken))
-    setLoading(false)
-    onChangeRightPanelMode(false)
+        widgetIdRef: turnstileWidgetIdRef,
+      })
+      // After await: do not use render-time `code` (stale vs example select).
+      setResponse(await runCode(getCode(), codeLanguage, turnstileToken))
+    } catch (error) {
+      setResponse({ error: String(error) })
+    } finally {
+      setLoading(false)
+      onChangeRightPanelMode(false)
+    }
   }
   handleExecutionRef.current = handleExecution
 
   return (
     <CustomProvider theme={darkMode ? 'dark' : 'light'}>
-      <div ref={turnstileRef} style={{ display: 'none' }} />
       <Header />
       <Grid fluid className={styles.grid}>
         <Col span={{ xs: 24, md: 12 }}>
@@ -58,6 +66,7 @@ const App: React.FunctionComponent = () => {
               <>
                 Editor
                 <div className={styles.codeHeaderButtons}>
+                  <div ref={turnstileRef} className={styles.turnstile} />
                   <CodeLanguageSelector codeLanguage={codeLanguage} onLanguageChange={onLanguageChange} />
                   <IconButton onClick={handleExecution} icon={<PlayIcon />}>
                       Run
