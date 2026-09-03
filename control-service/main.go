@@ -184,9 +184,7 @@ func (s *server) handleRun(c *echo.Context) error {
 		return respondError(c, http.StatusBadRequest, requestID, testID, logBuffer, "could not decode request body")
 	}
 	req.RequestID = requestID
-	if req.TestID == "" {
-		req.TestID = testID
-	}
+	req.TestID = testID
 	if !req.Language.IsValid() {
 		return respondError(c, http.StatusBadRequest, requestID, testID, logBuffer, "could not recognize language")
 	}

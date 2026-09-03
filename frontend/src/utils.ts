@@ -19,11 +19,15 @@ export type ExecutionResponse = Partial<{
 export const runCode = async (code: string, codeLanguage: CodeLanguage, turnstileToken: string): Promise<ExecutionResponse> => {
   if (codeLanguage === CodeLanguage.PLAYWRIGHT_TEST)
     codeLanguage = CodeLanguage.JAVASCRIPT
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  }
+  if (window.__TRY_PLAYWRIGHT_TEST_ID__) {
+    headers["X-Test-ID"] = window.__TRY_PLAYWRIGHT_TEST_ID__
+  }
   const resp = await fetch("/service/control/run", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers,
     body: JSON.stringify({
       code,
       language: codeLanguage,
@@ -46,6 +50,7 @@ export const runCode = async (code: string, codeLanguage: CodeLanguage, turnstil
 declare global {
   interface Window {
     gtag?: (kind: string, event: string, metaData: Record<string, string>) => void
+    __TRY_PLAYWRIGHT_TEST_ID__?: string
   }
 }
 

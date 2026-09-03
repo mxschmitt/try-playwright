@@ -1,23 +1,5 @@
 import { expect, test as base, APIResponse } from '@playwright/test';
-
-async function attachAggregatorLogs(testId?: string) {
-  const testInfo = test.info();
-  const effectiveTestId = testId || testInfo.testId;
-  const base = (process.env.LOG_AGGREGATOR_URL || '').replace(/\/$/, '');
-  if (!base) return;
-  try {
-    const res = await fetch(`${base}/logs/${encodeURIComponent(effectiveTestId)}`);
-    if (!res.ok) return;
-    const body = await res.text();
-    if (body.trim().length === 0) return;
-    await testInfo.attach(`logs-${effectiveTestId}`, {
-      body,
-      contentType: 'text/plain',
-    });
-  } catch {
-    // best-effort; ignore
-  }
-}
+import { attachAggregatorLogs } from './logAggregator';
 
 type TestFixtures = {
   executeCode: (code: string, language: string) => Promise<APIResponse>
@@ -26,18 +8,14 @@ type TestFixtures = {
 const test = base.extend<TestFixtures>({
   executeCode: async ({ request }, use) => {
     await use(async (code: string, language: string) => {
-      const requestId = test.info().testId; // align requestId with Playwright testId for log correlation
       const testId = test.info().testId;
       const resp = await request.post('/service/control/run', {
         headers: {
-          'X-Request-ID': requestId,
           'X-Test-ID': testId,
         },
         data: {
           code,
           language,
-          requestId,
-          testId,
         },
         timeout: 30 * 1000,
       });

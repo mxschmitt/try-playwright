@@ -1,23 +1,5 @@
 import { expect, test as base, Page } from '@playwright/test';
-
-async function attachAggregatorLogs(testId?: string) {
-  const testInfo = test.info();
-  const effectiveTestId = testId || testInfo.testId;
-  const base = (process.env.LOG_AGGREGATOR_URL || '').replace(/\/$/, '');
-  if (!base) return;
-  try {
-    const res = await fetch(`${base}/logs/${encodeURIComponent(effectiveTestId)}`);
-    if (!res.ok) return;
-    const body = await res.text();
-    if (body.trim().length === 0) return;
-    await testInfo.attach(`logs-${effectiveTestId}`, {
-      body,
-      contentType: 'text/plain',
-    });
-  } catch {
-    // best-effort; ignore
-  }
-}
+import { attachAggregatorLogs, installE2ETestId } from './logAggregator';
 
 class TryPlaywrightPage {
   constructor(private readonly page: Page) { }
@@ -27,16 +9,13 @@ class TryPlaywrightPage {
     await panel.getByRole('link').click();
     await expect(panel).toHaveClass(/rs-panel-in/);
     const responsePromise = this.page.waitForResponse("**/service/control/run");
-    await Promise.all([
-      responsePromise,
-      this.page.getByRole('button', { name: 'Run' }).click(),
-    ]);
-    const resp = await responsePromise;
     try {
-      const payload = await resp.json();
-      await attachAggregatorLogs(payload?.testId);
-    } catch (_) {
-      // ignore: best-effort log attachment
+      await Promise.all([
+        responsePromise,
+        this.page.getByRole('button', { name: 'Run' }).click(),
+      ]);
+    } finally {
+      await attachAggregatorLogs();
     }
   }
   async getConsoleLines(): Promise<string[]> {
@@ -51,6 +30,10 @@ class TryPlaywrightPage {
 }
 
 const test = base.extend<{ tpPage: TryPlaywrightPage }>({
+  page: async ({ page }, use) => {
+    await installE2ETestId(page)
+    await use(page)
+  },
   tpPage: async ({ page }, use) => {
     await use(new TryPlaywrightPage(page));
   }
