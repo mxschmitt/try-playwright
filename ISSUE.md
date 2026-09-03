@@ -46,13 +46,13 @@ With the immediate-reload loop this is typically **5–8 failures out of 8 sessi
 Required:
 
 - Playwright-bundled Firefox 153 (Juggler)
-- Monaco editor with a language worker actually started (`javascript` starts `ts.worker`; forcing `editor.worker` for JS also crashed)
-- `page.reload()` while that worker is still starting
+- Monaco `language: "javascript"` so `ts.worker` starts
+- Kick `getJavaScriptWorker()` / `getSemanticDiagnostics()` and **do not wait** for it
+- `page.reload()` immediately (while that worker is still starting)
 
-Not required (removed from this repro):
+Not required:
 
-- `javascriptDefaults.addExtraLib` / a 2.3MB Playwright `.d.ts`
-- `getJavaScriptWorker()` / `getSemanticDiagnostics()`
+- `addExtraLib` / a 2.3MB Playwright `.d.ts`
 - a 4s settle delay (that delay made the previous draft flaky)
 - Share URL, multiple tabs, or the full Try Playwright app
 

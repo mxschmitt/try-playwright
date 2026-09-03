@@ -32,12 +32,12 @@ SESSIONS=8 RELOADS=5 node crash-loop.mjs
 ## What matters
 
 1. Vite **production** build of `monaco-editor@0.55.1`
-2. A Monaco language worker actually starts (`language: "javascript"` → `ts.worker` here; `editor.worker` alone also crashed)
-3. `page.reload()` **immediately** after the editor is on screen — do **not** wait for the worker to go idle
+2. `language: "javascript"` → `ts.worker`, plus `getJavaScriptWorker()` / `getSemanticDiagnostics()` started and **not awaited**
+3. `page.reload()` **immediately** after `__editorReady` — while the worker is still busy
 
-Waiting several seconds after load (previous draft) made this flaky. Immediate reload is the reliable trigger.
+Waiting until the worker goes idle (several seconds, or `await` diagnostics) makes this flaky. The previous draft's 4s settle was the wrong direction.
 
-Not required: `addExtraLib`, Playwright `.d.ts`, `getSemanticDiagnostics`, Share URL, multiple tabs.
+Not required: `addExtraLib`, Playwright `.d.ts`, Share URL, multiple tabs.
 
 `import * as monaco from "monaco-editor/esm/vs/editor/editor.api"` with `language: "plaintext"` never started a worker and did **not** crash.
 
