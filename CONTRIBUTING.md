@@ -44,6 +44,8 @@ The worker Pods only have access to the queue, file service, and squid proxy. Th
 
 The control microservice is the server that receives requests from the user. It does create the corresponding workers, sends the messages to the queue, and responds to the user the response payload. Also it does store and serve the user snippets from Etcd.
 
+A run is started with `POST /service/control/run`. Clients that send `Accept: text/event-stream` receive `202 { id }` immediately and then attach to `GET /service/control/run/:id/log-watch` (SSE) for live stdout/stderr. Other clients wait for the same JSON payload as before (`success`, `output`, `files`, …). Workers still publish over RabbitMQ: `log` events while the process runs, then a final `done` payload. Each worker pod still executes a single job and is replaced.
+
 ### Worker
 
 For each of the languages, there are individual Docker images and worker implementations since each language gets executed differently.

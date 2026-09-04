@@ -192,3 +192,54 @@ class Program
     expect(body).toHaveProperty('output', '2')
   })
 })
+
+test.describe("Live logs", () => {
+  test("streams stdout over log-watch before done", async ({ request }) => {
+    const testId = test.info().testId
+    const code = [
+      "console.log('early');",
+      "const end = Date.now() + 3000;",
+      "while (Date.now() < end) {}",
+      "console.log('late');",
+    ].join('\n')
+    const started = Date.now()
+    const startResp = await request.post('/service/control/run', {
+      headers: {
+        'Accept': 'text/event-stream',
+        'X-Test-ID': testId,
+      },
+      data: {
+        code,
+        language: 'javascript',
+      },
+      timeout: 30 * 1000,
+    })
+    expect(startResp.status()).toBe(202)
+    const startedBody = await startResp.json()
+    const id = startedBody.id
+    expect(id).toBeTruthy()
+    expect(Date.now() - started).toBeLessThan(2000)
+
+    const watch = await request.get('/service/control/run/' + id + '/log-watch', {
+      timeout: 30 * 1000,
+    })
+    expect(watch.ok()).toBeTruthy()
+    const text = await watch.text()
+    expect(text).toContain(': connected')
+    expect(text).toContain('event: log')
+    expect(text).toContain('early')
+    const doneChunk = text.split('\n\n').find(chunk => chunk.includes('event: done'))
+    expect(doneChunk).toBeTruthy()
+    const dataLine = doneChunk.split('\n').find(line => line.startsWith('data: '))
+    const donePayload = JSON.parse(dataLine.slice(6))
+    expect(donePayload).toMatchObject({
+      success: true,
+      error: '',
+      files: [],
+    })
+    expect(donePayload.output).toContain('early')
+    expect(donePayload.output).toContain('late')
+    expectValidVersion(donePayload)
+    await attachAggregatorLogs(testId)
+  })
+})

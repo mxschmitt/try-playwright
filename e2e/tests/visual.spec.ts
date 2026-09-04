@@ -8,12 +8,9 @@ class TryPlaywrightPage {
     const panel = this.page.locator('.rs-panel-group > .rs-panel').nth(nth - 1);
     await panel.getByRole('link').click();
     await expect(panel).toHaveClass(/rs-panel-in/);
-    const responsePromise = this.page.waitForResponse("**/service/control/run");
     try {
-      await Promise.all([
-        responsePromise,
-        this.page.getByRole('button', { name: 'Run' }).click(),
-      ]);
+      await this.page.getByRole('button', { name: 'Run' }).click();
+      await this.page.getByText(/Duration of \d+ ms with Playwright version|Execution timeout!/).waitFor({ timeout: 120000 });
     } finally {
       await attachAggregatorLogs();
     }

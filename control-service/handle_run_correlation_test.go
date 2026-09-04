@@ -57,6 +57,7 @@ func newRunTestServer(t *testing.T) *httptest.Server {
 		workers: map[workertypes.WorkerLanguage]*Workers{
 			workertypes.WorkerLanguageJavaScript: {workers: make(chan *Worker)},
 		},
+		runs: newRunHub(),
 	}
 	s.initializeHttpServer()
 	return httptest.NewServer(s.echo)

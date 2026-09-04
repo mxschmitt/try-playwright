@@ -57,6 +57,7 @@ type server struct {
 	amqpErrorChan  chan *amqp.Error
 
 	workers map[workertypes.WorkerLanguage]*Workers
+	runs    *runHub
 }
 
 func newServer() (*server, error) {
@@ -121,6 +122,7 @@ func newServer() (*server, error) {
 		amqpConnection: amqpConnection,
 		amqpErrorChan:  amqpErrorChan,
 		workers:        workersMap,
+		runs:           newRunHub(),
 	}
 
 	s.initializeHttpServer()
@@ -134,6 +136,7 @@ func (s *server) initializeHttpServer() {
 	s.echo.GET("/service/control/health", s.handleHealth)
 	s.echo.HEAD("/service/control/health", s.handleHealth)
 	s.echo.POST("/service/control/run", s.handleRun)
+	s.echo.GET("/service/control/run/:id/log-watch", s.handleLogWatch)
 	s.echo.GET("/service/control/share/get/:id", s.handleShareGet)
 	s.echo.POST("/service/control/share/create", s.handleShareCreate)
 }
@@ -216,58 +219,74 @@ func (s *server) handleRun(c *echo.Context) error {
 	logger.Infof("Received code: '%s'", req.Code)
 	logger.Info("Obtained worker successfully")
 	logger.Info("Publishing job")
+	session := newRunSession(requestID)
+	s.runs.Put(requestID, session)
+	workers.replies.Store(worker.id, session)
 	if err := worker.Publish(req.Code, req.RequestID, req.TestID); err != nil {
 		logger.Errorf("could not create new worker job: %v", err)
+		s.runs.Delete(requestID)
+		workers.replies.Delete(worker.id)
 		return respondError(c, http.StatusInternalServerError, requestID, testID, logBuffer, "could not create new worker job")
 	}
 	logger.Println("Published message")
 
-	start := time.Now()
-
-	var payload *workertypes.WorkerResponsePayload
-	timeout := false
-	select {
-	case payload = <-worker.Subscribe():
-		payload.Duration = time.Since(start).Milliseconds()
-		logger.Println("Received response successfully")
-	case <-time.After(EXECUTION_TIMEOUT * time.Second):
-		logger.Println("Got execution timeout!")
-		timeout = true
-	}
-
 	go func() {
+		select {
+		case <-session.finished:
+			logger.Println("Received response successfully")
+		case <-time.After(EXECUTION_TIMEOUT * time.Second):
+			logger.Println("Got execution timeout!")
+			session.Fail("Execution timeout!")
+		}
+
 		logger.Println("Starting worker cleanup")
 		if err := worker.Cleanup(); err != nil {
 			logger.Printf("could not cleanup worker: %v", err)
-			return
+		} else {
+			logger.Println("Finished worker cleanup")
 		}
-		logger.Println("Finished worker cleanup")
 
 		logger.Println("Adding new worker")
 		if err := workers.AddWorkers(1); err != nil {
 			logger.Printf("could not create new worker: %v", err)
-			return
+		} else {
+			logger.Println("Added new worker successfully")
 		}
-		logger.Println("Added new worker successfully")
+
+		time.AfterFunc(runSessionTTL, func() {
+			s.runs.Delete(requestID)
+		})
 	}()
 
-	if timeout {
-		return c.JSON(http.StatusServiceUnavailable, map[string]any{
-			"error":     "Execution timeout!",
-			"requestId": requestID,
-			"testId":    testID,
-			"logs": map[string]any{
-				"control": logBuffer.String(),
-			},
-		})
+	if wantsJSONWait(c.Request().Header.Get("Accept")) {
+		<-session.finished
+		payload, timedOut := session.Result()
+		if timedOut || (payload != nil && payload.Error == "Execution timeout!") {
+			return c.JSON(http.StatusServiceUnavailable, map[string]any{
+				"error":     "Execution timeout!",
+				"requestId": requestID,
+				"testId":    testID,
+				"logs": map[string]any{
+					"control": logBuffer.String(),
+				},
+			})
+		}
+		if payload == nil {
+			return respondError(c, http.StatusInternalServerError, requestID, testID, logBuffer, "missing worker response")
+		}
+		payload.RequestID = requestID
+		payload.TestID = testID
+		if !payload.Success {
+			return c.JSON(http.StatusBadRequest, payload)
+		}
+		return c.JSON(http.StatusOK, payload)
 	}
 
-	payload.RequestID = requestID
-	payload.TestID = testID
-	if !payload.Success {
-		return c.JSON(http.StatusBadRequest, payload)
-	}
-	return c.JSON(http.StatusOK, payload)
+	return c.JSON(http.StatusAccepted, map[string]any{
+		"id":        requestID,
+		"requestId": requestID,
+		"testId":    testID,
+	})
 }
 
 func (s *server) handleShareGet(c *echo.Context) error {

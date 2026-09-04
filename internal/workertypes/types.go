@@ -2,6 +2,11 @@ package workertypes
 
 import "slices"
 
+const (
+	WorkerEventLog  = "log"
+	WorkerEventDone = "done"
+)
+
 type File struct {
 	PublicURL string `json:"publicURL"`
 	FileName  string `json:"fileName"`
@@ -17,6 +22,15 @@ type WorkerResponsePayload struct {
 	Output    string `json:"output"`
 	RequestID string `json:"requestId"`
 	TestID    string `json:"testId"`
+}
+
+// WorkerEvent is published on the AMQP reply queue while a job runs.
+// Type is "log" (Line set) or "done" (embedded payload). An empty Type is
+// treated as done so older workers still complete a run.
+type WorkerEvent struct {
+	Type string `json:"type"`
+	Line string `json:"line,omitempty"`
+	*WorkerResponsePayload
 }
 
 type WorkerRequestPayload struct {
