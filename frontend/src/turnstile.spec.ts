@@ -62,6 +62,19 @@ test('cloudflare gate returns empty when the API is missing', async () => {
   expect(await gate.getToken(container)).toBe('')
 })
 
+test('cloudflare gate ignores ready() throwing from async/defer api.js', async () => {
+  const { api, options } = mockApi({
+    ready: () => {
+      throw new Error('[Cloudflare Turnstile] Remove async/defer from the Turnstile api.js script tag before using turnstile.ready().')
+    },
+  })
+  api.execute = () => {
+    options.at(-1)?.callback?.('tok')
+  }
+  const gate = new CloudflareTurnstileGate('sitekey', { getApi: () => api })
+  expect(await gate.getToken(container)).toBe('tok')
+})
+
 test('cloudflare gate does not hang when render throws', async () => {
   const gate = new CloudflareTurnstileGate('sitekey', {
     getApi: () => ({
