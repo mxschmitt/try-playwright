@@ -1,14 +1,17 @@
 FROM golang:1.26-alpine AS builder
-WORKDIR /root
-COPY go.mod /root/
-COPY go.sum /root/
+WORKDIR /src
+COPY go.mod go.sum ./
 RUN go mod download
 
-COPY file-service/* /root/
-COPY internal/ /root/internal/
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app main.go
+COPY file-service/ ./file-service/
+COPY internal/ ./internal/
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-COPY --from=builder /app .
-CMD ["/app"]
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /app ./file-service \
+    && mkdir -p /runtime/tmp && chmod 1777 /runtime/tmp
+
+FROM scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /runtime/tmp /tmp
+COPY --from=builder /app /app
+ENTRYPOINT ["/app"]
