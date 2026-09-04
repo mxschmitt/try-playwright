@@ -8,6 +8,7 @@ import RightExamplesPanel from './RightExamplesPanel'
 import { CodeContext } from '../CodeContext'
 
 import type { ExecutionResponse } from '../../utils'
+import styles from './index.module.css'
 
 interface RightPanelProps {
     resp: ExecutionResponse | null;
@@ -24,7 +25,7 @@ const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
     return (
         <Panel
             bodyFill
-            h="100%"
+            className={styles.fillPanel}
             display="flex"
             direction="column"
             overflow="hidden"
