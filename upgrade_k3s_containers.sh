@@ -11,6 +11,7 @@ LOG_PREFIX="try-playwright-autoupdate"
 
 IMAGES=(
   ghcr.io/mxschmitt/try-playwright/frontend:latest
+  ghcr.io/mxschmitt/try-playwright/file-service:latest
   ghcr.io/mxschmitt/try-playwright/control-service:latest
   ghcr.io/mxschmitt/try-playwright/squid:latest
   ghcr.io/mxschmitt/try-playwright/worker-javascript:latest
@@ -19,15 +20,23 @@ IMAGES=(
   ghcr.io/mxschmitt/try-playwright/worker-csharp:latest
 )
 
-# Do not restart file; its manifests/env can lag :latest.
-APP_DEPLOYMENTS=(frontend control squid)
+APP_DEPLOYMENTS=(frontend file control squid)
 
 FORCE=0
 DRY_RUN=0
-for arg in "$@"; do
-  case "$arg" in
+CONTINUE_SHA=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --force|-f) FORCE=1 ;;
     --dry-run) DRY_RUN=1 ;;
+    --continue)
+      shift
+      CONTINUE_SHA="${1:-}"
+      if [[ -z "$CONTINUE_SHA" ]]; then
+        echo "--continue requires a commit SHA" >&2
+        exit 2
+      fi
+      ;;
     --help|-h)
       echo "Usage: $0 [--force] [--dry-run]"
       echo "  git fetch origin/main; if a new commit has a green CI run, pull images and restart."
@@ -36,10 +45,11 @@ for arg in "$@"; do
       exit 0
       ;;
     *)
-      echo "Unknown argument: $arg" >&2
+      echo "Unknown argument: $1" >&2
       exit 2
       ;;
   esac
+  shift
 done
 
 log() {
@@ -53,10 +63,12 @@ die() {
 
 mkdir -p "${STATE_DIR}"
 
-exec 9>"${LOCK_FILE}"
-if ! flock -n 9; then
-  log "another update is already running; exiting"
-  exit 0
+if [[ -z "$CONTINUE_SHA" ]]; then
+  exec 9>"${LOCK_FILE}"
+  if ! flock -n 9; then
+    log "another update is already running; exiting"
+    exit 0
+  fi
 fi
 
 export PATH="/usr/local/bin:/usr/bin:/bin:${PATH}"
@@ -71,19 +83,34 @@ fi
 
 [[ -d "$REPO/.git" ]] || die "repo not found at ${REPO}"
 
+FILE_ROLL_MARKER="${STATE_DIR}/file-download-handler.ok"
+
 LAST_DEPLOYED=""
 if [[ -f "$STATE_FILE" ]]; then
   LAST_DEPLOYED="$(tr -d '[:space:]' < "$STATE_FILE")"
 fi
 
-log "fetching origin/main (last deployed ${LAST_DEPLOYED:-none})"
-git -C "$REPO" fetch --prune origin main
-AFTER="$(git -C "$REPO" rev-parse origin/main)"
-log "origin/main is ${AFTER}"
+if [[ -n "$CONTINUE_SHA" ]]; then
+  AFTER="$CONTINUE_SHA"
+  log "continuing deploy of ${AFTER} with repo script"
+else
+  log "fetching origin/main (last deployed ${LAST_DEPLOYED:-none})"
+  git -C "$REPO" fetch --prune origin main
+  AFTER="$(git -C "$REPO" rev-parse origin/main)"
+  log "origin/main is ${AFTER}"
 
-if [[ "$FORCE" -eq 0 && "$LAST_DEPLOYED" == "$AFTER" ]]; then
-  log "no new commit; nothing to do"
-  exit 0
+  NEED_FILE_ROLL=0
+  if [[ ! -f "$FILE_ROLL_MARKER" ]]; then
+    NEED_FILE_ROLL=1
+  fi
+
+  if [[ "$FORCE" -eq 0 && "$LAST_DEPLOYED" == "$AFTER" && "$NEED_FILE_ROLL" -eq 0 ]]; then
+    log "no new commit; nothing to do"
+    exit 0
+  fi
+  if [[ "$LAST_DEPLOYED" == "$AFTER" && "$NEED_FILE_ROLL" -eq 1 ]]; then
+    log "SHA already deployed but file-service is not serving /file-uploads; rolling file"
+  fi
 fi
 
 ci_status_for_sha() {
@@ -109,30 +136,34 @@ print(run.get("html_url") or "")
 '
 }
 
-mapfile -t CI_FIELDS < <(ci_status_for_sha "$AFTER") || die "failed to query GitHub Actions"
-CI_STATUS="${CI_FIELDS[0]:-missing}"
-CI_CONCLUSION="${CI_FIELDS[1]:-}"
-CI_URL="${CI_FIELDS[2]:-}"
-log "CI for ${AFTER}: status=${CI_STATUS} conclusion=${CI_CONCLUSION:-none} ${CI_URL}"
+if [[ -z "$CONTINUE_SHA" ]]; then
+  mapfile -t CI_FIELDS < <(ci_status_for_sha "$AFTER") || die "failed to query GitHub Actions"
+  CI_STATUS="${CI_FIELDS[0]:-missing}"
+  CI_CONCLUSION="${CI_FIELDS[1]:-}"
+  CI_URL="${CI_FIELDS[2]:-}"
+  log "CI for ${AFTER}: status=${CI_STATUS} conclusion=${CI_CONCLUSION:-none} ${CI_URL}"
 
-if [[ "$CI_STATUS" != "completed" || "$CI_CONCLUSION" != "success" ]]; then
-  log "waiting for a successful CI run before deploying"
-  exit 0
+  if [[ "$CI_STATUS" != "completed" || "$CI_CONCLUSION" != "success" ]]; then
+    log "waiting for a successful CI run before deploying"
+    exit 0
+  fi
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    log "dry-run: would reset ${REPO} to ${AFTER}"
+    log "dry-run: would pull ${#IMAGES[@]} images and restart ${APP_DEPLOYMENTS[*]}"
+    exit 0
+  fi
+
+  if [[ "$FORCE" -eq 1 && "$LAST_DEPLOYED" == "$AFTER" ]]; then
+    log "force mode: redeploying ${AFTER}"
+  else
+    log "new commit ${LAST_DEPLOYED:-none} -> ${AFTER}"
+  fi
+
+  git -C "$REPO" reset --hard origin/main
+  log "re-execing $(basename "$0") from ${AFTER} so image/restart lists match the commit"
+  exec "$REPO/upgrade_k3s_containers.sh" --continue "$AFTER"
 fi
-
-if [[ "$DRY_RUN" -eq 1 ]]; then
-  log "dry-run: would reset ${REPO} to ${AFTER}"
-  log "dry-run: would pull ${#IMAGES[@]} images and restart ${APP_DEPLOYMENTS[*]}"
-  exit 0
-fi
-
-if [[ "$FORCE" -eq 1 && "$LAST_DEPLOYED" == "$AFTER" ]]; then
-  log "force mode: redeploying ${AFTER}"
-else
-  log "new commit ${LAST_DEPLOYED:-none} -> ${AFTER}"
-fi
-
-git -C "$REPO" reset --hard origin/main
 
 CRICTL=(k3s crictl)
 if ! command -v k3s >/dev/null; then
@@ -161,6 +192,7 @@ done
 
 log "waiting for application pods"
 kubectl wait --timeout=180s --for=condition=ready pod -l io.kompose.service=frontend
+kubectl wait --timeout=180s --for=condition=ready pod -l io.kompose.service=file
 kubectl wait --timeout=180s --for=condition=ready pod -l io.kompose.service=control
 kubectl wait --timeout=180s --for=condition=ready pod -l io.kompose.service=squid
 
@@ -176,4 +208,5 @@ curl -fsS --retry 12 --retry-all-errors --retry-delay 5 "$HEALTH_URL" >/dev/null
   || die "health check failed"
 
 printf '%s\n' "$AFTER" > "$STATE_FILE"
+touch "$FILE_ROLL_MARKER"
 log "deployed ${AFTER} successfully"
