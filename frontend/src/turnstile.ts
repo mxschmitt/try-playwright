@@ -48,16 +48,6 @@ function isUsableApi(api: TurnstileApi | null | undefined): api is TurnstileApi 
   return typeof api?.render === 'function' && typeof api?.execute === 'function'
 }
 
-function whenReady(turnstile: TurnstileApi): Promise<void> {
-  return new Promise((resolve) => {
-    if (typeof turnstile.ready === 'function') {
-      turnstile.ready(() => resolve())
-      return
-    }
-    resolve()
-  })
-}
-
 export class CloudflareTurnstileGate implements TurnstileGate {
   readonly mode = 'cloudflare' as const
   private widgetId: string | null = null
@@ -166,10 +156,9 @@ export class CloudflareTurnstileGate implements TurnstileGate {
             done('')
             return
           }
-          await whenReady(api)
-          if (settled) {
-            return
-          }
+          // Do not call turnstile.ready(): with async/defer api.js it throws
+          // "Remove async/defer ... before using turnstile.ready()", which
+          // used to settle this promise with an empty token on production.
           const alreadyRendered = Boolean(this.widgetId)
           if (!this.widgetId) {
             this.widgetId = api.render(container, {
