@@ -24,4 +24,47 @@ kubectl delete deployment,service minio --ignore-not-found
 kubectl apply -f k8/
 ```
 
+## Local development on Apple silicon
+
+On macOS 26, the complete application can run natively as `linux/arm64` with
+Apple's [`container`](https://github.com/apple/container) Kubernetes plugin.
+Application and dependency images are loaded directly into the cluster, so no
+registry push or login is required.
+
+Install `container`, `kubectl`, and `envsubst`, then run:
+
+```sh
+bash k8/apple-container.sh up
+```
+
+The script creates a disposable 8-CPU/16-GiB cluster, builds the application
+images, loads them together with RabbitMQ, etcd, and RustFS, installs kind's
+default storage provisioner, and deploys the manifests. The local profile uses
+one JavaScript worker to keep the build and iteration loop manageable.
+
+In another terminal, expose the frontend:
+
+```sh
+bash k8/apple-container.sh forward
+```
+
+Open <http://127.0.0.1:8080>. To iterate on selected services, rebuild and
+redeploy them without pushing images:
+
+```sh
+bash k8/apple-container.sh build frontend control-service
+bash k8/apple-container.sh deploy
+```
+
+Use `bash k8/apple-container.sh status` to inspect the deployment and
+`bash k8/apple-container.sh down` to delete it. The cluster name, resources,
+image tag, worker count, and host image retention are configurable; run the
+script without arguments for the full list.
+
+Apple's Kubernetes plugin is experimental, so treat these clusters as
+disposable. At the time of writing,
+[apple/container#2158](https://github.com/apple/container/pull/2158) is needed
+to restart a stopped cluster after its VM address changes. Initial creation
+and deployment do not depend on that fix.
+
 For more information about the infrastructure and contributing, see [here](./CONTRIBUTING.md).
