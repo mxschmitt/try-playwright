@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/experimental-ct-react';
 import type { MountResult } from '@playwright/experimental-ct-react';
-import type { Page } from '@playwright/test';
+import type { Page } from 'playwright/test';
 import App from '.';
 import CodeContextProvider from '../CodeContext';
 
