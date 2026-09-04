@@ -12,6 +12,13 @@ spec:
     - host: try.playwright.tech
       http:
         paths:
+        - path: /file-uploads
+          pathType: Prefix
+          backend:
+            service:
+              name: file
+              port:
+                number: 8080
         - path: /
           pathType: Prefix
           backend:

@@ -7,11 +7,12 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"slices"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -61,6 +62,7 @@ func newServer() (*server, error) {
 	s3Client, err := minio.New(endpoint, &minio.Options{
 		Creds:        credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure:       false,
+		Region:       "us-east-1",
 		BucketLookup: minio.BucketLookupPath,
 	})
 	if err != nil {
@@ -101,8 +103,13 @@ func newServer() (*server, error) {
 	s.echo.GET("/api/v1/health", s.handleHealth)
 	s.echo.HEAD("/api/v1/health", s.handleHealth)
 	s.echo.POST("/api/v1/file/upload", s.handleUploadImage)
+	s.echo.GET("/file-uploads/:object", s.handleDownloadFile)
+	s.echo.HEAD("/file-uploads/:object", s.handleDownloadFile)
 	return s, nil
 }
+
+// objectNameRe matches UUID object keys written by processUploadedFile.
+var objectNameRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|pdf|webm|zip)$`)
 
 type publicFile struct {
 	FileName  string `json:"fileName"`
@@ -183,16 +190,43 @@ func (s *server) processUploadedFile(ctx context.Context, fh *multipart.FileHead
 		return publicFile{}, fmt.Errorf("could not put object: %w", err)
 	}
 
-	publicURL, err := s.s3Client.PresignedGetObject(ctx, BUCKET_NAME, objectName, time.Minute*10, url.Values{})
-	if err != nil {
-		return publicFile{}, fmt.Errorf("could not generate public URL: %w", err)
-	}
-
 	return publicFile{
 		Extension: fileExtension,
 		FileName:  fh.Filename,
-		PublicURL: publicURL.EscapedPath() + "?" + publicURL.RawQuery,
+		// Served by this process (see handleDownloadFile) so browsers never
+		// present a SigV4 Host signed for the in-cluster rustfs:9000 endpoint.
+		PublicURL: "/file-uploads/" + objectName,
 	}, nil
+}
+
+func (s *server) handleDownloadFile(c *echo.Context) error {
+	objectName := c.Param("object")
+	if !objectNameRe.MatchString(objectName) {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid object name")
+	}
+
+	obj, err := s.s3Client.GetObject(c.Request().Context(), BUCKET_NAME, objectName, minio.GetObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("could not get object: %w", err)
+	}
+	defer obj.Close()
+
+	stat, err := obj.Stat()
+	if err != nil {
+		errResp := minio.ToErrorResponse(err)
+		if errResp.Code == "NoSuchKey" || errResp.StatusCode == http.StatusNotFound {
+			return echo.NewHTTPError(http.StatusNotFound, "not found")
+		}
+		return fmt.Errorf("could not stat object: %w", err)
+	}
+
+	c.Response().Header().Set("Content-Type", stat.ContentType)
+	c.Response().Header().Set("Content-Length", strconv.FormatInt(stat.Size, 10))
+	c.Response().Header().Set("Cache-Control", "public, max-age=3600")
+	if c.Request().Method == http.MethodHead {
+		return c.NoContent(http.StatusOK)
+	}
+	return c.Stream(http.StatusOK, stat.ContentType, obj)
 }
 
 func (s *server) handleHealth(c *echo.Context) error {

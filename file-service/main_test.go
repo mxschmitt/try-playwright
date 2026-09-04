@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -88,22 +87,21 @@ func TestUploadPNGAgainstRustFS(t *testing.T) {
 	if !strings.HasPrefix(files[0].PublicURL, "/file-uploads/") {
 		t.Fatalf("public URL is not path-style: %s", files[0].PublicURL)
 	}
+	if strings.Contains(files[0].PublicURL, "?") {
+		t.Fatalf("public URL should not be presigned: %s", files[0].PublicURL)
+	}
 
-	objectURL := "http://" + os.Getenv("S3_ENDPOINT") + files[0].PublicURL
-	resp, err := http.Get(objectURL)
-	if err != nil {
-		t.Fatalf("could not GET stored object: %v", err)
+	getReq := httptest.NewRequest(http.MethodGet, files[0].PublicURL, nil)
+	getRec := httptest.NewRecorder()
+	s.echo.ServeHTTP(getRec, getReq)
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("download status = %d, body = %s", getRec.Code, getRec.Body.String())
 	}
-	defer resp.Body.Close()
-	got, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
+	if ct := getRec.Header().Get("Content-Type"); ct != "image/png" {
+		t.Fatalf("content-type = %q", ct)
 	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("GET object status = %d, body = %s", resp.StatusCode, got)
-	}
-	if !bytes.Equal(got, png1x1) {
-		t.Fatalf("stored object did not round-trip, got %d bytes", len(got))
+	if !bytes.Equal(getRec.Body.Bytes(), png1x1) {
+		t.Fatalf("downloaded object did not round-trip, got %d bytes", getRec.Body.Len())
 	}
 }
 
@@ -136,5 +134,34 @@ func TestRejectsDisallowedMimeType(t *testing.T) {
 	s.echo.ServeHTTP(rec, req)
 	if rec.Code == http.StatusCreated {
 		t.Fatalf("expected rejected upload, got %d", rec.Code)
+	}
+}
+
+func TestObjectNameRe(t *testing.T) {
+	if !objectNameRe.MatchString("8cc1c45b-9f14-4d92-894d-4f4a62fc6691.png") {
+		t.Fatal("expected uuid png to match")
+	}
+	for _, name := range []string{"../etc/passwd", "foo.png", "8cc1c45b-9f14-4d92-894d-4f4a62fc6691.txt", "8cc1c45b-9f14-4d92-894d-4f4a62fc6691.png/../x"} {
+		if objectNameRe.MatchString(name) {
+			t.Fatalf("did not expect %q to match", name)
+		}
+	}
+}
+
+func TestDownloadRejectsInvalidObjectName(t *testing.T) {
+	if os.Getenv("S3_ENDPOINT") == "" {
+		t.Skip("S3_ENDPOINT is not set")
+	}
+
+	s, err := newServer()
+	if err != nil {
+		t.Fatalf("could not init server: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/file-uploads/not-a-uuid.png", nil)
+	rec := httptest.NewRecorder()
+	s.echo.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
 	}
 }
