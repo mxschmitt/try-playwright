@@ -12,7 +12,7 @@ import { CodeContext } from '../CodeContext'
 
 import CodeLanguageSelector from '../CodeLanguageSelector';
 import useDarkMode from '../../hooks/useDarkMode';
-import './index.module.css'
+import styles from './index.module.css'
 
 const VITE_TURNSTILE_SITEKEY = '0x4AAAAAAA_K0T_2LZ0rgUtv';
 
@@ -84,9 +84,9 @@ const App: React.FunctionComponent = () => {
       <Container h="100%">
         <Header />
         <Content minh={0} overflow="auto" display="flex" direction="column">
-          <Grid fluid data-testid="app-main" w="100%" flex={{ xs: 'none', md: 1 }} minh={0} display="flex" direction="column">
-            <Row flex={{ xs: 'none', md: 1 }} minh={0} w="100%">
-              <Col span={{ xs: 24, md: 12 }} minw={0} minh={{ xs: 500, md: 0 }} pos="relative" display="flex" direction="column" data-testid="app-editor-column">
+          <Grid fluid data-testid="app-main" w="100%" flex={1} minh={0} display="flex" direction="column">
+            <Row flex={1} minh={0} w="100%">
+              <Col span={{ xs: 24, md: 12 }} minw={0} minh={0} pos="relative" display="flex" direction="column" className={styles.editorColumn} data-testid="app-editor-column">
                 {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
                 <Panel
                   bodyFill
