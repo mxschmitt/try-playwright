@@ -1,12 +1,16 @@
 FROM golang:1.26-alpine AS builder
-WORKDIR /root
-COPY go.mod go.sum /root/
+WORKDIR /src
+COPY go.mod go.sum ./
 RUN go mod download
 
-COPY log-aggregator /root/log-aggregator
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app ./log-aggregator
+COPY log-aggregator/ ./log-aggregator/
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /app ./log-aggregator \
+    && mkdir -p /runtime/tmp && chmod 1777 /runtime/tmp
+
+FROM scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /runtime/tmp /tmp
 COPY --from=builder /app /app
-CMD ["/app"]
+ENTRYPOINT ["/app"]
