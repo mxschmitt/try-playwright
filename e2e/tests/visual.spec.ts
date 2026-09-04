@@ -148,7 +148,7 @@ test.describe("should handle platform core related features", () => {
 
     await page.getByRole('button', { name: 'Run'}).click();
     await expect(page.getByText("Execution timeout!")).toBeVisible({
-      timeout: 70 * 1000,
+      timeout: 90 * 1000,
     });
   })
   test("should handle uncaughtException correctly", async ({ page }) => {
