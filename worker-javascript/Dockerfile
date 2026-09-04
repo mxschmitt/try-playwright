@@ -23,14 +23,14 @@ ENV PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 
-RUN npm install -g --omit=dev --no-audit --no-fund \
+RUN useradd --create-home --shell /usr/sbin/nologin pwuser \
+    && npm install -g --omit=dev --no-audit --no-fund \
         playwright@${PLAYWRIGHT_VERSION} \
         @playwright/test@${PLAYWRIGHT_VERSION} \
         ts-node \
     && playwright install --with-deps chromium-headless-shell firefox webkit ffmpeg \
     && rm -rf /ms-playwright/webkit-*/minibrowser-gtk \
     && npm cache clean --force \
-    && useradd --create-home --uid 1000 --shell /usr/sbin/nologin pwuser \
     && chmod -R 755 /ms-playwright \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /root/.npm /tmp/* \
         /usr/share/doc /usr/share/man /usr/share/lintian
