@@ -83,14 +83,16 @@ const App: React.FunctionComponent = () => {
     <CustomProvider theme={darkMode ? 'dark' : 'light'}>
       <Container h="100%">
         <Header />
-        <Content minh={0} overflow="auto">
-          <Grid fluid data-testid="app-main" h={{ md: '100%' }} w="100%">
-            <Row h={{ md: '100%' }}>
-              <Col span={{ xs: 24, md: 12 }} h={{ md: '100%' }} minw={0} pos="relative" className={styles.editorColumn} data-testid="app-editor-column">
+        <Content minh={0} overflow="auto" display="flex" direction="column">
+          <Grid fluid data-testid="app-main" w="100%" flex={1} minh={0} display="flex" direction="column">
+            <Row flex={1} minh={0} w="100%">
+              <Col span={{ xs: 24, md: 12 }} minw={0} minh={0} pos="relative" display="flex" direction="column" className={styles.editorColumn} data-testid="app-editor-column">
                 {loading && <Loader center content="loading" backdrop style={{ zIndex: 10 }} />}
                 <Panel
                   bodyFill
-                  h="100%"
+                  flex={1}
+                  minh={0}
+                  w="100%"
                   display="flex"
                   direction="column"
                   overflow="hidden"
@@ -111,7 +113,7 @@ const App: React.FunctionComponent = () => {
                   <Editor onExecution={handleExecutionRef} />
                 </Panel>
               </Col>
-              <Col span={{ xs: 24, md: 12 }} h={{ md: '100%' }} minw={0} data-testid="app-examples-column">
+              <Col span={{ xs: 24, md: 12 }} minw={0} display="flex" direction="column" data-testid="app-examples-column">
                 <RightPanel resp={resp} />
               </Col>
             </Row>

@@ -24,7 +24,9 @@ const RightPanel: React.FunctionComponent<RightPanelProps> = ({ resp }) => {
     return (
         <Panel
             bodyFill
-            h="100%"
+            flex={1}
+            minh={0}
+            w="100%"
             display="flex"
             direction="column"
             overflow="hidden"
