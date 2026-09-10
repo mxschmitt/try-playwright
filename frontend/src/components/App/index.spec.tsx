@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/experimental-ct-react';
 import type { MountResult } from '@playwright/experimental-ct-react';
-import type { Page } from 'playwright/test';
 import App from '.';
 import CodeContextProvider from '../CodeContext';
 
-async function mountApp(mount: (component: React.ReactElement) => Promise<MountResult>, page: Page) {
+type CtPage = Parameters<Parameters<typeof test>[1]>[0]['page'];
+
+async function mountApp(mount: (component: React.ReactElement) => Promise<MountResult>, page: CtPage) {
   await page.addStyleTag({ content: 'html, body, #root { height: 100%; margin: 0; }' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await mount(

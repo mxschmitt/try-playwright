@@ -1,23 +1,22 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "target": "ESNext",
     "useDefineForClassFields": true,
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": false,
     "skipLibCheck": true,
-    "esModuleInterop": false,
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx"
   },
   "include": ["src"],
-  "exclude": ["src/examples"],
+  "exclude": ["src/examples", "src/**/*.spec.ts", "src/**/*.spec.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
