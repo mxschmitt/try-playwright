@@ -37,7 +37,7 @@ This is the Try Playwright monorepo. It contains:
 2. Reuse existing patterns in the touched service/package.
 3. Avoid committing secrets, certificates, or local environment files.
 4. Prefer `internal/` for shared Go logic used by multiple services/workers.
-5. For Playwright version/autocomplete updates, use `node update_pw.mjs` instead of ad-hoc manual edits.
+5. For Playwright version/autocomplete updates, use `npm ci && node update_pw.mjs` (repo root) instead of ad-hoc manual edits.
 
 ## Validation Commands
 

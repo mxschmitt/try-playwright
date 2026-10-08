@@ -1,0 +1,11 @@
+{
+  "name": "try-playwright-scripts",
+  "private": true,
+  "description": "Dependencies for repository-level scripts like update_pw.mjs",
+  "scripts": {
+    "update-pw": "node update_pw.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}
