@@ -1,6 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import { isBuiltin } from 'module';
+// The TypeScript 7 API is experimental and may change between releases.
+import { API } from 'typescript/unstable/sync';
+import { createVirtualFileSystem } from 'typescript/unstable/fs';
+import { SyntaxKind } from 'typescript/unstable/ast';
+import { forEachLeadingCommentRange } from 'typescript/unstable/ast/scanner';
 
 const dirname = path.dirname(new URL(import.meta.url).pathname);
 
@@ -40,103 +46,205 @@ async function getNpmFile(packageName, file) {
 }
 
 /**
- * Removes import statements, reference directives, copyright headers, and export statements from the beginning of a type definition file.
- * This prevents issues with relative imports that don't exist in the concatenated file.
+ * Parses the given declaration files with the TypeScript compiler and passes the
+ * resulting source files to `callback`. The files only live in a virtual file system.
  *
- * @param {string} content - The file content to process
- * @returns {string} - The content with imports/references/exports/copyright headers stripped
+ * @template T
+ * @param {Record<string, string>} files - Map of file name to file content
+ * @param {(sourceFiles: Record<string, import('typescript/unstable/ast').SourceFile>) => T} callback
+ * @returns {T}
  */
-function stripFileHeader(content) {
-    const lines = content.split('\n');
-    let startIndex = 0;
-    let inMultiLineComment = false;
+function withParsedFiles(files, callback) {
+    const root = '/virtual';
+    const toFileName = (/** @type {string} */ name) => `${root}/${name}`;
+    const api = new API({
+        cwd: root,
+        fs: createVirtualFileSystem(Object.fromEntries(Object.entries(files).map(([name, content]) => [toFileName(name), content]))),
+    });
+    try {
+        const snapshot = api.updateSnapshot({ openFiles: Object.keys(files).map(toFileName) });
+        const sourceFiles = Object.fromEntries(Object.keys(files).map(name => {
+            const fileName = toFileName(name);
+            const sourceFile = snapshot.getDefaultProjectForFile(fileName)?.program.getSourceFile(fileName);
+            if (!sourceFile)
+                throw new Error(`Could not parse ${name}`);
+            if (sourceFile.text !== files[name])
+                throw new Error(`Parsed text of ${name} does not match its content`);
+            return [name, sourceFile];
+        }));
+        return callback(sourceFiles);
+    } finally {
+        api.close();
+    }
+}
 
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
+/**
+ * @typedef {{ start: number, end: number, text: string }} TextEdit
+ */
 
-        // Check for multi-line comment start
-        if (line.startsWith('/**') || line.startsWith('/*')) {
-            inMultiLineComment = true;
-            startIndex = i + 1;
-            continue;
+/**
+ * @param {string} content
+ * @param {TextEdit[]} edits - Non-overlapping edits
+ * @returns {string}
+ */
+function applyEdits(content, edits) {
+    let result = content;
+    for (const { start, end, text } of [...edits].sort((a, b) => b.start - a.start))
+        result = result.slice(0, start) + text + result.slice(end);
+    return result;
+}
+
+/**
+ * Guards against the experimental API reporting positions in another unit (e.g. UTF-8 bytes).
+ *
+ * @param {import('typescript/unstable/ast').SourceFile} sourceFile
+ * @param {import('typescript/unstable/ast').Node} node
+ * @param {string} expected
+ */
+function assertNodeStartsWith(sourceFile, node, expected) {
+    const actual = sourceFile.text.slice(node.getStart(sourceFile), node.getStart(sourceFile) + expected.length);
+    if (actual !== expected)
+        throw new Error(`Unexpected node position in ${sourceFile.fileName}: expected "${expected}", got "${actual}"`);
+}
+
+/**
+ * Whether the module can't be resolved from within the concatenated file: relative
+ * paths point to files which got inlined and only the Node.js globals are available.
+ *
+ * @param {import('typescript/unstable/ast').Expression | undefined} moduleSpecifier
+ * @returns {boolean}
+ */
+function isUnresolvableModule(moduleSpecifier) {
+    if (moduleSpecifier?.kind !== SyntaxKind.StringLiteral)
+        return false;
+    return moduleSpecifier.text.startsWith('.') || isBuiltin(moduleSpecifier.text);
+}
+
+/**
+ * Removes the module syntax from a type definition file so its declarations can be
+ * concatenated into an ambient module declaration:
+ * - imports/re-exports of relative paths and Node.js builtins (they don't exist in the concatenated file)
+ * - the file header (copyright comments and triple-slash reference directives)
+ *
+ * Imports of other packages (e.g. the optional `zod` import, guarded by `@ts-ignore`) are kept.
+ *
+ * @param {import('typescript/unstable/ast').SourceFile} sourceFile
+ * @returns {string}
+ */
+function stripModuleSyntax(sourceFile) {
+    /** @type {TextEdit[]} */
+    const edits = [];
+    const isModuleSyntax = (/** @type {import('typescript/unstable/ast').Statement} */ statement) => {
+        switch (statement.kind) {
+            case SyntaxKind.ImportDeclaration:
+            case SyntaxKind.ExportDeclaration:
+                return isUnresolvableModule(statement.moduleSpecifier);
+            case SyntaxKind.ImportEqualsDeclaration:
+                return statement.moduleReference.kind === SyntaxKind.ExternalModuleReference && isUnresolvableModule(statement.moduleReference.expression);
+            default:
+                return false;
         }
+    };
 
-        // Check for multi-line comment end
-        if (inMultiLineComment) {
-            if (line.endsWith('*/')) {
-                inMultiLineComment = false;
-                startIndex = i + 1;
-            }
+    for (const statement of sourceFile.statements) {
+        if (!isModuleSyntax(statement))
             continue;
-        }
-
-        // Skip single-line comments
-        if (line.startsWith('//')) {
-            startIndex = i + 1;
-            continue;
-        }
-
-        // Skip empty lines
-        if (line === '') {
-            startIndex = i + 1;
-            continue;
-        }
-
-        // Skip triple-slash reference directives
-        if (line.startsWith('///')) {
-            startIndex = i + 1;
-            continue;
-        }
-
-        // Skip import statements
-        if (line.startsWith('import ') || line.startsWith('import{')) {
-            startIndex = i + 1;
-            continue;
-        }
-
-        // Skip export statements at the top (but not export type/interface declarations)
-        if (line.startsWith('export ') && !line.match(/^export (type|interface|class|const|function|namespace|declare)/)) {
-            startIndex = i + 1;
-            continue;
-        }
-
-        // We've hit actual content, stop skipping
-        break;
+        assertNodeStartsWith(sourceFile, statement, statement.kind === SyntaxKind.ExportDeclaration ? 'export' : 'import');
+        // The full range includes leading trivia, e.g. `// @ts-ignore` comments belonging to the statement.
+        edits.push({ start: statement.pos, end: statement.end, text: '' });
     }
 
-    return lines.slice(startIndex).join('\n');
+    // Drop the file header (copyright comments and triple-slash directives), but keep the
+    // comments directly attached to the first remaining statement, e.g. its JSDoc.
+    const firstStatement = sourceFile.statements.find(statement => !isModuleSyntax(statement));
+    if (firstStatement) {
+        const { text } = sourceFile;
+        /** @type {{ pos: number, end: number }[]} */
+        const comments = [];
+        forEachLeadingCommentRange(text, firstStatement.pos, (pos, end) => {
+            comments.push({ pos, end });
+        });
+        let headerEnd = firstStatement.getStart(sourceFile);
+        for (const comment of comments.reverse()) {
+            const isSeparatedByBlankLine = /\n[ \t\r]*\n/.test(text.slice(comment.end, headerEnd));
+            if (isSeparatedByBlankLine || text.startsWith('///', comment.pos))
+                break;
+            headerEnd = comment.pos;
+        }
+        edits.push({ start: firstStatement.pos, end: headerEnd, text: '' });
+    }
+
+    return applyEdits(sourceFile.text, edits);
+}
+
+/**
+ * Rewrites module specifiers of import/export declarations and import types.
+ *
+ * @param {import('typescript/unstable/ast').SourceFile} sourceFile
+ * @param {Record<string, string>} replacements - Map of old to new module specifier
+ * @returns {string}
+ */
+function rewriteModuleSpecifiers(sourceFile, replacements) {
+    /** @type {TextEdit[]} */
+    const edits = [];
+    const moduleSpecifierParents = new Set([
+        SyntaxKind.ImportDeclaration,
+        SyntaxKind.ExportDeclaration,
+        SyntaxKind.ExternalModuleReference,
+        SyntaxKind.LiteralType, // import('...') types
+    ]);
+    const visit = (/** @type {import('typescript/unstable/ast').Node} */ node) => {
+        if (node.kind === SyntaxKind.StringLiteral && moduleSpecifierParents.has(node.parent.kind) && Object.hasOwn(replacements, node.text)) {
+            const start = node.getStart(sourceFile);
+            const quote = sourceFile.text[start];
+            assertNodeStartsWith(sourceFile, node, quote + node.text + quote);
+            edits.push({ start, end: node.end, text: quote + replacements[node.text] + quote });
+        }
+        node.forEachChild(visit);
+    };
+    visit(sourceFile);
+    return applyEdits(sourceFile.text, edits);
 }
 
 async function updateFrontendTypes() {
     const typesFile = 'frontend/src/components/Editor/types.txt';
-    let typesBuffer = '';
+    const files = {
+        'globals.d.ts': await getNpmFile('@types/node@18', 'globals.d.ts'),
+        'protocol.d.ts': await getNpmFile(`playwright-core`, 'types/protocol.d.ts'),
+        'structs.d.ts': await getNpmFile(`playwright-core`, 'types/structs.d.ts'),
+        'types.d.ts': await getNpmFile(`playwright-core`, 'types/types.d.ts'),
+        'test.d.ts': await getNpmFile('playwright', 'types/test.d.ts'),
+    };
 
-    // Add Node.js global types
-    typesBuffer += stripFileHeader(await getNpmFile('@types/node@18', 'globals.d.ts'));
-    typesBuffer += '\n';
+    const typesBuffer = withParsedFiles(files, sourceFiles => {
+        let typesBuffer = '';
 
-    // Add playwright-core module
-    typesBuffer += 'declare module \'playwright-core\' {\n';
-    typesBuffer += await getNpmFile(`playwright-core`, 'types/protocol.d.ts');
-    typesBuffer += stripFileHeader(await getNpmFile(`playwright-core`, 'types/structs.d.ts'));
-    typesBuffer += '\n';
-    typesBuffer += stripFileHeader(await getNpmFile(`playwright-core`, 'types/types.d.ts'));
-    typesBuffer += '}\n';
+        // Add Node.js global types
+        typesBuffer += stripModuleSyntax(sourceFiles['globals.d.ts']);
+        typesBuffer += '\n';
 
-    // Add playwright module (re-exports playwright-core)
-    typesBuffer += 'declare module \'playwright\' {\n';
-    typesBuffer += '  export * from \'playwright-core\';\n';
-    typesBuffer += '}\n';
+        // Add playwright-core module
+        typesBuffer += 'declare module \'playwright-core\' {\n';
+        typesBuffer += files['protocol.d.ts'];
+        typesBuffer += stripModuleSyntax(sourceFiles['structs.d.ts']);
+        typesBuffer += '\n';
+        typesBuffer += stripModuleSyntax(sourceFiles['types.d.ts']);
+        typesBuffer += '}\n';
 
-    // Add @playwright/test module
-    typesBuffer += 'declare module \'@playwright/test\' {\n';
-    const testTypes = await getNpmFile('playwright', 'types/test.d.ts');
-    // Fix internal reference paths that won't exist in the concatenated file
-    const fixedTestTypes = testTypes.split('\n')
-        .map(line => line.replace('@playwright/test/types/expect-types', '@playwright/test-expect'))
-        .join('\n');
-    typesBuffer += fixedTestTypes;
-    typesBuffer += '}\n';
+        // Add playwright module (re-exports playwright-core)
+        typesBuffer += 'declare module \'playwright\' {\n';
+        typesBuffer += '  export * from \'playwright-core\';\n';
+        typesBuffer += '}\n';
+
+        // Add @playwright/test module
+        typesBuffer += 'declare module \'@playwright/test\' {\n';
+        // Fix internal reference paths that won't exist in the concatenated file
+        typesBuffer += rewriteModuleSpecifiers(sourceFiles['test.d.ts'], {
+            '@playwright/test/types/expect-types': '@playwright/test-expect',
+        });
+        typesBuffer += '}\n';
+        return typesBuffer;
+    });
 
     fs.writeFileSync(typesFile, typesBuffer);
 }

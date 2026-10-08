@@ -24946,6 +24946,9 @@ Error was thrown.
     "Schema.getDomains": Schema.getDomainsReturnValue;
   }
 }
+/**
+ * Can be converted to JSON
+ */
 export type Serializable = any;
 /**
  * Can be converted to JSON, but may also contain JSHandles.
@@ -24978,6 +24981,8 @@ export type SmartHandle<T> = [T] extends [Node] ? ElementHandle<T> : JSHandle<T>
 export type ElementHandleForTag<K extends keyof HTMLElementTagNameMap> = ElementHandle<HTMLElementTagNameMap[K]>;
 export type BindingSource = { context: BrowserContext, page: Page, frame: Frame };
 
+// Use the global URLPattern type if available (Node.js 22+, modern browsers),
+// otherwise fall back to `never` so it disappears from union types.
 type URLPattern = typeof globalThis extends { URLPattern: new (...args: any) => infer T } ? T : never;
 
 type PageWaitForSelectorOptionsNotHidden = PageWaitForSelectorOptions & {

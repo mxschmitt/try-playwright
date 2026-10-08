@@ -55,7 +55,7 @@ Kubernetes manifests to run only a subset, for example `javascript,python`.
 
 ## Generate / Update autocompletion
 
-- Execute the `update_pw.mjs` script.
+- Execute `npm ci && node update_pw.mjs` in the repository root.
 
 ## Infrastructure evolution
 
@@ -73,7 +73,7 @@ The worker infra got rewritten, since the workers would share a lot of code each
 
 ## Updating Playwright
 
-1. Execute `node update_pw.mjs`
+1. Execute `npm ci && node update_pw.mjs` in the repository root
 1. Create and merge the PR
 1. Wait until PR is built on the `main` branch
 1. Exeute the following on the host:
