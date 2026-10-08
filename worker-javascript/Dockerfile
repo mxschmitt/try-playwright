@@ -1,4 +1,4 @@
-ARG PLAYWRIGHT_VERSION=1.62.1
+ARG PLAYWRIGHT_VERSION=1.64.0
 FROM golang:1.26-alpine AS builder
 WORKDIR /root
 COPY go.mod /root/

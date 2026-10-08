@@ -1,7 +1,7 @@
 
 import { useEffect, useContext, useRef } from 'react'
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import tsWorker from 'monaco-editor/language/typescript/ts.worker?worker'
+import editorWorker from 'monaco-editor/editor/editor.worker?worker'
 import * as monaco from 'monaco-editor';
 
 import { Box } from 'rsuite'
