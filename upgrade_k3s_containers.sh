@@ -177,6 +177,20 @@ if [[ -z "$CONTINUE_SHA" ]]; then
   exec "$REPO/upgrade_k3s_containers.sh" --continue "$AFTER"
 fi
 
+# Without this, manifest changes (new services, env vars, ingress routes) never
+# reach the cluster and only image updates would be deployed. Generate before
+# pulling images so a missing or broken env file fails fast. The env file is
+# only sourced in the subshell so it cannot override this script's variables.
+[[ -f "$ENV_FILE" ]] || die "env file ${ENV_FILE} not found; see README.md for the required variables"
+log "generating k8/ manifests with ${ENV_FILE}"
+(
+  set -a
+  # shellcheck source=/dev/null
+  . "$ENV_FILE"
+  set +a
+  cd "$REPO" && bash k8/generate.sh
+) || die "k8/generate.sh failed"
+
 CRICTL=(k3s crictl)
 if ! command -v k3s >/dev/null; then
   CRICTL=(crictl)
@@ -187,26 +201,17 @@ for image in "${IMAGES[@]}"; do
   "${CRICTL[@]}" pull "$image"
 done
 
-# Without this, manifest changes (new services, env vars, ingress routes) never
-# reach the cluster and only image updates would be deployed.
-[[ -f "$ENV_FILE" ]] || die "env file ${ENV_FILE} not found; see README.md for the required variables"
-log "generating k8/ manifests with ${ENV_FILE}"
-set -a
-# shellcheck source=/dev/null
-. "$ENV_FILE"
-set +a
-(cd "$REPO" && bash k8/generate.sh) || die "k8/generate.sh failed"
+# Delete workers before bouncing control (including a rollout triggered by the
+# apply below) so the new control process creates a fresh pool. Do not delete
+# workers after control is ready.
+log "removing worker pods before control restart"
+kubectl delete pod -l role=worker --wait=false || true
 
 log "applying k8/ manifests"
 kubectl apply -f "$REPO/k8/"
 log "deleting retired resources: ${RETIRED_RESOURCES[*]}"
 kubectl delete "${RETIRED_RESOURCES[@]}" --ignore-not-found
 kubectl rollout status deployment/rustfs --timeout=180s
-
-# Delete workers before bouncing control so the new control process creates a
-# fresh pool. Do not delete workers after control is ready.
-log "removing worker pods before control restart"
-kubectl delete pod -l role=worker --wait=false || true
 
 log "restarting deployments: ${APP_DEPLOYMENTS[*]}"
 restart_args=()
@@ -231,7 +236,7 @@ fi
 HEALTH_URL="${BASE_URL}/service/control/health"
 
 log "checking health at ${HEALTH_URL}"
-curl -fsS --retry 12 --retry-all-errors --retry-delay 5 "$HEALTH_URL" >/dev/null \
+curl -fsS --max-time 10 --retry 12 --retry-all-errors --retry-delay 5 "$HEALTH_URL" >/dev/null \
   || die "health check failed"
 
 # A missing object returns 404 only when file-service can reach object storage;
@@ -240,7 +245,7 @@ STORAGE_URL="${BASE_URL}/file-uploads/00000000-0000-0000-0000-000000000000.png"
 log "checking object storage via ${STORAGE_URL}"
 storage_status=""
 for _ in $(seq 1 12); do
-  storage_status="$(curl -s -o /dev/null -w '%{http_code}' -I "$STORAGE_URL" || true)"
+  storage_status="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' -I "$STORAGE_URL" || true)"
   [[ "$storage_status" == "404" ]] && break
   sleep 5
 done

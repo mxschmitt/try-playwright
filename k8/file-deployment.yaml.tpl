@@ -37,12 +37,13 @@ spec:
           ports:
             - name: http
               containerPort: 8080
-          # The HTTP server only starts after the storage bucket check passed, so
-          # a pod that cannot reach RustFS never becomes ready.
+          # /api/v1/health checks (and recreates) the RustFS bucket, so the pod
+          # is not ready while object storage is unavailable.
           readinessProbe:
             httpGet:
               path: /api/v1/health
               port: http
             initialDelaySeconds: 2
             periodSeconds: 5
+            timeoutSeconds: 5
       restartPolicy: Always

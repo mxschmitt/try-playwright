@@ -68,33 +68,11 @@ func newServer() (*server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not init S3 client: %w", err)
 	}
-	err = s3Client.MakeBucket(context.Background(), BUCKET_NAME, minio.MakeBucketOptions{})
-	if err != nil {
-		// Check to see if we already own this bucket (which happens if you run this twice)
-		exists, errBucketExists := s3Client.BucketExists(context.Background(), BUCKET_NAME)
-		if errBucketExists == nil && exists {
-			log.Printf("We already own %s\n", BUCKET_NAME)
-		} else {
-			return nil, fmt.Errorf("could not check if bucket exists: %w", err)
-		}
-	} else {
-		log.Printf("Successfully created bucket %s\n", BUCKET_NAME)
-		config := lifecycle.NewConfiguration()
-		config.Rules = []lifecycle.Rule{
-			{
-				ID:     "expire-bucket",
-				Status: "Enabled",
-				Expiration: lifecycle.Expiration{
-					Days: 1,
-				},
-			},
-		}
-		if err := s3Client.SetBucketLifecycle(context.Background(), BUCKET_NAME, config); err != nil {
-			return nil, fmt.Errorf("could not set bucket lifecycle rule: %w", err)
-		}
-	}
 	s := &server{
 		s3Client: s3Client,
+	}
+	if err := s.ensureBucket(context.Background()); err != nil {
+		return nil, err
 	}
 
 	s.echo = echo.New()
@@ -229,7 +207,48 @@ func (s *server) handleDownloadFile(c *echo.Context) error {
 	return c.Stream(http.StatusOK, stat.ContentType, obj)
 }
 
+// ensureBucket creates the upload bucket with its expiry rule if it does not exist yet.
+func (s *server) ensureBucket(ctx context.Context) error {
+	err := s.s3Client.MakeBucket(ctx, BUCKET_NAME, minio.MakeBucketOptions{})
+	if err != nil {
+		// Check to see if we already own this bucket (which happens if you run this twice)
+		exists, errBucketExists := s.s3Client.BucketExists(ctx, BUCKET_NAME)
+		if errBucketExists == nil && exists {
+			log.Printf("We already own %s\n", BUCKET_NAME)
+			return nil
+		}
+		return fmt.Errorf("could not check if bucket exists: %w", err)
+	}
+	log.Printf("Successfully created bucket %s\n", BUCKET_NAME)
+	config := lifecycle.NewConfiguration()
+	config.Rules = []lifecycle.Rule{
+		{
+			ID:     "expire-bucket",
+			Status: "Enabled",
+			Expiration: lifecycle.Expiration{
+				Days: 1,
+			},
+		},
+	}
+	if err := s.s3Client.SetBucketLifecycle(ctx, BUCKET_NAME, config); err != nil {
+		return fmt.Errorf("could not set bucket lifecycle rule: %w", err)
+	}
+	return nil
+}
+
+// handleHealth reports unhealthy while object storage is unreachable. RustFS
+// keeps its data in an emptyDir, so the bucket is recreated after a restart.
 func (s *server) handleHealth(c *echo.Context) error {
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 3*time.Second)
+	defer cancel()
+	exists, err := s.s3Client.BucketExists(ctx, BUCKET_NAME)
+	if err == nil && !exists {
+		err = s.ensureBucket(ctx)
+	}
+	if err != nil {
+		log.Printf("health check failed: %v", err)
+		return c.String(http.StatusServiceUnavailable, "storage unavailable")
+	}
 	return c.String(http.StatusOK, "OK")
 }
 
