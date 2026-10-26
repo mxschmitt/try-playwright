@@ -38,7 +38,7 @@ spec:
             - name: http
               containerPort: 8080
           # /api/v1/health checks (and recreates) the RustFS bucket, so the pod
-          # is not ready while object storage is unavailable.
+          # stays up but not ready while object storage is unavailable.
           readinessProbe:
             httpGet:
               path: /api/v1/health

@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -35,6 +36,8 @@ type server struct {
 	echo       *echo.Echo
 	httpServer *http.Server
 	s3Client   *minio.Client
+	// lifecycleSet is false until the bucket expiry rule has been applied.
+	lifecycleSet atomic.Bool
 }
 
 const BUCKET_NAME = "file-uploads"
@@ -71,8 +74,10 @@ func newServer() (*server, error) {
 	s := &server{
 		s3Client: s3Client,
 	}
+	// Storage may not be up yet (e.g. RustFS starting in parallel). Keep running;
+	// the health check reports not ready and retries until the bucket exists.
 	if err := s.ensureBucket(context.Background()); err != nil {
-		return nil, err
+		log.Printf("storage not ready yet: %v", err)
 	}
 
 	s.echo = echo.New()
@@ -207,19 +212,27 @@ func (s *server) handleDownloadFile(c *echo.Context) error {
 	return c.Stream(http.StatusOK, stat.ContentType, obj)
 }
 
-// ensureBucket creates the upload bucket with its expiry rule if it does not exist yet.
+// ensureBucket creates the upload bucket if it does not exist yet and makes
+// sure its expiry rule is set.
 func (s *server) ensureBucket(ctx context.Context) error {
 	err := s.s3Client.MakeBucket(ctx, BUCKET_NAME, minio.MakeBucketOptions{})
 	if err != nil {
 		// Check to see if we already own this bucket (which happens if you run this twice)
 		exists, errBucketExists := s.s3Client.BucketExists(ctx, BUCKET_NAME)
-		if errBucketExists == nil && exists {
-			log.Printf("We already own %s\n", BUCKET_NAME)
-			return nil
+		if errBucketExists != nil {
+			return fmt.Errorf("could not create bucket: %w; could not check if bucket exists: %w", err, errBucketExists)
 		}
-		return fmt.Errorf("could not check if bucket exists: %w", err)
+		if !exists {
+			return fmt.Errorf("could not create bucket: %w", err)
+		}
+		log.Printf("We already own %s\n", BUCKET_NAME)
+	} else {
+		log.Printf("Successfully created bucket %s\n", BUCKET_NAME)
+		s.lifecycleSet.Store(false)
 	}
-	log.Printf("Successfully created bucket %s\n", BUCKET_NAME)
+	if s.lifecycleSet.Load() {
+		return nil
+	}
 	config := lifecycle.NewConfiguration()
 	config.Rules = []lifecycle.Rule{
 		{
@@ -233,6 +246,7 @@ func (s *server) ensureBucket(ctx context.Context) error {
 	if err := s.s3Client.SetBucketLifecycle(ctx, BUCKET_NAME, config); err != nil {
 		return fmt.Errorf("could not set bucket lifecycle rule: %w", err)
 	}
+	s.lifecycleSet.Store(true)
 	return nil
 }
 
@@ -242,7 +256,7 @@ func (s *server) handleHealth(c *echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 3*time.Second)
 	defer cancel()
 	exists, err := s.s3Client.BucketExists(ctx, BUCKET_NAME)
-	if err == nil && !exists {
+	if err == nil && (!exists || !s.lifecycleSet.Load()) {
 		err = s.ensureBucket(ctx)
 	}
 	if err != nil {

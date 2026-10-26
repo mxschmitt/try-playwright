@@ -201,17 +201,18 @@ for image in "${IMAGES[@]}"; do
   "${CRICTL[@]}" pull "$image"
 done
 
-# Delete workers before bouncing control (including a rollout triggered by the
-# apply below) so the new control process creates a fresh pool. Do not delete
-# workers after control is ready.
-log "removing worker pods before control restart"
-kubectl delete pod -l role=worker --wait=false || true
-
 log "applying k8/ manifests"
 kubectl apply -f "$REPO/k8/"
 log "deleting retired resources: ${RETIRED_RESOURCES[*]}"
 kubectl delete "${RETIRED_RESOURCES[@]}" --ignore-not-found
 kubectl rollout status deployment/rustfs --timeout=180s
+
+# Delete workers before bouncing control so the new control process creates a
+# fresh pool. Do not delete workers after control is ready. This stays after
+# the apply: if apply fails, the old control keeps its working workers. A
+# control rollout started by apply is superseded by the restart below.
+log "removing worker pods before control restart"
+kubectl delete pod -l role=worker --wait=false || true
 
 log "restarting deployments: ${APP_DEPLOYMENTS[*]}"
 restart_args=()
