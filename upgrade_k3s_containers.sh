@@ -1,9 +1,12 @@
 #!/bin/bash
-# Pull origin/main every 15 minutes. If a new commit is fully built, refresh images and restart.
+# Pull origin/main every 15 minutes. If a new commit is fully built, apply the
+# k8/ manifests, refresh images and restart.
 set -euo pipefail
 
 REPO="${TRY_PLAYWRIGHT_REPO:-/root/try-playwright}"
 GITHUB_REPO="mxschmitt/try-playwright"
+# Secrets and settings for k8/generate.sh (RUSTFS_*, TURNSTILE_SECRET_KEY, ...).
+ENV_FILE="${TRY_PLAYWRIGHT_ENV_FILE:-/etc/try-playwright/env}"
 STATE_DIR="${TRY_PLAYWRIGHT_STATE_DIR:-/var/lib/try-playwright}"
 STATE_FILE="${STATE_DIR}/last-deployed-sha"
 LOCK_FILE="${STATE_DIR}/autoupdate.lock"
@@ -18,9 +21,17 @@ IMAGES=(
   ghcr.io/mxschmitt/try-playwright/worker-java:latest
   ghcr.io/mxschmitt/try-playwright/worker-python:latest
   ghcr.io/mxschmitt/try-playwright/worker-csharp:latest
+  ghcr.io/mxschmitt/try-playwright/log-aggregator:latest
 )
 
-APP_DEPLOYMENTS=(frontend file control squid)
+APP_DEPLOYMENTS=(frontend file control squid log-aggregator)
+
+# Resources whose manifests were removed from k8/. `kubectl apply` never deletes
+# anything, so list them here to have them cleaned up on the next deploy.
+RETIRED_RESOURCES=(
+  deployment/minio
+  service/minio
+)
 
 FORCE=0
 DRY_RUN=0
@@ -150,6 +161,7 @@ if [[ -z "$CONTINUE_SHA" ]]; then
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
     log "dry-run: would reset ${REPO} to ${AFTER}"
+    log "dry-run: would apply k8/ manifests with ${ENV_FILE} and delete ${RETIRED_RESOURCES[*]}"
     log "dry-run: would pull ${#IMAGES[@]} images and restart ${APP_DEPLOYMENTS[*]}"
     exit 0
   fi
@@ -175,6 +187,22 @@ for image in "${IMAGES[@]}"; do
   "${CRICTL[@]}" pull "$image"
 done
 
+# Without this, manifest changes (new services, env vars, ingress routes) never
+# reach the cluster and only image updates would be deployed.
+[[ -f "$ENV_FILE" ]] || die "env file ${ENV_FILE} not found; see README.md for the required variables"
+log "generating k8/ manifests with ${ENV_FILE}"
+set -a
+# shellcheck source=/dev/null
+. "$ENV_FILE"
+set +a
+(cd "$REPO" && bash k8/generate.sh) || die "k8/generate.sh failed"
+
+log "applying k8/ manifests"
+kubectl apply -f "$REPO/k8/"
+log "deleting retired resources: ${RETIRED_RESOURCES[*]}"
+kubectl delete "${RETIRED_RESOURCES[@]}" --ignore-not-found
+kubectl rollout status deployment/rustfs --timeout=180s
+
 # Delete workers before bouncing control so the new control process creates a
 # fresh pool. Do not delete workers after control is ready.
 log "removing worker pods before control restart"
@@ -186,26 +214,37 @@ for deploy in "${APP_DEPLOYMENTS[@]}"; do
   restart_args+=("deployment/${deploy}")
 done
 kubectl rollout restart "${restart_args[@]}"
+# rollout status waits until the new pods are ready. Avoid `kubectl wait -l`
+# here: it also matches old pods that are still terminating and then fails
+# with NotFound once they are gone.
+log "waiting for application pods"
 for deploy in "${APP_DEPLOYMENTS[@]}"; do
   kubectl rollout status "deployment/${deploy}" --timeout=180s
 done
 
-log "waiting for application pods"
-kubectl wait --timeout=180s --for=condition=ready pod -l io.kompose.service=frontend
-kubectl wait --timeout=180s --for=condition=ready pod -l io.kompose.service=file
-kubectl wait --timeout=180s --for=condition=ready pod -l io.kompose.service=control
-kubectl wait --timeout=180s --for=condition=ready pod -l io.kompose.service=squid
-
 FRONTEND_PORT="$(kubectl get svc frontend -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || true)"
 if [[ -n "$FRONTEND_PORT" ]]; then
-  HEALTH_URL="http://127.0.0.1:${FRONTEND_PORT}/service/control/health"
+  BASE_URL="http://127.0.0.1:${FRONTEND_PORT}"
 else
-  HEALTH_URL="http://127.0.0.1:8080/service/control/health"
+  BASE_URL="http://127.0.0.1:8080"
 fi
+HEALTH_URL="${BASE_URL}/service/control/health"
 
 log "checking health at ${HEALTH_URL}"
 curl -fsS --retry 12 --retry-all-errors --retry-delay 5 "$HEALTH_URL" >/dev/null \
   || die "health check failed"
+
+# A missing object returns 404 only when file-service can reach object storage;
+# a storage outage surfaces as 5xx.
+STORAGE_URL="${BASE_URL}/file-uploads/00000000-0000-0000-0000-000000000000.png"
+log "checking object storage via ${STORAGE_URL}"
+storage_status=""
+for _ in $(seq 1 12); do
+  storage_status="$(curl -s -o /dev/null -w '%{http_code}' -I "$STORAGE_URL" || true)"
+  [[ "$storage_status" == "404" ]] && break
+  sleep 5
+done
+[[ "$storage_status" == "404" ]] || die "object storage check failed (HTTP ${storage_status:-none})"
 
 printf '%s\n' "$AFTER" > "$STATE_FILE"
 touch "$FILE_ROLL_MARKER"
