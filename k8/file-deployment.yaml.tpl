@@ -34,4 +34,15 @@ spec:
           image: ghcr.io/mxschmitt/try-playwright/file-service:${DOCKER_TAG}
           imagePullPolicy: IfNotPresent
           name: file
+          ports:
+            - name: http
+              containerPort: 8080
+          # The HTTP server only starts after the storage bucket check passed, so
+          # a pod that cannot reach RustFS never becomes ready.
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
       restartPolicy: Always
