@@ -20,9 +20,9 @@ import (
 )
 
 // pwuser is uid and gid 1001 in the Noble Playwright base images
-// (mcr.microsoft.com/playwright v1.64.0 and the python, java, and dotnet
-// v1.63.0 images). ubuntu:noble already has ubuntu:1000, so adduser pwuser
-// takes 1001. /etc/passwd in those images is "pwuser:x:1001:1001".
+// (node, python, and dotnet v1.64.1, java v1.64.0). ubuntu:noble already
+// has ubuntu:1000, so adduser pwuser takes 1001. /etc/passwd in those
+// images is "pwuser:x:1001:1001".
 const (
 	pwuserUID int64 = 1001
 	pwuserGID int64 = 1001
