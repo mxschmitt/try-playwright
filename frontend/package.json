@@ -9,19 +9,19 @@
   },
   "dependencies": {
     "@rsuite/icons": "^1.4.1",
-    "@sentry/browser": "^11.6.0",
+    "@sentry/browser": "^11.10.0",
     "monaco-editor": "0.57.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "rsuite": "6.2.5"
   },
   "devDependencies": {
     "@playwright/experimental-ct-react": "^1.62.1",
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-react": "^6.2.1",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.5"
   }
 }
