@@ -19,6 +19,15 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// pwuser is uid and gid 1001 in the Noble Playwright base images
+// (mcr.microsoft.com/playwright v1.64.0 and the python, java, and dotnet
+// v1.63.0 images). ubuntu:noble already has ubuntu:1000, so adduser pwuser
+// takes 1001. /etc/passwd in those images is "pwuser:x:1001:1001".
+const (
+	pwuserUID int64 = 1001
+	pwuserGID int64 = 1001
+)
+
 type Workers struct {
 	language           workertypes.WorkerLanguage
 	workers            chan *Worker
@@ -144,27 +153,59 @@ func newWorker(workers *Workers) (*Worker, error) {
 
 func (w *Worker) createPod() error {
 	var err error
-	w.pod, err = w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).Create(context.Background(), &v1.Pod{
+	w.pod, err = w.workers.k8ClientSet.CoreV1().Pods(K8_NAMESPACE_NAME).Create(
+		context.Background(),
+		newWorkerPod(w.id, w.language),
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("could not create pod: %w", err)
+	}
+	return nil
+}
+
+func newWorkerPod(id string, language workertypes.WorkerLanguage) *v1.Pod {
+	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("worker-%s-", w.language),
+			GenerateName: fmt.Sprintf("worker-%s-", language),
 			Labels: map[string]string{
 				"role":     "worker",
-				"language": string(w.language),
+				"language": string(language),
 			},
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy:                v1.RestartPolicy(v1.RestartPolicyNever),
 			AutomountServiceAccountToken: ptr.To(false),
 			EnableServiceLinks:           ptr.To(false),
+			SecurityContext: &v1.PodSecurityContext{
+				RunAsNonRoot: ptr.To(true),
+				RunAsUser:    ptr.To(pwuserUID),
+				RunAsGroup:   ptr.To(pwuserGID),
+				SeccompProfile: &v1.SeccompProfile{
+					Type: v1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
 			Containers: []v1.Container{
 				{
 					Name:            "worker",
-					Image:           determineWorkerImageName(w.workers.language),
+					Image:           determineWorkerImageName(language),
 					ImagePullPolicy: v1.PullIfNotPresent,
+					SecurityContext: &v1.SecurityContext{
+						RunAsNonRoot:             ptr.To(true),
+						RunAsUser:                ptr.To(pwuserUID),
+						RunAsGroup:               ptr.To(pwuserGID),
+						AllowPrivilegeEscalation: ptr.To(false),
+						Capabilities: &v1.Capabilities{
+							Drop: []v1.Capability{"ALL"},
+						},
+						SeccompProfile: &v1.SeccompProfile{
+							Type: v1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
 					Env: []v1.EnvVar{
 						{
 							Name:  "WORKER_ID",
-							Value: w.id,
+							Value: id,
 						},
 						{
 							Name:  "AMQP_URL",
@@ -202,11 +243,7 @@ func (w *Worker) createPod() error {
 				},
 			},
 		},
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("could not create pod: %w", err)
 	}
-	return nil
 }
 
 func determineWorkerImageName(language workertypes.WorkerLanguage) string {
