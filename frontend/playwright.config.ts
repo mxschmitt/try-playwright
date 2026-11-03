@@ -1,10 +1,15 @@
-import { defineConfig, devices } from '@playwright/experimental-ct-react';
+import { defineConfig, devices } from '@playwright/test';
 
 /**
- * See https://playwright.dev/docs/test-configuration.
+ * See https://playwright.dev/docs/test-components.
  */
+// Keep this off the Vite dev server's default port so a different app
+// already listening on 5173 is not reused as the gallery.
+const galleryURL = 'http://localhost:3100/playwright/gallery/index.html';
+
 const config = defineConfig({
   testDir: './',
+  testMatch: '**/*.spec.ts',
   /* Maximum time one test can run for. */
   timeout: 10 * 1000,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -19,9 +24,14 @@ const config = defineConfig({
   use: {
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-
-    /* Port to use for Playwright component endpoint. */
-    ctPort: 3100,
+    baseURL: galleryURL,
+    serviceWorkers: 'block',
+    reuseContext: true,
+  },
+  webServer: {
+    command: 'npm run dev -- --port 3100 --strictPort',
+    url: galleryURL,
+    reuseExistingServer: !process.env.CI,
   },
 
   /* Configure projects for major browsers */

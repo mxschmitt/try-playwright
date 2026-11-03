@@ -3,6 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import packageJSON from './package.json'
+import { storyTypes } from './playwright/gallery/storyTypes'
 
 if (!process.env.VITE_GIT_SHA) {
   try {
@@ -17,8 +19,17 @@ if (!process.env.VITE_GIT_SHA) {
 }
 
 // https://vitejs.dev/config/
+const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    storyTypes({
+      prefix: packageJSON.name,
+      src: path.resolve(frontendRoot, 'src'),
+      outFile: path.resolve(frontendRoot, 'playwright/gallery/stories.d.ts'),
+    }),
+  ],
   define: {
     'process.env': {}
   },

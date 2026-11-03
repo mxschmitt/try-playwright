@@ -1,22 +1,11 @@
-import { test, expect } from '@playwright/experimental-ct-react';
-import type { MountResult } from '@playwright/experimental-ct-react';
-import App from '.';
-import CodeContextProvider from '../CodeContext';
+import { test, expect } from '@playwright/test';
 
-type CtPage = Parameters<Parameters<typeof test>[1]>[0]['page'];
-
-async function mountApp(mount: (component: React.ReactElement) => Promise<MountResult>, page: CtPage) {
-  await page.addStyleTag({ content: 'html, body, #root { height: 100%; margin: 0; }' });
+test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await mount(
-    <CodeContextProvider>
-      <App />
-    </CodeContextProvider>
-  );
-}
+});
 
 test('desktop layout fills the viewport in two aligned columns', async ({ mount, page }) => {
-  await mountApp(mount, page);
+  await mount('try-playwright-frontend/components/App/index/Desktop');
 
   const main = page.getByTestId('app-main');
   const editor = page.getByTestId('app-editor-column');
@@ -49,7 +38,7 @@ test('editor column stays full height after a short output error', async ({ moun
       body: JSON.stringify({ error: 'Error: Could not complete bot check. Please try again.' }),
     });
   });
-  await mountApp(mount, page);
+  await mount('try-playwright-frontend/components/App/index/Desktop');
 
   const viewport = page.viewportSize()!;
   await page.getByRole('button', { name: 'Run' }).click();

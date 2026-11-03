@@ -16,7 +16,7 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src"],
-  "exclude": ["src/examples", "src/**/*.spec.ts", "src/**/*.spec.tsx"],
+  "include": ["src", "playwright/gallery/main.tsx", "playwright/gallery/stories.d.ts"],
+  "exclude": ["src/examples"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
