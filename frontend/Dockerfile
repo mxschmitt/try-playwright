@@ -9,6 +9,7 @@ RUN npm ci
 COPY frontend/vite.config.ts frontend/tsconfig.json frontend/tsconfig.node.json frontend/index.html /frontend/
 COPY frontend/public /frontend/public
 COPY frontend/src /frontend/src
+COPY frontend/playwright/gallery /frontend/playwright/gallery
 
 ARG GIT_SHA
 ENV VITE_GIT_SHA=${GIT_SHA}
